@@ -781,6 +781,11 @@ AC_SUBST(MAINTAINER_CFLAGS)
 AC_OUTPUT(
 Makefile
 README
+config.h.win32
+build/Makefile
+build/win32/Makefile
+build/win32/vs9/Makefile
+build/win32/vs10/Makefile
 cogl/Makefile
 cogl/cogl-1.0.pc
 cogl/cogl-$COGL_MAJOR_VERSION.0.pc:cogl/cogl.pc.in
