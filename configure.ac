@@ -396,7 +396,8 @@ AS_IF([test "x$enable_gl" = "xyes"],
       [
         DRIVER_COUNT=$((DRIVER_COUNT + 1))
         COGL_DRIVER=gl
-        ALLOW_GLX=yes
+
+        PKG_CHECK_EXISTS([x11], [ALLOW_GLX=yes])
 
         cogl_gl_headers="GL/gl.h"
 
@@ -697,7 +698,11 @@ AS_ALL_LINGUAS
 dnl ================================================================
 dnl Documentation stuff.
 dnl ================================================================
+# gtkdocize greps for ^GTK_DOC_CHECK and parses it, so you need to have
+# it on it's own line.
+m4_ifdef([GTK_DOC_CHECK], [
 GTK_DOC_CHECK([gtk_doc_req_version], [--flavour no-tmpl])
+])
 AM_CONDITIONAL([BUILD_GTK_DOC], [test "x$enable_gtk_doc" = "xyes"])
 
 dnl ================================================================
