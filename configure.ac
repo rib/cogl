@@ -702,12 +702,26 @@ AS_IF([test "x$NEED_EGL" = "xyes"],
 AM_CONDITIONAL(SUPPORT_EGL, [test "x$SUPPORT_EGL" = "xyes"])
 
 
+X11_MODULES="x11 xext xfixes >= xfixes_req_version xdamage xcomposite >= xcomposite_req_version"
+
+AC_ARG_ENABLE(
+  [xlib],
+  [AC_HELP_STRING([--enable-xlib=@<:@no/yes@:>@], [Enable xlib features @<:@default=auto@:>@])],
+  [],
+  [
+    PKG_CHECK_EXISTS([DUMMY], [$X11_MODULES],
+                     [enable_x11=yes],
+                     [enable_x11=no])
+  ]
+)
+AS_IF([test "x$enable_x11" = "xyes"], [NEED_XLIB=yes])
+
+
 dnl         ========================================================
 dnl         Check X11 dependencies if required
 dnl         ========================================================
 AS_IF([test "x$NEED_XLIB" = "xyes"],
       [
-        X11_MODULES="x11 xext xfixes >= xfixes_req_version xdamage xcomposite >= xcomposite_req_version"
         PKG_CHECK_MODULES(DUMMY, [$X11_MODULES],
                           [COGL_PKG_REQUIRES="$COGL_PKG_REQUIRES $X11_MODULES"])
         SUPPORT_X11=yes
@@ -883,6 +897,7 @@ echo "        GL Window System APIs:${GL_WINSYS_APIS}"
 if test "x$SUPPORT_EGL" = "xyes"; then
 echo "        EGL Platforms:${EGL_PLATFORMS}"
 fi
+echo "        X11 support: ${enable_x11}"
 echo "        Image backend: ${COGL_IMAGE_BACKEND}"
 echo "        Cogl Pango: ${enable_cogl_pango}"
 
