@@ -133,8 +133,9 @@ _cogl_xlib_query_damage_extension (void)
 int
 _cogl_xlib_get_damage_base (void)
 {
+  CoglRendererX11 *x11_renderer;
   _COGL_GET_CONTEXT (ctxt, -1);
 
-  CoglRendererX11 *x11_renderer = ctxt->display->renderer->winsys;
+  x11_renderer = ctxt->display->renderer->winsys;
   return x11_renderer->damage_base;
 }
