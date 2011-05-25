@@ -99,19 +99,6 @@ _cogl_xlib_remove_filter (CoglNativeFilterFunc func,
   cogl_renderer_remove_native_filter (ctx->display->renderer, func, data);
 }
 
-static int
-error_handler (Display     *xdpy,
-               XErrorEvent *error)
-{
-  _COGL_GET_CONTEXT (ctxt, 0);
-
-  g_assert (ctxt->trap_state);
-
-  ctxt->trap_state->trapped_error_code = error->error_code;
-
-  return 0;
-}
-
 void
 _cogl_xlib_trap_errors (CoglXlibTrapState *state)
 {
