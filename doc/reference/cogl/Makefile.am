@@ -60,12 +60,13 @@ IGNORE_HFILES=\
 	cogl-feature-private.h			\
 	cogl-framebuffer-private.h		\
 	cogl-gtype-private.h			\
-	cogl-index-array-private.h		\
+	cogl-index-buffer-private.h		\
 	cogl-indices-private.h			\
 	cogl-journal-private.h			\
 	cogl-matrix-private.h			\
 	cogl-object-private.h			\
 	cogl-path-private.h			\
+	cogl-depth-state-private.h		\
 	cogl-pipeline-fragend-arbfp-private.h	\
 	cogl-pipeline-fragend-fixed-private.h	\
 	cogl-pipeline-fragend-glsl-private.h	\
@@ -74,7 +75,7 @@ IGNORE_HFILES=\
 	cogl-pipeline-progend-glsl-private.h	\
 	cogl-pipeline-vertend-fixed-private.h	\
 	cogl-pipeline-vertend-glsl-private.h	\
-	cogl-pixel-array-private.h		\
+	cogl-pixel-buffer-private.h		\
 	cogl-primitive-private.h		\
 	cogl-primitives-private.h		\
 	cogl-private.h				\
@@ -139,7 +140,9 @@ GTKDOC_LIBS=$(top_builddir)/cogl/libcogl.la $(COGL_DEP_LIBS)
 
 # This includes the standard gtk-doc make rules, copied by gtkdocize.
 EXTRA_DIST =
--include $(top_srcdir)/gtk-doc.make
+if BUILD_GTK_DOC
+include $(top_srcdir)/gtk-doc.make
+endif
 
 # Other files to distribute
 # e.g. EXTRA_DIST += version.xml.in

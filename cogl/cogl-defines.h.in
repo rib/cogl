@@ -21,6 +21,10 @@
  *
  */
 
+#if !defined(__COGL_H_INSIDE__) && !defined(CLUTTER_COMPILATION)
+#error "Only <cogl/cogl.h> can be included directly."
+#endif
+
 #ifndef __COGL_DEFINES_H__
 #define __COGL_DEFINES_H__
 
@@ -30,6 +34,17 @@
 G_BEGIN_DECLS
 
 @COGL_DEFINES@
+
+#ifdef COGL_HAS_EGL_SUPPORT
+#ifdef COGL_HAS_GLES1
+#include <GLES/gl.h>
+@COGL_GLES1_EGL_INCLUDE@
+#else
+#include <EGL/egl.h>
+#define NativeDisplayType EGLNativeDisplayType
+#define NativeWindowType EGLNativeWindowType
+#endif
+#endif
 
 G_END_DECLS
 

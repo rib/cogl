@@ -3,7 +3,7 @@
  *
  * An object oriented GL/GLES Abstraction/Utility Layer
  *
- * Copyright (C) 2010 Intel Corporation.
+ * Copyright (C) 2011 Intel Corporation.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -16,40 +16,17 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library. If not, see <http://www.gnu.org/licenses/>.
- *
- *
+ * License along with this library. If not, see
+ * <http://www.gnu.org/licenses/>.
  *
  * Authors:
- *   Damien Lespiau <damien.lespiau@intel.com>
  *   Robert Bragg <robert@linux.intel.com>
  */
 
-#ifndef __COGL_PIXEL_ARRAY_PRIVATE_H__
-#define __COGL_PIXEL_ARRAY_PRIVATE_H__
+#ifndef __COGL_DEPTH_STATE_PRIVATE_H
+#define __COGL_DEPTH_STATE_PRIVATE_H
 
-#include "cogl-handle.h"
-#include "cogl-buffer-private.h"
 
-#include <glib.h>
+#define COGL_DEPTH_STATE_MAGIC 0xDEADBEEF
 
-G_BEGIN_DECLS
-
-#define COGL_PIXEL_ARRAY(array)     ((CoglPixelArray *)(array))
-
-struct _CoglPixelArray
-{
-  CoglBuffer            _parent;
-
-  CoglPixelFormat       format;
-  unsigned int          width;
-  unsigned int          height;
-  unsigned int          stride;
-};
-
-GQuark
-_cogl_handle_pixel_array_get_type (void);
-
-G_END_DECLS
-
-#endif /* __COGL_PIXEL_ARRAY_PRIVATE_H__ */
+#endif /* __COGL_DEPTH_STATE_PRIVATE_H */

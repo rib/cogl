@@ -43,7 +43,7 @@
 #include "cogl-util.h"
 #include "cogl-context-private.h"
 #include "cogl-handle.h"
-#include "cogl-pixel-array-private.h"
+#include "cogl-pixel-buffer-private.h"
 
 /*
  * GL/GLES compatibility defines for the buffer API:
@@ -128,9 +128,9 @@ convert_bind_target_to_gl_target (CoglBufferBindTarget target)
         return GL_PIXEL_PACK_BUFFER;
       case COGL_BUFFER_BIND_TARGET_PIXEL_UNPACK:
         return GL_PIXEL_UNPACK_BUFFER;
-      case COGL_BUFFER_BIND_TARGET_VERTEX_ARRAY:
+      case COGL_BUFFER_BIND_TARGET_ATTRIBUTE_BUFFER:
         return GL_ARRAY_BUFFER;
-      case COGL_BUFFER_BIND_TARGET_INDEX_ARRAY:
+      case COGL_BUFFER_BIND_TARGET_INDEX_BUFFER:
         return GL_ELEMENT_ARRAY_BUFFER;
       default:
         g_return_val_if_reached (COGL_BUFFER_BIND_TARGET_PIXEL_UNPACK);

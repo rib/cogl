@@ -1373,7 +1373,9 @@ bind_gl_framebuffer (CoglContext *ctx,
         _cogl_framebuffer_get_winsys (framebuffer);
       winsys->onscreen_bind (COGL_ONSCREEN (framebuffer));
 #endif
-      GE (glBindFramebuffer (target, 0));
+      /* glBindFramebuffer is an an extension with OpenGL ES 1.1 */
+      if (cogl_features_available (COGL_FEATURE_OFFSCREEN))
+        GE (glBindFramebuffer (target, 0));
     }
 }
 
@@ -1410,6 +1412,10 @@ _cogl_framebuffer_flush_state (CoglFramebuffer *draw_buffer,
   if (ctx->dirty_gl_viewport)
     {
       float gl_viewport_y;
+
+      if (draw_buffer->viewport_width < 0
+          || draw_buffer->viewport_height < 0)
+        return;
 
       /* Convert the Cogl viewport y offset to an OpenGL viewport y offset
        * NB: OpenGL defines its window and viewport origins to be bottom

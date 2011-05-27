@@ -148,6 +148,8 @@ AS_CASE([$host],
 AC_MSG_RESULT([$platform_win32])
 AM_CONDITIONAL(OS_WIN32, [test "$platform_win32" = "yes"])
 
+AC_CHECK_HEADER([OpenGL/gl.h], [platform_quartz=yes], [platform_quartz=no])
+AM_CONDITIONAL(OS_QUARTZ, [test "$platform_quartz" = "yes"])
 
 dnl ================================================================
 dnl Handle extra configure options
@@ -164,13 +166,31 @@ AC_ARG_ENABLE(
   enable_debug=default
 )
 
+PKG_CHECK_EXISTS([CAIRO], [cairo], [have_cairo=yes])
+AC_ARG_ENABLE(
+  [cairo],
+  [AC_HELP_STRING([--enable-cairo=@<:@no/yes@:>@], [Control Cairo usage in Cogl debugging code @<:@default=]default[@:>@])],
+  [],
+  enable_cairo=default
+)
+AS_IF([test "x$enable_cairo" = "xyes" && test "x$have_cairo" != "xyes"],
+      [AC_MSG_ERROR([Could not find Cairo])])
+
+
 AS_CASE(
   [$enable_debug],
   [yes],
   [
     test "$cflags_set" = set || CFLAGS="$CFLAGS -g -O0"
     COGL_EXTRA_CFLAGS="$COGL_EXTRA_CFLAGS -DCOGL_GL_DEBUG -DCOGL_OBJECT_DEBUG -DCOGL_HANDLE_DEBUG -DCOGL_ENABLE_DEBUG"
-    COGL_PKG_REQUIRES="$COGL_PKG_REQUIRES cairo"
+
+    # debugging code can use cairo to dump the atlas
+    AS_IF([test "x$have_cairo" = "xyes" && test "x$enable_cairo" != "xno"],
+          [
+            COGL_PKG_REQUIRES="$COGL_PKG_REQUIRES cairo"
+            AC_DEFINE([HAVE_CAIRO], [1], [Whether we have cairo or not])
+          ])
+
   ],
   [no],
   [
@@ -307,7 +327,7 @@ AC_ARG_ENABLE(
 )
 AS_IF([test "x$enable_gles1" = "xyes"],
       [
-        AS_IF([test "x$platform_win32" != "xyes"],
+        AS_IF([test "x$platform_win32" = "xyes"],
 	      [AC_MSG_ERROR([GLES 1 not available for win32])])
 
         DRIVER_COUNT=$((DRIVER_COUNT + 1))
@@ -325,9 +345,29 @@ AS_IF([test "x$enable_gles1" = "xyes"],
            NEED_EGL=yes
           ],
           [
-            AC_CHECK_HEADERS([$cogl_gl_headers],
-                             [],
-                             [AC_MSG_ERROR([Unable to locate required GLES headers])])
+            # We have to check the two headers independently as GLES/glext.h
+            # needs to include GLES/gl.h to have the GL types defined (eg.
+            # GLenum).
+            AC_CHECK_HEADER([GLES/gl.h],
+                            [],
+                            [AC_MSG_ERROR([Unable to locate GLES/gl.h])])
+            AC_CHECK_HEADER([GLES/glext.h],
+                            [],
+                            [AC_MSG_ERROR([Unable to locate GLES/glext.h])],
+                            [#include <GLES/gl.h>])
+
+            # Early implementations provided only a GLES/egl.h while Khronos's
+            # implementer guide now states EGL/egl.h is the One. Some
+            # implementations keep a GLES/egl.h wrapper around EGL/egl.h for
+            # backward compatibility while others provide EGL/egl.h only.
+            AC_CHECK_HEADERS([GLES/egl.h EGL/egl.h])
+
+            AS_IF([test "x$ac_cv_header_GLES_egl_h" = "xyes"],
+                  [COGL_GLES1_EGL_INCLUDE="#include <GLES/egl.h>"],
+                  [AS_IF([test "x$ac_cv_header_EGL_egl_h" = "xyes"],
+                         [COGL_GLES1_EGL_INCLUDE="#include <EGL/egl.h>"],
+                         [AC_MSG_ERROR([Unable to locate EGL header])])])
+            AC_SUBST([COGL_GLES1_EGL_INCLUDE])
 
             # Check for a GLES 1.x Common Profile library with/without EGL.
             #
@@ -359,8 +399,8 @@ AC_ARG_ENABLE(
 )
 AS_IF([test "x$enable_gles2" = "xyes"],
       [
-        AS_IF([test "x$platform_win32" != "xyes"],
-	      [AC_MSG_ERROR([GLES 1 not available for win32])])
+        AS_IF([test "x$platform_win32" = "xyes"],
+	      [AC_MSG_ERROR([GLES 2 not available for win32])])
 
         DRIVER_COUNT=$((DRIVER_COUNT + 1))
         COGL_DRIVER=gles
@@ -374,11 +414,16 @@ AS_IF([test "x$enable_gles2" = "xyes"],
         PKG_CHECK_EXISTS([glesv2],
           [COGL_PKG_REQUIRES="$COGL_PKG_REQUIRES glesv2"],
           [
-            AC_CHECK_HEADERS([$cogl_gl_headers],
-                             [],
-                             [AC_MSG_ERROR([Unable to locate required GLES headers])],
-                             [[#include <GLES2/gl2.h>
-                             ]])
+            # We have to check the two headers independently as GLES2/gl2ext.h
+            # needs to include GLES2/gl2.h to have the GL types defined (eg.
+            # GLenum).
+            AC_CHECK_HEADER([GLES2/gl2.h],
+                            [],
+                            [AC_MSG_ERROR([Unable to locate GLES2/gl2.h])])
+            AC_CHECK_HEADER([GLES2/gl2ext.h],
+                            [],
+                            [AC_MSG_ERROR([Unable to locate GLES2/gl2ext.h])],
+                            [#include <GLES2/gl2.h>])
 
             COGL_EXTRA_LDFLAGS="$COGL_EXTRA_LDFLAGS -lGLESv2"
           ])
@@ -401,15 +446,22 @@ AS_IF([test "x$enable_gl" = "xyes"],
 
         cogl_gl_headers="GL/gl.h"
 
-        AS_IF([test "x$platform_win32" = "xyes"],
+        AS_IF([test "x$platform_quartz" = "xyes"],
+              [
+                cogl_gl_headers="OpenGL/gl.h"
+                COGL_EXTRA_LDFLAGS="$COGL_EXTRA_LDFLAGS -framework OpenGL"
+              ],
+
+              [test "x$platform_win32" = "xyes"],
 	      [
 		COGL_EXTRA_LDFLAGS="$COGL_EXTRA_LDFLAGS -lopengl32 -lgdi32 -lwinmm"
 		COGL_EXTRA_CFLAGS="$COGL_EXTRA_CFLAGS -D_WIN32_WINNT=0x0500"
                 ALLOW_WGL=yes
 	      ],
+
 	      [
-		PKG_CHECK_EXISTS(
-		  [gl], [COGL_PKG_REQUIRES="$COGL_PKG_REQUIRES gl"],
+		PKG_CHECK_EXISTS([gl],
+                  [COGL_PKG_REQUIRES="$COGL_PKG_REQUIRES gl"],
 		  [AC_CHECK_LIB(GL, [glGetString],
 				[COGL_EXTRA_LDFLAGS="$COGL_EXTRA_LDFLAGS -lGL"],
 				[AC_MSG_ERROR([Unable to locate required GL library])])
@@ -509,6 +561,29 @@ AS_IF([test "x$enable_wgl" = "xyes"],
       ])
 AM_CONDITIONAL(SUPPORT_WGL, [test "x$SUPPORT_WGL" = "xyes"])
 
+AC_ARG_ENABLE(
+  [quartz],
+  [AC_HELP_STRING([--enable-quartz=@<:@no/yes@:>@], [Enable support for the Quartz platform @<:@default=no@:>@])],
+  [],
+  [AS_IF([test "x$platform_quartz" = "xyes"], [enable_quartz=yes], [enable_quartz=no])]
+)
+AS_IF([test "x$enable_quartz" = "xyes"],
+  [AS_IF([test "x$platform_quartz" = "xno"],
+         [AC_MSG_ERROR([OpenGL framework not support with $COGL_DRIVER driver])])
+
+   AS_IF([test "x$enable_stub_winsys" = "xyes"],
+         [AC_MSG_ERROR([Stub winsys not currently compatible with others])])
+
+   SUPPORT_QUARTZ=yes
+   GL_WINSYS_APIS="$GL_WINSYS_APIS quartz"
+
+   AC_DEFINE([COGL_HAS_QUARTZ_SUPPORT], [1], [Cogl supports OpenGL using the Quartz framework])
+   COGL_DEFINES_SYMBOLS-"$COGL_DEFINES_SYMBOLS COGL_HAS_QUARTZ_SUPPORT"
+
+   #AC_DEFINE([COGL_HAS_FULL_WINSYS], [1], [Cogl can create its own OpenGL context])
+  ])
+AM_CONDITIONAL(SUPPORT_QUARTZ, [test "x$SUPPORT_QUARTZ" = "xyes"])
+
 EGL_PLATFORM_COUNT=0
 
 AC_ARG_ENABLE(
@@ -585,6 +660,27 @@ AS_IF([test "x$enable_wayland_egl_platform" == "xyes"],
 AM_CONDITIONAL(SUPPORT_EGL_PLATFORM_WAYLAND,
                [test "x$enable_wayland_egl_platform" = "xyes"])
 
+dnl Android EGL platform
+AC_ARG_ENABLE(
+  [android-egl-platform],
+  [AC_HELP_STRING([--enable-android-egl-platform=@<:@no/yes@:>@], [Enable support for the Android egl platform @<:@default=no@:>@])],
+  [],
+  enable_android_egl_platform=no
+)
+AS_IF([test "x$enable_android_egl_platform" == "xyes"],
+      [
+        EGL_PLATFORM_COUNT=$((EGL_PLATFORM_COUNT+1))
+        NEED_EGL=yes
+        EGL_PLATFORMS="$EGL_PLATFORMS android"
+
+        AC_CHECK_HEADER([android/native_window.h],
+                        [],
+                        [AC_MSG_ERROR([Unable to locate android/native_window.h])])
+
+        COGL_DEFINES_SYMBOLS="$COGL_DEFINES_SYMBOLS COGL_HAS_EGL_PLATFORM_ANDROID_SUPPORT"
+      ])
+AM_CONDITIONAL(SUPPORT_EGL_PLATFORM_ANDROID,
+               [test "x$enable_android_egl_platform" = "xyes"])
 
 dnl This should go last, since it's the default fallback and we need
 dnl to check the value of $EGL_PLATFORM_COUNT here.
@@ -632,12 +728,17 @@ AS_IF([test "x$NEED_EGL" = "xyes" && test "x$EGL_CHECKED" != "xyes"],
             COGL_EXTRA_LDFLAGS="$COGL_EXTRA_LDFLAGS -lEGL"
           ]
           )
+        ])
+
+AS_IF([test "x$NEED_EGL" = "xyes"],
+      [
         SUPPORT_EGL=yes
         GL_WINSYS_APIS="$GL_WINSYS_APIS egl"
         COGL_DEFINES_SYMBOLS="$COGL_DEFINES_SYMBOLS COGL_HAS_EGL_SUPPORT"
         AC_DEFINE([COGL_HAS_FULL_WINSYS], [1],
                   [Cogl can create its own OpenGL context])
       ])
+
 AM_CONDITIONAL(SUPPORT_EGL, [test "x$SUPPORT_EGL" = "xyes"])
 
 

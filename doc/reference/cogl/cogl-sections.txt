@@ -519,19 +519,25 @@ cogl_material_get_layer_wrap_mode_p
 cogl_material_wrap_mode_get_type
 cogl_material_set_user_program
 cogl_material_get_user_program
-cogl_material_set_depth_range
-cogl_material_get_depth_range
-cogl_material_set_depth_test_enabled
-cogl_material_get_depth_test_enabled
-cogl_material_set_depth_test_function
-cogl_material_get_depth_test_function
-cogl_material_set_depth_writing_enabled
-cogl_material_get_depth_writing_enabled
 cogl_material_foreach_layer
 
 <SUBSECTION Private>
 cogl_blend_string_error_get_type
 cogl_blend_string_error_quark
+</SECTION>
+
+<SECTION>
+<FILE>cogl-depth-state</FILE>
+CoglDepthState
+cogl_depth_state_init
+cogl_depth_state_set_test_enabled
+cogl_depth_state_get_test_enabled
+cogl_depth_state_set_test_function
+cogl_depth_state_get_test_function
+cogl_depth_state_set_writing_enabled
+cogl_depth_state_get_writing_enabled
+cogl_depth_state_set_range
+cogl_depth_state_get_range
 </SECTION>
 
 <SECTION>
@@ -657,4 +663,44 @@ cogl_program_uniform_matrix
 <TITLE>Offscreen Buffers (Deprecated)</TITLE>
 cogl_offscreen_ref
 cogl_offscreen_unref
+</SECTION>
+
+<SECTION>
+<FILE>cogl-euler</FILE>
+<TITLE>Eulers (Rotations)</TITLE>
+CoglEuler
+cogl_euler_init
+cogl_euler_init_from_matrix
+cogl_euler_init_from_quaternion
+cogl_euler_equal
+cogl_euler_copy
+cogl_euler_free
+</SECTION>
+
+<SECTION>
+<FILE>cogl-quaternion</FILE>
+<TITLE>Quaternions (Rotations)</TITLE>
+CoglQuaternion
+cogl_quaternion_init_identity
+cogl_quaternion_init
+cogl_quaternion_init_from_angle_vector
+cogl_quaternion_init_from_array
+cogl_quaternion_init_from_x_rotation
+cogl_quaternion_init_from_y_rotation
+cogl_quaternion_init_from_z_rotation
+cogl_quaternion_equal
+cogl_quaternion_copy
+cogl_quaternion_free
+cogl_quaternion_get_rotation_angle
+cogl_quaternion_get_rotation_axis
+cogl_quaternion_normalize
+cogl_quaternion_dot_product
+cogl_quaternion_invert
+cogl_quaternion_multiply
+cogl_quaternion_pow
+cogl_quaternion_slerp
+cogl_quaternion_nlerp
+cogl_quaternion_squad
+cogl_get_static_identity_quaternion
+cogl_get_static_zero_quaternion
 </SECTION>

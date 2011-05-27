@@ -47,6 +47,16 @@ G_BEGIN_DECLS
 #define COGL_PRIVATE(x) private_member_ ## x
 #endif
 
+/* To help catch accidental changes to public structs that should
+ * be stack allocated we use this macro to compile time assert that
+ * a struct size is as expected.
+ */
+#define COGL_STRUCT_SIZE_ASSERT(TYPE, SIZE) \
+typedef struct { \
+          char compile_time_assert_ ## TYPE ## _size[ \
+              (sizeof (TYPE) == (SIZE)) ? 1 : -1]; \
+        } _ ## TYPE ## SizeCheck
+
 /**
  * CoglHandle:
  *
@@ -117,6 +127,18 @@ cogl_object_unref (void *object);
  * actual arguments and return type may be different.
  */
 typedef void (* CoglFuncPtr) (void);
+
+/* We forward declare this in cogl-types to avoid circular dependencies
+ * between cogl-matrix.h, cogl-euler.h and cogl-quaterion.h */
+typedef struct _CoglMatrix      CoglMatrix;
+
+/* Same as above we forward declared CoglQuaternion to avoid
+ * circular dependencies. */
+typedef struct _CoglQuaternion CoglQuaternion;
+
+/* Same as above we forward declared CoglEuler to avoid
+ * circular dependencies. */
+typedef struct _CoglEuler CoglEuler;
 
 /**
  * CoglFixed:
@@ -332,6 +354,7 @@ struct _CoglColor
   guint32 COGL_PRIVATE (padding1);
   guint32 COGL_PRIVATE (padding2);
 };
+COGL_STRUCT_SIZE_ASSERT (CoglColor, 16);
 
 /**
  * CoglTextureVertex:
@@ -352,6 +375,7 @@ struct _CoglTextureVertex
 
   CoglColor color;
 };
+COGL_STRUCT_SIZE_ASSERT (CoglTextureVertex, 36);
 
 /**
  * CoglTextureFlags:

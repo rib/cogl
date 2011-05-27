@@ -61,21 +61,24 @@ cogl_public_h = \
 	$(srcdir)/cogl-buffer.h 		\
 	$(srcdir)/cogl-color.h 			\
 	$(srcdir)/cogl-fixed.h 			\
+	$(srcdir)/cogl-depth-state.h 		\
 	$(srcdir)/cogl-material-compat.h 	\
 	$(srcdir)/cogl-pipeline.h 		\
 	$(srcdir)/cogl-vector.h 		\
+	$(srcdir)/cogl-euler.h 			\
+	$(srcdir)/cogl-quaternion.h 		\
 	$(srcdir)/cogl-matrix.h 		\
 	$(srcdir)/cogl-offscreen.h 		\
 	$(srcdir)/cogl-primitives.h 		\
 	$(srcdir)/cogl-path.h 			\
-	$(srcdir)/cogl-pixel-array.h		\
+	$(srcdir)/cogl-pixel-buffer.h		\
 	$(srcdir)/cogl-shader.h 		\
 	$(srcdir)/cogl-texture.h 		\
 	$(srcdir)/cogl-texture-3d.h             \
 	$(srcdir)/cogl-types.h 			\
 	$(srcdir)/cogl-vertex-buffer.h 		\
-	$(srcdir)/cogl-index-array.h 		\
-	$(srcdir)/cogl-vertex-array.h 		\
+	$(srcdir)/cogl-index-buffer.h 		\
+	$(srcdir)/cogl-attribute-buffer.h 	\
 	$(srcdir)/cogl-indices.h 		\
 	$(srcdir)/cogl-attribute.h 		\
 	$(srcdir)/cogl-primitive.h 		\
@@ -213,14 +216,14 @@ cogl_sources_c = \
 	$(srcdir)/cogl-color.c				\
 	$(srcdir)/cogl-buffer-private.h 		\
 	$(srcdir)/cogl-buffer.c				\
-	$(srcdir)/cogl-pixel-array-private.h		\
-	$(srcdir)/cogl-pixel-array.c			\
+	$(srcdir)/cogl-pixel-buffer-private.h		\
+	$(srcdir)/cogl-pixel-buffer.c			\
 	$(srcdir)/cogl-vertex-buffer-private.h 		\
 	$(srcdir)/cogl-vertex-buffer.c			\
-	$(srcdir)/cogl-index-array-private.h		\
-	$(srcdir)/cogl-index-array.c			\
-	$(srcdir)/cogl-vertex-array-private.h		\
-	$(srcdir)/cogl-vertex-array.c			\
+	$(srcdir)/cogl-index-buffer-private.h		\
+	$(srcdir)/cogl-index-buffer.c			\
+	$(srcdir)/cogl-attribute-buffer-private.h	\
+	$(srcdir)/cogl-attribute-buffer.c		\
 	$(srcdir)/cogl-indices-private.h		\
 	$(srcdir)/cogl-indices.c			\
 	$(srcdir)/cogl-attribute-private.h		\
@@ -229,9 +232,13 @@ cogl_sources_c = \
 	$(srcdir)/cogl-primitive.c			\
 	$(srcdir)/cogl-matrix.c				\
 	$(srcdir)/cogl-vector.c				\
+	$(srcdir)/cogl-euler.c				\
+	$(srcdir)/cogl-quaternion.c			\
 	$(srcdir)/cogl-matrix-private.h			\
 	$(srcdir)/cogl-matrix-stack.c			\
 	$(srcdir)/cogl-matrix-stack.h			\
+	$(srcdir)/cogl-depth-state.c			\
+	$(srcdir)/cogl-depth-state-private.h		\
 	$(srcdir)/cogl-pipeline.c			\
 	$(srcdir)/cogl-pipeline-private.h		\
 	$(srcdir)/cogl-pipeline-opengl.c		\
@@ -324,6 +331,10 @@ cogl_sources_c += \
 	$(srcdir)/winsys/cogl-winsys-wgl.c \
 	$(srcdir)/winsys/cogl-winsys-wgl-feature-functions.h
 endif
+if SUPPORT_QUARTZ
+cogl_sources_c += \
+	$(srcdir)/winsys/cogl-winsys-quartz.c
+endif
 if SUPPORT_EGL_PLATFORM_POWERVR_X11
 cogl_sources_c += \
 	$(srcdir)/winsys/cogl-winsys-egl.c
@@ -337,6 +348,10 @@ cogl_sources_c += \
        $(srcdir)/winsys/cogl-winsys-egl.c
 endif
 if SUPPORT_EGL_PLATFORM_WAYLAND
+cogl_sources_c += \
+       $(srcdir)/winsys/cogl-winsys-egl.c
+endif
+if SUPPORT_EGL_PLATFORM_ANDROID
 cogl_sources_c += \
        $(srcdir)/winsys/cogl-winsys-egl.c
 endif
@@ -356,9 +371,15 @@ include $(top_srcdir)/build/autotools/Makefile.am.enums
 lib_LTLIBRARIES += libcogl.la
 
 libcogl_la_LIBADD = -lm $(COGL_DEP_LIBS) $(COGL_EXTRA_LDFLAGS)
+
 if SUPPORT_GLX
 libcogl_la_LIBADD += -ldl
 endif
+
+if SUPPORT_QUARTZ
+libcogl_la_LIBADD += -ldl
+endif
+
 # XXX: The aim is to eventually get rid of all private API exports
 # for cogl-pango.
 libcogl_la_LDFLAGS = \
@@ -374,6 +395,7 @@ nodist_libcogl_la_SOURCES = $(BUILT_SOURCES)
 cogl_headers = \
 	$(cogl_public_h) \
 	$(srcdir)/cogl-deprecated.h \
+	$(srcdir)/cogl-pango.h \
 	$(NULL)
 
 coglincludedir = $(includedir)/cogl/cogl
@@ -434,7 +456,7 @@ Cogl-1.0.gir: libcogl.la Makefile
 Cogl_1_0_gir_NAMESPACE = Cogl
 Cogl_1_0_gir_VERSION = 1.0
 Cogl_1_0_gir_LIBS = libcogl.la
-Cogl_1_0_gir_FILES = $(cogl_headers) cogl-enum-types.h
+Cogl_1_0_gir_FILES = $(cogl_public_h) cogl-enum-types.h
 Cogl_1_0_gir_CFLAGS = $(INCLUDES) $(AM_CPPFLAGS)
 Cogl_1_0_gir_INCLUDES = GL-1.0 GObject-2.0
 Cogl_1_0_gir_EXPORT_PACKAGES = cogl-1.0

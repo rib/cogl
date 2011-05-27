@@ -43,7 +43,7 @@ INCLUDES = \
 	-I$(top_srcdir)			\
 	-I$(top_builddir)
 
-cogl_pangoheadersdir = $(includedir)/cogl/cogl
+cogl_pangoheadersdir = $(includedir)/cogl/cogl-pango
 cogl_pangoheaders_HEADERS = $(source_h)
 
 pc_files = cogl-pango-1.0.pc \
@@ -96,6 +96,8 @@ DISTCLEANFILES += ../build/win32/vs9/cogl-pango.vcproj ../build/win32/vs10/cogl-
 INTROSPECTION_GIRS =
 
 if HAVE_INTROSPECTION
+INTROSPECTION_COMPILER_ARGS=--includedir=$(top_builddir)/cogl
+
 CoglPango-1.0.gir: libcogl-pango.la Makefile
 
 CoglPango_1_0_gir_NAMESPACE = CoglPango
@@ -109,7 +111,7 @@ CoglPango_1_0_gir_SCANNERFLAGS = \
 	--warn-all \
 	--identifier-prefix=CoglPango \
 	--symbol-prefix=cogl_pango \
-	--c-include='cogl/cogl-pango.h' \
+	--c-include='cogl-pango/cogl-pango.h' \
 	--include-uninstalled=$(top_builddir)/cogl/Cogl-1.0.gir
 
 INTROSPECTION_GIRS += CoglPango-1.0.gir

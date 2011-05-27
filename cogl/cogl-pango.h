@@ -3,7 +3,7 @@
  *
  * An object oriented GL/GLES Abstraction/Utility Layer
  *
- * Copyright (C) 2010 Intel Corporation.
+ * Copyright (C) 2011 Intel Corporation.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -16,24 +16,18 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library. If not, see
- * <http://www.gnu.org/licenses/>.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  *
  *
- *
- * Authors:
- *   Robert Bragg <robert@linux.intel.com>
  */
+#ifndef __COGL_PANGO_H_COMPAT__
+#define __COGL_PANGO_H_COMPAT__
 
-#ifndef __COGL_VERTEX_ARRAY_PRIVATE_H
-#define __COGL_VERTEX_ARRAY_PRIVATE_H
+#ifdef COGL_ENABLE_EXPERIMENTAL_2_0_API
+#error "#include <cogl/cogl-pango.h> is unsupported; please #include <cogl-pango/cogl-pango.h>"
+#else
+#warning "#include <cogl/cogl-pango.h> is deprecated; please #include <cogl-pango/cogl-pango.h>"
+#include <cogl-pango/cogl-pango.h>
+#endif
 
-#include "cogl-buffer-private.h"
-
-struct _CoglVertexArray
-{
-  CoglBuffer _parent;
-};
-
-#endif /* __COGL_VERTEX_ARRAY_PRIVATE_H */
-
+#endif /* __COGL_PANGO_H_COMPAT__ */

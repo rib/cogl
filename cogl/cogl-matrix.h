@@ -30,6 +30,10 @@
 #include <glib.h>
 #include "cogl-types.h"
 
+#ifdef COGL_ENABLE_EXPERIMENTAL_API
+#include "cogl-quaternion.h"
+#endif
+
 G_BEGIN_DECLS
 
 /**
@@ -40,8 +44,6 @@ G_BEGIN_DECLS
  * transforms, and projective transforms. This exposes a utility API that can
  * be used for direct manipulation of these matrices.
  */
-
-typedef struct _CoglMatrix      CoglMatrix;
 
 /**
  * CoglMatrix:
@@ -106,6 +108,7 @@ struct _CoglMatrix
   unsigned long  COGL_PRIVATE (flags);
   unsigned long  COGL_PRIVATE (_padding3);
 };
+COGL_STRUCT_SIZE_ASSERT (CoglMatrix, 128 + sizeof (unsigned long) * 3);
 
 /**
  * cogl_matrix_init_identity:
@@ -359,6 +362,21 @@ cogl_matrix_init_from_array (CoglMatrix *matrix,
  */
 G_CONST_RETURN float *
 cogl_matrix_get_array (const CoglMatrix *matrix);
+
+#ifdef COGL_ENABLE_EXPERIMENTAL_API
+/**
+ * cogl_matrix_init_from_quaternion:
+ * @matrix: A 4x4 transformation matrix
+ * @quaternion: A #CoglQuaternion
+ *
+ * Initializes @matrix from a #CoglQuaternion rotation.
+ *
+ * Return value: a pointer to the float array
+ */
+void
+cogl_matrix_init_from_quaternion (CoglMatrix *matrix,
+                                  CoglQuaternion *quaternion);
+#endif
 
 /**
  * cogl_matrix_equal:
