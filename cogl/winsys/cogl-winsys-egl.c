@@ -79,28 +79,39 @@ typedef enum _CoglEGLWinsysFeature
   COGL_EGL_WINSYS_FEATURE_EGL_IMAGE_FROM_WAYLAND_BUFFER =1L<<2
 } CoglEGLWinsysFeature;
 
-typedef struct _CoglRendererEGL
-{
 #ifdef COGL_HAS_EGL_PLATFORM_POWERVR_X11_SUPPORT
-  CoglRendererXlib _parent;
+typedef struct _CoglRendererEGLPlatformX11
+{
+  CoglRendererXlib xlib_renderer;
+} CoglRendererEGLPlatformX11;
 #endif
 
-  CoglEGLWinsysFeature private_features;
-
 #ifdef COGL_HAS_EGL_PLATFORM_WAYLAND_SUPPORT
+typedef struct _CoglRendererEGLPlatformWayland
+{
   struct wl_display *wayland_display;
   struct wl_compositor *wayland_compositor;
   uint32_t wayland_event_mask;
+} CoglRendererEGLPlatformWayland;
 #endif
+
+#ifdef COGL_HAS_EGL_PLATFORM_GDL_SUPPORT
+typedef struct _CoglRendererEGLPlatformGDL
+{
+  gboolean gdl_initialized;
+} CoglRendererEGLPlatformGDL;
+#endif
+
+typedef struct _CoglRendererEGL
+{
+  CoglEGLWinsysFeature private_features;
 
   EGLDisplay edpy;
 
   EGLint egl_version_major;
   EGLint egl_version_minor;
 
-#ifdef COGL_HAS_EGL_PLATFORM_GDL_SUPPORT
-  gboolean gdl_initialized;
-#endif
+  void *platform;
 
   /* Function pointers for GLX specific extensions */
 #define COGL_WINSYS_FEATURE_BEGIN(a, b, c, d)
@@ -117,32 +128,60 @@ typedef struct _CoglRendererEGL
 #undef COGL_WINSYS_FEATURE_END
 } CoglRendererEGL;
 
-typedef struct _CoglDisplayEGL
-{
 #ifdef COGL_HAS_EGL_PLATFORM_POWERVR_X11_SUPPORT
-  CoglDisplayXlib _parent;
+typedef struct _CoglDisplayEGLPlatformX11
+{
+  CoglDisplayXlib display_x11;
+  EGLSurface dummy_surface;
+} CoglDisplayEGLPlatformX11;
 #endif
 
-  EGLContext egl_context;
-#if defined (COGL_HAS_EGL_PLATFORM_POWERVR_X11_SUPPORT)
-  EGLSurface dummy_surface;
-#elif defined (COGL_HAS_EGL_PLATFORM_WAYLAND_SUPPORT)
+#ifdef COGL_HAS_EGL_PLATFORM_WAYLAND_SUPPORT
+typedef struct _CoglDisplayEGLPlatformWayland
+{
   struct wl_surface *wayland_surface;
   struct wl_egl_window *wayland_egl_native_window;
   EGLSurface dummy_surface;
-#elif defined (COGL_HAS_EGL_PLATFORM_POWERVR_NULL_SUPPORT) || \
-      defined (COGL_HAS_EGL_PLATFORM_GDL_SUPPORT) || \
-      defined (COGL_HAS_EGL_PLATFORM_ANDROID_SUPPORT)
+} CoglDisplayEGLPlatformWayland;
+#endif
+
+#ifdef COGL_HAS_EGL_PLATFORM_POWERVR_NULL_SUPPORT
+typedef struct _CoglDisplayEGLPlatformNULL
+{
   EGLSurface egl_surface;
   int egl_surface_width;
   int egl_surface_height;
   gboolean have_onscreen;
-#else
-#error "Unknown EGL platform"
+} CoglDisplayEGLPlatformNULL;
 #endif
 
+#ifdef COGL_HAS_EGL_PLATFORM_GDL_SUPPORT
+typedef struct _CoglDisplayEGLPlatformGDL
+{
+  EGLSurface egl_surface;
+  int egl_surface_width;
+  int egl_surface_height;
+  gboolean have_onscreen;
+} CoglDisplayEGLPlatformGDL;
+#endif
+
+#ifdef COGL_HAS_EGL_PLATFORM_ANDROID_SUPPORT
+typedef struct _CoglDisplayEGLPlatformAndroid
+{
+  EGLSurface egl_surface;
+  int egl_surface_width;
+  int egl_surface_height;
+  gboolean have_onscreen;
+} CoglDisplayEGLPlatformAndroid;
+#endif
+
+typedef struct _CoglDisplayEGL
+{
+  EGLContext egl_context;
   EGLConfig egl_config;
   gboolean found_egl_config;
+
+  void *platform;
 } CoglDisplayEGL;
 
 typedef struct _CoglContextEGL
@@ -158,18 +197,26 @@ typedef struct _CoglOnscreenXlib
 } CoglOnscreenXlib;
 #endif
 
-typedef struct _CoglOnscreenEGL
-{
 #ifdef COGL_HAS_EGL_PLATFORM_POWERVR_X11_SUPPORT
-  CoglOnscreenXlib _parent;
+typedef struct CoglOnscreenEGLPlatformX11
+{
+  CoglOnscreenXlib onscreen_x11;
+} CoglOnscreenEGLPlatformX11;
 #endif
 
 #ifdef COGL_HAS_EGL_PLATFORM_WAYLAND_SUPPORT
+typedef struct CoglOnscreenEGLPlatformX11
+{
   struct wl_egl_window *wayland_egl_native_window;
   struct wl_surface *wayland_surface;
+} CoglOnscreenEGLPlatformX11;
 #endif
 
+typedef struct _CoglOnscreenEGL
+{
   EGLSurface egl_surface;
+
+  void *platform;
 } CoglOnscreenEGL;
 
 #ifdef EGL_KHR_image_pixmap
@@ -272,21 +319,35 @@ event_filter_cb (void *event, void *data)
 
   return COGL_FILTER_CONTINUE;
 }
+
+static void
+_cogl_egl_platform_renderer_disconnect (CoglRenderer *renderer)
+{
+  CoglRendererEGL *egl_renderer = renderer->winsys;
+  CoglRendererEGLPlatformX11 *x11_renderer_platform = renderer->platform;
+
+  _cogl_renderer_xlib_disconnect (&x11_renderer_platform->xlib_renderer);
+}
 #endif /* COGL_HAS_EGL_PLATFORM_POWERVR_X11_SUPPORT */
+
+#ifdef COGL_HAS_EGL_PLATFORM_GDL_SUPPORT
+static void
+_cogl_egl_platform_renderer_disconnect (CoglRenderer *renderer)
+{
+  CoglRendererEGL *egl_renderer = renderer->winsys;
+  CoglRendererEGLPlatformGDL *gdl_renderer_platform = renderer->platform;
+
+  if (gdl_renderer_platform->gdl_initialized)
+    gdl_close ();
+}
+#endif
 
 static void
 _cogl_winsys_renderer_disconnect (CoglRenderer *renderer)
 {
   CoglRendererEGL *egl_renderer = renderer->winsys;
 
-#ifdef COGL_HAS_EGL_PLATFORM_GDL_SUPPORT
-  if (egl_renderer->gdl_initialized)
-    gdl_close ();
-#endif
-
-#ifdef COGL_HAS_EGL_PLATFORM_POWERVR_X11_SUPPORT
-  _cogl_renderer_xlib_disconnect (renderer);
-#endif
+  egl_renderer->platform_vtable->disconnect (renderer);
 
   eglTerminate (egl_renderer->edpy);
 
@@ -361,24 +422,15 @@ check_egl_extensions (CoglRenderer *renderer)
       }
 }
 
+#ifdef COGL_HAS_EGL_PLATFORM_POWERVR_X11_SUPPORT
 static gboolean
-_cogl_winsys_renderer_connect (CoglRenderer *renderer,
-                               GError **error)
+_cogl_egl_platform_renderer_connect (CoglRenderer *renderer,
+                                     GError **error)
 {
-  CoglRendererEGL *egl_renderer;
-#ifdef COGL_HAS_EGL_PLATFORM_POWERVR_X11_SUPPORT
-  CoglRendererXlib *xlib_renderer;
-#endif
+  CoglRendererEGL *egl_renderer = renderer->winsys;
   EGLBoolean status;
-#ifdef COGL_HAS_EGL_PLATFORM_GDL_SUPPORT
-  gdl_ret_t rc = GDL_SUCCESS;
-  gdl_display_info_t gdl_display_info;
-#endif
+  CoglRendererXlib *xlib_renderer;
 
-  renderer->winsys = g_slice_new0 (CoglRendererEGL);
-
-  egl_renderer = renderer->winsys;
-#ifdef COGL_HAS_EGL_PLATFORM_POWERVR_X11_SUPPORT
   xlib_renderer = renderer->winsys;
 
   if (!_cogl_renderer_xlib_connect (renderer, error))
@@ -391,7 +443,23 @@ _cogl_winsys_renderer_connect (CoglRenderer *renderer,
                           &egl_renderer->egl_version_major,
                           &egl_renderer->egl_version_minor);
 
-#elif defined (COGL_HAS_EGL_PLATFORM_WAYLAND_SUPPORT)
+  if (status != EGL_TRUE)
+    {
+      g_set_error (error, COGL_WINSYS_ERROR,
+                   COGL_WINSYS_ERROR_INIT,
+                   "Failed to initialize EGL");
+      goto error;
+    }
+}
+#endif
+
+#if defined (COGL_HAS_EGL_PLATFORM_WAYLAND_SUPPORT)
+static gboolean
+_cogl_egl_platform_renderer_connect (CoglRenderer *renderer,
+                                     GError **error)
+{
+  CoglRendererEGL *egl_renderer = renderer->winsys;
+  EGLBoolean status;
 
   /* The EGL API doesn't provide for a way to explicitly select a
    * platform when the driver can support multiple. Mesa allows
@@ -449,14 +517,31 @@ _cogl_winsys_renderer_connect (CoglRenderer *renderer,
   while (!egl_renderer->wayland_compositor)
     wl_display_iterate (egl_renderer->wayland_display,
                         egl_renderer->wayland_event_mask);
-#else
+  if (status != EGL_TRUE)
+    {
+      g_set_error (error, COGL_WINSYS_ERROR,
+                   COGL_WINSYS_ERROR_INIT,
+                   "Failed to initialize EGL");
+      goto error;
+    }
+}
+#endif
+
+#ifdef COGL_HAS_EGL_PLATFORM_GDL_SUPPORT
+static gboolean
+_cogl_egl_platform_renderer_connect (CoglRenderer *renderer,
+                                     GError **error)
+{
+  CoglRendererEGL *egl_renderer = renderer->winsys;
+  EGLBoolean status;
+  gdl_ret_t rc = GDL_SUCCESS;
+  gdl_display_info_t gdl_display_info;
+
   egl_renderer->edpy = eglGetDisplay (EGL_DEFAULT_DISPLAY);
 
   status = eglInitialize (egl_renderer->edpy,
 			  &egl_renderer->egl_version_major,
 			  &egl_renderer->egl_version_minor);
-#endif
-
   if (status != EGL_TRUE)
     {
       g_set_error (error, COGL_WINSYS_ERROR,
@@ -465,7 +550,6 @@ _cogl_winsys_renderer_connect (CoglRenderer *renderer,
       goto error;
     }
 
-#ifdef COGL_HAS_EGL_PLATFORM_GDL_SUPPORT
   /* Check we can talk to the GDL library */
 
   rc = gdl_init (NULL);
@@ -490,16 +574,70 @@ _cogl_winsys_renderer_connect (CoglRenderer *renderer,
     }
 
   gdl_close ();
+}
 #endif
+
+#ifdef COGL_HAS_EGL_PLATFORM_ANDROID_SUPPORT
+static gboolean
+_cogl_egl_platform_renderer_connect (CoglRenderer *renderer,
+                                     GError **error)
+{
+  CoglRendererEGL *egl_renderer = renderer->winsys;
+  EGLBoolean status;
+
+  egl_renderer->edpy = eglGetDisplay (EGL_DEFAULT_DISPLAY);
+
+  status = eglInitialize (egl_renderer->edpy,
+			  &egl_renderer->egl_version_major,
+			  &egl_renderer->egl_version_minor);
+  if (status != EGL_TRUE)
+    {
+      g_set_error (error, COGL_WINSYS_ERROR,
+                   COGL_WINSYS_ERROR_INIT,
+                   "Failed to initialize EGL");
+      goto error;
+    }
+}
+#endif
+
+static gboolean
+_cogl_winsys_renderer_connect (CoglRenderer *renderer,
+                               GError **error)
+{
+  renderer->winsys = g_slice_new0 (CoglRendererEGL);
+
+  if (!egl_renderer->platform_vtable->connect (renderer, &error))
+    {
+      _cogl_winsys_renderer_disconnect (renderer);
+      return FALSE;
+    }
 
   check_egl_extensions (renderer);
 
   return TRUE;
-
-error:
-  _cogl_winsys_renderer_disconnect (renderer);
-  return FALSE;
 }
+
+#ifdef COGL_HAS_EGL_PLATFORM_POWERVR_X11_SUPPORT
+static void
+_cogl_egl_platform_update_features (CoglContext *context)
+{
+  context->feature_flags |= COGL_FEATURE_ONSCREEN_MULTIPLE;
+  COGL_FLAGS_SET (context->winsys_features,
+                  COGL_WINSYS_FEATURE_MULTIPLE_ONSCREEN,
+                  TRUE);
+}
+#endif
+
+#ifdef COGL_HAS_EGL_PLATFORM_WAYLAND_SUPPORT
+static void
+_cogl_egl_platform_update_features (CoglContext *context)
+{
+  context->feature_flags |= COGL_FEATURE_ONSCREEN_MULTIPLE;
+  COGL_FLAGS_SET (context->winsys_features,
+                  COGL_WINSYS_FEATURE_MULTIPLE_ONSCREEN,
+                  TRUE);
+}
+#endif
 
 static void
 update_winsys_features (CoglContext *context)
@@ -515,13 +653,8 @@ update_winsys_features (CoglContext *context)
 
   _cogl_gl_update_features (context);
 
-#if defined (COGL_HAS_EGL_PLATFORM_POWERVR_X11_SUPPORT) || \
-    defined (COGL_HAS_EGL_PLATFORM_WAYLAND_SUPPORT)
-  context->feature_flags |= COGL_FEATURE_ONSCREEN_MULTIPLE;
-  COGL_FLAGS_SET (context->winsys_features,
-                  COGL_WINSYS_FEATURE_MULTIPLE_ONSCREEN,
-                  TRUE);
-#endif
+  if (egl_renderer->platform_vtable->update_features)
+    egl_renderer->platform_vtable->update_features (context);
 
   if (egl_renderer->private_features & COGL_EGL_WINSYS_FEATURE_SWAP_REGION)
     {
