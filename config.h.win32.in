@@ -19,6 +19,9 @@
 /* The prefix for our gettext translation domains. */
 #define GETTEXT_PACKAGE "@GETTEXT_PACKAGE@"
 
+/* Whether we have cairo or not */
+#define HAVE_CAIRO 1
+
 /* Define to 1 if you have the <CE4100/libgdl.h> header file. */
 /*#undef HAVE_CE4100_LIBGDL_H*/
 
@@ -60,6 +63,10 @@
 
 /* Define if the GNU gettext() function is already present or preinstalled. */
 #define HAVE_GETTEXT 1
+
+/* Define to 1 if you have the <GLES/egl.h> header file. */
+/*#undef HAVE_GLES_EGL_H*/
+
 
 /* Define if you have the iconv() function and it works. */
 #define HAVE_ICONV 1
