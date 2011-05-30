@@ -27,6 +27,10 @@ cogl2_path_set_fill_rule
 cogl2_path_stroke
 #endif
 
+#ifdef COGL_HAS_EGL_PLATFORM_ANDROID_SUPPORT
+cogl_android_set_native_window_EXP
+#endif
+
 cogl_angle_cos
 cogl_angle_sin
 cogl_angle_tan
@@ -34,6 +38,8 @@ cogl_angle_tan
 #ifdef COGL_ENABLE_EXPERIMENTAL_API
 cogl_attribute_new
 #endif
+
+cogl_attribute_buffer_new
 
 cogl_attribute_type_get_type
 cogl_begin_gl
@@ -160,6 +166,19 @@ cogl_context_new_EXP
 
 cogl_create_program
 cogl_create_shader
+
+#ifdef COGL_ENABLE_EXPERIMENTAL_API
+cogl_depth_state_get_range
+cogl_depth_state_get_test_enabled
+cogl_depth_state_get_test_function
+cogl_depth_state_get_write_enabled
+cogl_depth_state_init
+cogl_depth_state_set_test_enabled
+cogl_depth_state_set_test_function
+cogl_depth_state_set_range
+cogl_depth_state_set_write_enabled
+#endif
+
 cogl_depth_test_function_get_type
 cogl_disable_fog
 
@@ -174,13 +193,24 @@ cogl_double_to_uint
 
 #ifdef COGL_ENABLE_EXPERIMENTAL_API
 cogl_draw_attributes
-cogl_draw_attributes_array
 cogl_draw_indexed_attributes
-cogl_draw_indexed_attributes_array
 #endif
 
 cogl_end_gl
 cogl_error_get_type
+
+#ifdef COGL_ENABLE_EXPERIMENTAL_API
+cogl_euler_copy
+cogl_euler_equal
+cogl_euler_free
+cogl_euler_init
+cogl_euler_init_from_matrix
+#if 0
+;not yet implemented
+cogl_euler_init_from_quaternion
+#endif
+#endif
+
 cogl_features_available
 cogl_feature_flags_get_type
 cogl_fixed_atan
@@ -231,6 +261,12 @@ cogl_get_rectangle_indices
 #endif
 
 cogl_get_source
+
+#ifdef COGL_ENABLE_EXPERIMENTAL_API
+cogl_get_static_identity_quaternion
+cogl_get_static_zero_quaternion
+#endif
+
 cogl_get_viewport
 
 #ifdef _COGL_SUPPORTS_GTYPE_INTEGRATION
@@ -242,12 +278,12 @@ cogl_handle_ref
 cogl_handle_unref
 
 #ifdef COGL_ENABLE_EXPERIMENTAL_API
-cogl_index_array_new
-cogl_indices_get_array
+cogl_index_buffer_new
+cogl_indices_get_buffer
 cogl_indices_get_offset
 cogl_indices_get_type
 cogl_indices_new
-cogl_indices_new_for_array
+cogl_indices_new_for_buffer
 cogl_indices_set_offset
 #endif
 
@@ -257,10 +293,12 @@ cogl_indices_type_get_type
 cogl_is_attribute
 #endif
 
+cogl_is_attribute_buffer
 cogl_is_bitmap
 
 #ifdef COGL_ENABLE_EXPERIMENTAL_API
 cogl_is_buffer_EXP
+cogl_is_index_buffer
 #if 0
 ;not implemented!
 cogl_is_indices_array
@@ -273,7 +311,7 @@ cogl_is_path
 
 #ifdef COGL_ENABLE_EXPERIMENTAL_API
 cogl_is_pipeline
-cogl_is_pixel_array_EXP
+cogl_is_pixel_buffer_EXP
 cogl_is_primitive
 #endif
 
@@ -288,7 +326,6 @@ cogl_is_texture
 
 #ifdef COGL_ENABLE_EXPERIMENTAL_API
 cogl_is_texture_3d_EXP
-cogl_is_vertex_array
 #endif
 
 cogl_is_vertex_buffer
@@ -305,10 +342,7 @@ cogl_material_get_ambient
 cogl_material_get_color
 
 #ifdef COGL_ENABLE_EXPERIMENTAL_API
-cogl_material_get_depth_range
-cogl_material_get_depth_test_enabled
-cogl_material_get_depth_test_function
-cogl_material_get_depth_writing_enabled
+cogl_material_get_depth_state
 #endif
 
 cogl_material_get_diffuse
@@ -348,10 +382,7 @@ cogl_material_set_color4f
 cogl_material_set_color4ub
 
 #ifdef COGL_ENABLE_EXPERIMENTAL_API
-cogl_material_set_depth_range
-cogl_material_set_depth_test_enabled
-cogl_material_set_depth_test_function
-cogl_material_set_depth_writing_enabled
+cogl_material_set_depth_state
 #endif
 
 cogl_material_set_diffuse
@@ -383,6 +414,11 @@ cogl_matrix_frustum
 cogl_matrix_get_array
 cogl_matrix_get_inverse
 cogl_matrix_init_from_array
+
+#ifdef COGL_ENABLE_EXPERIMENTAL_API
+cogl_matrix_init_from_quaternion
+#endif
+
 cogl_matrix_init_identity
 cogl_matrix_multiply
 cogl_matrix_ortho
@@ -477,10 +513,7 @@ cogl_pipeline_get_alpha_test_function
 cogl_pipeline_get_alpha_test_reference
 cogl_pipeline_get_ambient
 cogl_pipeline_get_color
-cogl_pipeline_get_depth_range
-cogl_pipeline_get_depth_test_enabled
-cogl_pipeline_get_depth_test_function
-cogl_pipeline_get_depth_writing_enabled
+cogl_pipeline_get_depth_state
 cogl_pipeline_get_diffuse
 cogl_pipeline_get_emission
 cogl_pipeline_get_layer_point_sprite_coords_enabled
@@ -501,10 +534,7 @@ cogl_pipeline_set_blend_constant
 cogl_pipeline_set_color
 cogl_pipeline_set_color4f
 cogl_pipeline_set_color4ub
-cogl_pipeline_set_depth_range
-cogl_pipeline_set_depth_test_enabled
-cogl_pipeline_set_depth_test_function
-cogl_pipeline_set_depth_writing_enabled
+cogl_pipeline_set_depth_state
 cogl_pipeline_set_diffuse
 cogl_pipeline_set_emission
 cogl_pipeline_set_layer_combine
@@ -529,12 +559,12 @@ cogl_pipeline_wrap_mode_get_type
 #ifdef COGL_ENABLE_EXPERIMENTAL_API
 #if 0
 ;not implemented!
-cogl_pixel_array_new_EXP
+cogl_pixel_buffer_new_EXP
 #endif
-cogl_pixel_array_new_with_size_EXP
+cogl_pixel_buffer_new_with_size_EXP
 #if 0
 ;not exported in the main APIs for now
-cogl_pixel_array_set_region_EXP
+cogl_pixel_buffer_set_region_EXP
 #endif
 #endif
 
@@ -563,7 +593,7 @@ cogl_primitive_new_p3
 cogl_primitive_new_p3c4
 cogl_primitive_new_p3t2
 cogl_primitive_new_p3t2c4
-cogl_primitive_new_with_attributes_array
+cogl_primitive_new_with_attributes
 cogl_primitive_set_attributes
 cogl_primitive_set_first_vertex
 cogl_primitive_set_indices
@@ -591,6 +621,30 @@ cogl_program_uniform_1i
 
 cogl_program_unref
 cogl_program_use
+
+#ifdef COGL_ENABLE_EXPERIMENTAL_API
+cogl_quaternion_copy
+cogl_quaternion_dot_product
+cogl_quaternion_equal
+cogl_quaternion_free
+cogl_quaternion_get_rotation_angle
+cogl_quaternion_get_rotation_axis
+cogl_quaternion_init
+cogl_quaternion_init_from_angle_vector
+cogl_quaternion_init_from_array
+cogl_quaternion_init_from_euler
+cogl_quaternion_init_from_x_rotation
+cogl_quaternion_init_from_y_rotation
+cogl_quaternion_init_from_z_rotation
+cogl_quaternion_init_identity
+cogl_quaternion_invert
+cogl_quaternion_multiply
+cogl_quaternion_nlerp
+cogl_quaternion_normalize
+cogl_quaternion_pow
+cogl_quaternion_slerp
+cogl_quaternion_squad
+#endif
 
 #ifndef COGL_DISABLE_DEPRECATED
 cogl_push_draw_buffer
@@ -727,6 +781,9 @@ cogl_transform
 cogl_translate
 
 #ifdef COGL_ENABLE_EXPERIMENTAL_API
+cogl_vdraw_attributes
+cogl_vdraw_indexed_attributes
+
 cogl_vector3_add_EXP
 cogl_vector3_copy_EXP
 cogl_vector3_cross_product_EXP
@@ -743,7 +800,6 @@ cogl_vector3_magnitude_EXP
 cogl_vector3_multiply_scalar_EXP
 cogl_vector3_normalize_EXP
 cogl_vector3_subtract_EXP
-cogl_vertex_array_new
 #endif
 
 cogl_vertex_buffer_add
