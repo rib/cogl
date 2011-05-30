@@ -233,6 +233,7 @@ cogl_sources_c = \
 	$(srcdir)/cogl-matrix.c				\
 	$(srcdir)/cogl-vector.c				\
 	$(srcdir)/cogl-euler.c				\
+	$(srcdir)/cogl-quaternion-private.h			\
 	$(srcdir)/cogl-quaternion.c			\
 	$(srcdir)/cogl-matrix-private.h			\
 	$(srcdir)/cogl-matrix-stack.c			\
