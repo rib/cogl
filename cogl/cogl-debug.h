@@ -31,6 +31,16 @@
 
 G_BEGIN_DECLS
 
+#ifdef _MSC_VER
+#ifdef COGL_BUILD_EXP
+#define COGL_EXP __declspec(dllexport)
+#else
+#define COGL_EXP __declspec(dllimport)
+#endif
+#else
+#define COGL_EXP 
+#endif
+
 typedef enum {
   COGL_DEBUG_SLICING,
   COGL_DEBUG_OFFSCREEN,
@@ -74,7 +84,7 @@ typedef enum {
 
 #define COGL_DEBUG_N_INTS COGL_FLAGS_N_INTS_FOR_SIZE (COGL_DEBUG_N_FLAGS)
 
-extern unsigned int _cogl_debug_flags[COGL_DEBUG_N_INTS];
+COGL_EXP extern unsigned int _cogl_debug_flags[COGL_DEBUG_N_INTS];
 
 #define COGL_DEBUG_ENABLED(flag) \
   COGL_FLAGS_GET (_cogl_debug_flags, flag)
