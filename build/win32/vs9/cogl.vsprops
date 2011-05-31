@@ -28,7 +28,15 @@
 	/>
 	<UserMacro
 		Name="LibBuildDefines"
-		Value="HAVE_CONFIG_H;CLUTTER_COMPILATION"
+		Value="HAVE_CONFIG_H;CLUTTER_COMPILATION;_WIN32_WINNT=0x0500;COGL_ENABLE_DEBUG"
+	/>
+	<UserMacro
+		Name="ReleaseLibBuildDefines"
+		Value="G_DISABLE_CHECKS;G_DISABLE_CAST_CHECKS"
+	/>
+	<UserMacro
+		Name="DebugLibBuildDefines"
+		Value="COGL_GL_DEBUG;COGL_OBJECT_DEBUG;COGL_HANDLE_DEBUG"
 	/>
 	<UserMacro
 		Name="CoglBuildDefines"

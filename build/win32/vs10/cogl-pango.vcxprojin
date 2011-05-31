@@ -78,7 +78,7 @@
 		</PreBuildEvent>
 		<ClCompile>
 			<Optimization>Disabled</Optimization>
-			<PreprocessorDefinitions>_DEBUG;CLUTTER_ENABLE_DEBUG;$(LibBuildDefines);$(CoglPangoBuildDefines);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+			<PreprocessorDefinitions>_DEBUG;$(LibBuildDefines);$(DebugLibBuildDefines);$(CoglPangoBuildDefines);%(PreprocessorDefinitions)</PreprocessorDefinitions>
 			<MinimalRebuild>true</MinimalRebuild>
 			<BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
 			<RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -106,7 +106,7 @@
 		</PreBuildEvent>
 		<ClCompile>
 			<Optimization>Disabled</Optimization>
-			<PreprocessorDefinitions>_DEBUG;CLUTTER_ENABLE_DEBUG;$(LibBuildDefines);$(CoglPangoBuildDefines);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+			<PreprocessorDefinitions>_DEBUG;$(LibBuildDefines);$(DebugLibBuildDefines);$(CoglPangoBuildDefines);%(PreprocessorDefinitions)</PreprocessorDefinitions>
 			<MinimalRebuild>true</MinimalRebuild>
 			<BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
 			<RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -135,7 +135,7 @@
 		<ClCompile>
 			<Optimization>MaxSpeed</Optimization>
 			<IntrinsicFunctions>true</IntrinsicFunctions>
-			<PreprocessorDefinitions>$(LibBuildDefines);$(CoglPangoBuildDefines);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+			<PreprocessorDefinitions>$(LibBuildDefines);$(ReleaseLibBuildDefines);$(CoglPangoBuildDefines);%(PreprocessorDefinitions)</PreprocessorDefinitions>
 			<RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
 			<FunctionLevelLinking>true</FunctionLevelLinking>
 			<PrecompiledHeader>
@@ -163,7 +163,7 @@
 			<Command>$(PreBuildCmd)</Command>
 		</PreBuildEvent>
 		<ClCompile>
-			<PreprocessorDefinitions>$(LibBuildDefines);$(CoglPangoBuildDefines);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+			<PreprocessorDefinitions>$(LibBuildDefines);$(ReleaseLibBuildDefines);$(CoglPangoBuildDefines);%(PreprocessorDefinitions)</PreprocessorDefinitions>
 			<RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
 			<PrecompiledHeader>
 			</PrecompiledHeader>
