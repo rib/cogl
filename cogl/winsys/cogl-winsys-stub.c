@@ -132,25 +132,24 @@ _cogl_winsys_onscreen_set_visibility (CoglOnscreen *onscreen,
 {
 }
 
-static CoglWinsysVtable _cogl_winsys_vtable =
-  {
-    .name = "STUB",
-    .get_proc_address = _cogl_winsys_get_proc_address,
-    .renderer_connect = _cogl_winsys_renderer_connect,
-    .renderer_disconnect = _cogl_winsys_renderer_disconnect,
-    .display_setup = _cogl_winsys_display_setup,
-    .display_destroy = _cogl_winsys_display_destroy,
-    .context_init = _cogl_winsys_context_init,
-    .context_deinit = _cogl_winsys_context_deinit,
+static CoglWinsysVtable _cogl_winsys_vtable = 
+{
+    "STUB", /*.name*/
+    _cogl_winsys_get_proc_address, /*.get_proc_address =*/
+    _cogl_winsys_renderer_connect, /*.renderer_connect =*/
+    _cogl_winsys_renderer_disconnect, /*.renderer_disconnect =*/
+    _cogl_winsys_display_setup, /*.display_setup =*/
+    _cogl_winsys_display_destroy, /*.display_destroy =*/
+    _cogl_winsys_context_init, /*.context_init =*/
+    _cogl_winsys_context_deinit, /*.context_deinit =*/
 
-    .onscreen_init = _cogl_winsys_onscreen_init,
-    .onscreen_deinit = _cogl_winsys_onscreen_deinit,
-    .onscreen_bind = _cogl_winsys_onscreen_bind,
-    .onscreen_swap_buffers = _cogl_winsys_onscreen_swap_buffers,
-    .onscreen_update_swap_throttled =
-      _cogl_winsys_onscreen_update_swap_throttled,
-    .onscreen_set_visibility = _cogl_winsys_onscreen_set_visibility,
-  };
+    _cogl_winsys_onscreen_init, /*.onscreen_init =*/
+    _cogl_winsys_onscreen_deinit, /*.onscreen_deinit =*/
+    _cogl_winsys_onscreen_bind, /*.onscreen_bind =*/
+    _cogl_winsys_onscreen_swap_buffers, /*.onscreen_swap_buffers =*/
+    _cogl_winsys_onscreen_update_swap_throttled,/*.onscreen_update_swap_throttled =*/
+    _cogl_winsys_onscreen_set_visibility, /*.onscreen_set_visibility =*/
+};
 
 const CoglWinsysVtable *
 _cogl_winsys_stub_get_vtable (void)
