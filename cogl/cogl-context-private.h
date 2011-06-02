@@ -65,6 +65,7 @@ struct _CoglContext
 
   /* Features cache */
   CoglFeatureFlags feature_flags;
+  CoglPrivateFeatureFlags private_feature_flags;
 
   CoglHandle        default_pipeline;
   CoglHandle        default_layer_0;
@@ -263,7 +264,6 @@ struct _CoglContext
   unsigned int winsys_features
     [COGL_FLAGS_N_INTS_FOR_SIZE (COGL_WINSYS_FEATURE_N_FEATURES)];
   void *winsys;
-  gboolean stub_winsys;
 };
 
 CoglContext *

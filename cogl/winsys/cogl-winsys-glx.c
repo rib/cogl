@@ -137,7 +137,7 @@ static const CoglFeatureData winsys_feature_data[] =
 #include "cogl-winsys-glx-feature-functions.h"
   };
 
-CoglFuncPtr
+static CoglFuncPtr
 _cogl_winsys_get_proc_address (const char *name)
 {
   static GLXGetProcAddressProc get_proc_func = NULL;
@@ -176,22 +176,6 @@ _cogl_winsys_get_proc_address (const char *name)
     return get_proc_func ((GLubyte *) name);
 
   return NULL;
-}
-
-#undef COGL_WINSYS_FEATURE_BEGIN
-#define COGL_WINSYS_FEATURE_BEGIN(a, b, c, d, e, f)
-#undef COGL_WINSYS_FEATURE_FUNCTION
-#define COGL_WINSYS_FEATURE_FUNCTION(ret, name, args) \
-  glx_renderer->pf_ ## name = NULL;
-#undef COGL_WINSYS_FEATURE_END
-#define COGL_WINSYS_FEATURE_END()
-
-static void
-initialize_function_table (CoglRenderer *renderer)
-{
-  CoglRendererGLX *glx_renderer = renderer->winsys;
-
-#include "cogl-winsys-glx-feature-functions.h"
 }
 
 static CoglOnscreen *
@@ -361,10 +345,9 @@ update_winsys_features (CoglContext *context)
                   COGL_WINSYS_FEATURE_MULTIPLE_ONSCREEN,
                   TRUE);
 
-  initialize_function_table (context->display->renderer);
-
   for (i = 0; i < G_N_ELEMENTS (winsys_feature_data); i++)
-    if (_cogl_feature_check ("GLX", winsys_feature_data + i, 0, 0,
+    if (_cogl_feature_check (_cogl_context_get_winsys (context),
+                             "GLX", winsys_feature_data + i, 0, 0,
                              glx_extensions,
                              glx_renderer))
       {
@@ -882,7 +865,7 @@ _cogl_winsys_onscreen_deinit (CoglOnscreen *onscreen)
   if (glx_onscreen == NULL)
     return;
 
-  _cogl_xlib_trap_errors (&old_state);
+  _cogl_renderer_xlib_trap_errors (context->display->renderer, &old_state);
 
   if (glx_onscreen->glxwin != None)
     {
@@ -900,7 +883,7 @@ _cogl_winsys_onscreen_deinit (CoglOnscreen *onscreen)
 
   XSync (xlib_renderer->xdpy, False);
 
-  _cogl_xlib_untrap_errors (&old_state);
+  _cogl_renderer_xlib_untrap_errors (context->display->renderer, &old_state);
 
   g_slice_free (CoglOnscreenGLX, onscreen->winsys);
   onscreen->winsys = NULL;
@@ -929,7 +912,7 @@ _cogl_winsys_onscreen_bind (CoglOnscreen *onscreen)
       if (glx_context->current_drawable == drawable)
         return;
 
-      _cogl_xlib_trap_errors (&old_state);
+      _cogl_renderer_xlib_trap_errors (context->display->renderer, &old_state);
 
       glXMakeContextCurrent (xlib_renderer->xdpy,
                              drawable, drawable,
@@ -943,7 +926,7 @@ _cogl_winsys_onscreen_bind (CoglOnscreen *onscreen)
       if (glx_context->current_drawable == drawable)
         return;
 
-      _cogl_xlib_trap_errors (&old_state);
+      _cogl_renderer_xlib_trap_errors (context->display->renderer, &old_state);
 
       COGL_NOTE (WINSYS,
                  "MakeContextCurrent dpy: %p, window: 0x%x (%s), context: %p",
@@ -990,7 +973,8 @@ _cogl_winsys_onscreen_bind (CoglOnscreen *onscreen)
 
   /* FIXME: We should be reporting a GError here
    */
-  if (_cogl_xlib_untrap_errors (&old_state))
+  if (_cogl_renderer_xlib_untrap_errors (context->display->renderer,
+                                         &old_state))
     {
       g_warning ("X Error received while making drawable 0x%08lX current",
                  drawable);
@@ -1799,10 +1783,11 @@ _cogl_winsys_texture_pixmap_x11_update (CoglTexturePixmapX11 *tex_pixmap,
       else
         {
           glx_tex_pixmap->glx_tex =
-            _cogl_texture_2d_new_with_size (tex_pixmap->width,
-                                            tex_pixmap->height,
-                                            COGL_TEXTURE_NO_ATLAS,
-                                            texture_format);
+            cogl_texture_2d_new_with_size (ctx,
+                                           tex_pixmap->width,
+                                           tex_pixmap->height,
+                                           texture_format,
+                                           NULL);
 
           if (glx_tex_pixmap->glx_tex)
             COGL_NOTE (TEXTURE_PIXMAP, "Created a texture 2d for %p",

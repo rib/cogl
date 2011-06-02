@@ -28,10 +28,6 @@
 #include "cogl-pipeline-private.h"
 #include "cogl-texture-private.h"
 
-#define COGL_TEXTURE_2D(tex) ((CoglTexture2D *) tex)
-
-typedef struct _CoglTexture2D CoglTexture2D;
-
 struct _CoglTexture2D
 {
   CoglTexture     _parent;
@@ -59,25 +55,24 @@ struct _CoglTexture2D
 GQuark
 _cogl_handle_texture_2d_get_type (void);
 
-gboolean
-_cogl_is_texture_2d (CoglHandle object);
-
-CoglHandle
-_cogl_texture_2d_new_with_size (unsigned int     width,
-                                unsigned int     height,
-                                CoglTextureFlags flags,
-                                CoglPixelFormat  internal_format);
-
 CoglHandle
 _cogl_texture_2d_new_from_bitmap (CoglBitmap      *bmp,
                                   CoglTextureFlags flags,
-                                  CoglPixelFormat  internal_format);
+                                  CoglPixelFormat  internal_format,
+                                  GError         **error);
 
-CoglHandle
-_cogl_texture_2d_new_from_foreign (GLuint gl_handle,
-                                   GLuint width,
-                                   GLuint height,
-                                   CoglPixelFormat format);
+#if defined (COGL_HAS_EGL_SUPPORT) && defined (EGL_KHR_image_base)
+/* NB: The reason we require the width, height and format to be passed
+ * even though they may seem redundant is because GLES 1/2 don't
+ * provide a way to query these properties. */
+CoglTexture2D *
+_cogl_egl_texture_2d_new_from_image (CoglContext *ctx,
+                                     int width,
+                                     int height,
+                                     CoglPixelFormat format,
+                                     EGLImageKHR image,
+                                     GError **error);
+#endif
 
 /*
  * _cogl_texture_2d_externally_modified:

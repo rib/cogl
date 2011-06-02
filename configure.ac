@@ -165,32 +165,12 @@ AC_ARG_ENABLE(
   [],
   enable_debug=default
 )
-
-PKG_CHECK_EXISTS([CAIRO], [cairo], [have_cairo=yes])
-AC_ARG_ENABLE(
-  [cairo],
-  [AC_HELP_STRING([--enable-cairo=@<:@no/yes@:>@], [Control Cairo usage in Cogl debugging code @<:@default=]default[@:>@])],
-  [],
-  enable_cairo=default
-)
-AS_IF([test "x$enable_cairo" = "xyes" && test "x$have_cairo" != "xyes"],
-      [AC_MSG_ERROR([Could not find Cairo])])
-
-
 AS_CASE(
   [$enable_debug],
   [yes],
   [
     test "$cflags_set" = set || CFLAGS="$CFLAGS -g -O0"
     COGL_EXTRA_CFLAGS="$COGL_EXTRA_CFLAGS -DCOGL_GL_DEBUG -DCOGL_OBJECT_DEBUG -DCOGL_HANDLE_DEBUG -DCOGL_ENABLE_DEBUG"
-
-    # debugging code can use cairo to dump the atlas
-    AS_IF([test "x$have_cairo" = "xyes" && test "x$enable_cairo" != "xno"],
-          [
-            COGL_PKG_REQUIRES="$COGL_PKG_REQUIRES cairo"
-            AC_DEFINE([HAVE_CAIRO], [1], [Whether we have cairo or not])
-          ])
-
   ],
   [no],
   [
@@ -200,6 +180,32 @@ AS_CASE(
 )
 
 AC_SUBST(COGL_DEBUG_CFLAGS)
+
+
+dnl     ============================================================
+dnl     Enable cairo usage for debugging
+dnl       (debugging code can use cairo to dump the atlas)
+dnl     ============================================================
+
+PKG_CHECK_EXISTS([CAIRO], [cairo], [have_cairo=yes])
+AC_ARG_ENABLE(
+  [cairo],
+  [AC_HELP_STRING([--enable-cairo=@<:@no/yes@:>@], [Control Cairo usage in Cogl debugging code @<:@default=auto@:>@])],
+  [],
+  [
+    AS_IF([test "x$enable_debug" = "xyes"],
+          [enable_cairo=$have_cairo],
+          [enable_cairo=no])
+  ]
+)
+AS_IF([test "x$enable_cairo" = "xyes" && test "x$enable_debug" = "xyes"],
+      [
+        AS_IF([test "x$have_cairo" != "xyes"],
+              [AC_MSG_ERROR([Could not find Cairo])])
+
+        COGL_PKG_REQUIRES="$COGL_PKG_REQUIRES cairo"
+        AC_DEFINE([HAVE_CAIRO], [1], [Whether we have cairo or not])
+      ])
 
 
 dnl     ============================================================
@@ -241,7 +247,7 @@ AS_CASE(
 )
 
 # strip leading spaces
-COGL_EXTRA_CFLAGS="$COGL_EXTRA_CFLAGS ${MAINTAINER_CFLAGS/#  }"
+COGL_EXTRA_CFLAGS="$COGL_EXTRA_CFLAGS ${MAINTAINER_CFLAGS#*  }"
 
 
 dnl     ============================================================
@@ -363,11 +369,17 @@ AS_IF([test "x$enable_gles1" = "xyes"],
             AC_CHECK_HEADERS([GLES/egl.h EGL/egl.h])
 
             AS_IF([test "x$ac_cv_header_GLES_egl_h" = "xyes"],
-                  [COGL_GLES1_EGL_INCLUDE="#include <GLES/egl.h>"],
-                  [AS_IF([test "x$ac_cv_header_EGL_egl_h" = "xyes"],
-                         [COGL_GLES1_EGL_INCLUDE="#include <EGL/egl.h>"],
-                         [AC_MSG_ERROR([Unable to locate EGL header])])])
-            AC_SUBST([COGL_GLES1_EGL_INCLUDE])
+                  [COGL_EGL_INCLUDES="#include <GLES/egl.h>"],
+                  [test "x$ac_cv_header_EGL_egl_h" = "xyes"],
+                  [
+                    COGL_EGL_INCLUDES="#include <EGL/egl.h>"
+                    AC_CHECK_HEADERS([EGL/eglext.h],
+                                     [COGL_EGL_INCLUDES="$COGL_EGL_INCLUDE
+#include <EGL/eglext.h>"],
+                                     [])
+                  ],
+                  [AC_MSG_ERROR([Unable to locate EGL header])])
+            AC_SUBST([COGL_EGL_INCLUDES])
 
             # Check for a GLES 1.x Common Profile library with/without EGL.
             #
@@ -486,24 +498,6 @@ dnl         ========================================================
 dnl         Check window system integration libraries...
 dnl         ========================================================
 
-dnl The "stub" winsys is a fallback option we use when Cogl doesn't
-dnl yet have support for a window system. It enables a toolkit like
-dnl Clutter to provide external support instead. Currently this is
-dnl not compatible with other window system backends.
-AC_ARG_ENABLE(
-  [stub-winsys],
-  [AC_HELP_STRING([--enable-stub-winsys=@<:@no/yes@:>@], [Enable support stub winsys @<:@default=no@:>@])],
-  [],
-  enable_stub_winsys=no
-)
-AS_IF([test "x$enable_stub_winsys" = "xyes"],
-      [
-        GL_WINSYS_APIS="$GL_WINSYS_APIS stub"
-        ALLOW_GLX=no
-        ALLOW_WGL=no
-      ])
-AM_CONDITIONAL(SUPPORT_STUB, [test "x$enable_stub_winsys" = "xyes"])
-
 AC_ARG_ENABLE(
   [glx],
   [AC_HELP_STRING([--enable-glx=@<:@no/yes@:>@], [Enable support GLX @<:@default=auto@:>@])],
@@ -512,9 +506,6 @@ AC_ARG_ENABLE(
 )
 AS_IF([test "x$enable_glx" = "xyes"],
       [
-        AS_IF([test "x$enable_stub_winsys" = "xyes"],
-              [AC_MSG_ERROR([Stub winsys not currently compatible with others])])
-
         AS_IF([test "x$ALLOW_GLX" != "xyes"],
               [AC_MSG_ERROR([GLX not supported with $COGL_DRIVER driver])])
 
@@ -523,8 +514,6 @@ AS_IF([test "x$enable_glx" = "xyes"],
         GL_WINSYS_APIS="$GL_WINSYS_APIS glx"
 
         AC_DEFINE([COGL_HAS_GLX_SUPPORT], [1], [Cogl supports OpenGL using the GLX API])
-        AC_DEFINE([COGL_HAS_FULL_WINSYS], [1],
-                  [Cogl can create its own OpenGL context])
 
         # We might fall back to DRM for sync-to-vblank on GLX
         PKG_CHECK_EXISTS([libdrm],
@@ -544,9 +533,6 @@ AC_ARG_ENABLE(
 )
 AS_IF([test "x$enable_wgl" = "xyes"],
       [
-        AS_IF([test "x$enable_stub_winsys" = "xyes"],
-              [AC_MSG_ERROR([Stub winsys not currently compatible with others])])
-
         AS_IF([test "x$ALLOW_WGL" != "xyes"],
               [AC_MSG_ERROR([WGL not supported with $COGL_DRIVER driver])])
 
@@ -555,34 +541,8 @@ AS_IF([test "x$enable_wgl" = "xyes"],
 
         AC_DEFINE([COGL_HAS_WGL_SUPPORT], [1], [Cogl supports OpenGL using the WGL API])
         COGL_DEFINES_SYMBOLS="$COGL_DEFINES_SYMBOLS COGL_HAS_WIN32_SUPPORT"
-
-        AC_DEFINE([COGL_HAS_FULL_WINSYS], [1],
-                  [Cogl can create its own OpenGL context])
       ])
 AM_CONDITIONAL(SUPPORT_WGL, [test "x$SUPPORT_WGL" = "xyes"])
-
-AC_ARG_ENABLE(
-  [quartz],
-  [AC_HELP_STRING([--enable-quartz=@<:@no/yes@:>@], [Enable support for the Quartz platform @<:@default=no@:>@])],
-  [],
-  [AS_IF([test "x$platform_quartz" = "xyes"], [enable_quartz=yes], [enable_quartz=no])]
-)
-AS_IF([test "x$enable_quartz" = "xyes"],
-  [AS_IF([test "x$platform_quartz" = "xno"],
-         [AC_MSG_ERROR([OpenGL framework not support with $COGL_DRIVER driver])])
-
-   AS_IF([test "x$enable_stub_winsys" = "xyes"],
-         [AC_MSG_ERROR([Stub winsys not currently compatible with others])])
-
-   SUPPORT_QUARTZ=yes
-   GL_WINSYS_APIS="$GL_WINSYS_APIS quartz"
-
-   AC_DEFINE([COGL_HAS_QUARTZ_SUPPORT], [1], [Cogl supports OpenGL using the Quartz framework])
-   COGL_DEFINES_SYMBOLS-"$COGL_DEFINES_SYMBOLS COGL_HAS_QUARTZ_SUPPORT"
-
-   #AC_DEFINE([COGL_HAS_FULL_WINSYS], [1], [Cogl can create its own OpenGL context])
-  ])
-AM_CONDITIONAL(SUPPORT_QUARTZ, [test "x$SUPPORT_QUARTZ" = "xyes"])
 
 EGL_PLATFORM_COUNT=0
 
@@ -594,9 +554,6 @@ AC_ARG_ENABLE(
 )
 AS_IF([test "x$enable_null_egl_platform" = "xyes"],
       [
-        AS_IF([test "x$enable_stub_winsys" = "xyes"],
-              [AC_MSG_ERROR([Stub winsys not currently compatible with others])])
-
         EGL_PLATFORM_COUNT=$((EGL_PLATFORM_COUNT+1))
         NEED_EGL=yes
         EGL_PLATFORMS="$EGL_PLATFORMS null"
@@ -614,9 +571,6 @@ AC_ARG_ENABLE(
 )
 AS_IF([test "x$enable_gdl_egl_platform" == "xyes"],
       [
-        AS_IF([test "x$enable_stub_winsys" = "xyes"],
-              [AC_MSG_ERROR([Stub winsys not currently compatible with others])])
-
         EGL_PLATFORM_COUNT=$((EGL_PLATFORM_COUNT+1))
         NEED_EGL=yes
         EGL_PLATFORMS="$EGL_PLATFORMS gdl"
@@ -660,6 +614,21 @@ AS_IF([test "x$enable_wayland_egl_platform" == "xyes"],
 AM_CONDITIONAL(SUPPORT_EGL_PLATFORM_WAYLAND,
                [test "x$enable_wayland_egl_platform" = "xyes"])
 
+AC_ARG_ENABLE(
+  [wayland-egl-server],
+  [AC_HELP_STRING([--enable-wayland-egl-server=@<:@no/yes@:>@], [Enable server side wayland support @<:@default=no@:>@])],
+  [],
+  enable_wayland_egl_server=no
+)
+AS_IF([test "x$enable_wayland_egl_server" == "xyes"],
+      [
+        NEED_EGL=yes
+        COGL_PKG_REQUIRES="$COGL_PKG_REQUIRES wayland-server"
+        COGL_DEFINES_SYMBOLS="$COGL_DEFINES_SYMBOLS COGL_HAS_WAYLAND_EGL_SERVER_SUPPORT"
+      ])
+AM_CONDITIONAL(SUPPORT_WAYLAND_EGL_SERVER,
+               [test "x$enable_wayland_egl_server" = "xyes"])
+
 dnl Android EGL platform
 AC_ARG_ENABLE(
   [android-egl-platform],
@@ -693,9 +662,6 @@ AC_ARG_ENABLE(
 )
 AS_IF([test "x$enable_xlib_egl_platform" = "xyes"],
       [
-        AS_IF([test "x$enable_stub_winsys" = "xyes"],
-              [AC_MSG_ERROR([Stub winsys not currently compatible with others])])
-
         EGL_PLATFORM_COUNT=$((EGL_PLATFORM_COUNT+1))
         NEED_EGL=yes
         NEED_XLIB=yes
@@ -717,7 +683,7 @@ AS_IF([test "x$NEED_EGL" = "xyes" && test "x$EGL_CHECKED" != "xyes"],
           [COGL_PKG_REQUIRES="$COGL_PKG_REQUIRES egl"],
           [
             AC_CHECK_HEADERS(
-              [EGL/egl.h],
+              [EGL/egl.h EGL/eglext.h],
               [],
               [AC_MSG_ERROR([Unable to locate required EGL headers])])
 
@@ -728,15 +694,17 @@ AS_IF([test "x$NEED_EGL" = "xyes" && test "x$EGL_CHECKED" != "xyes"],
             COGL_EXTRA_LDFLAGS="$COGL_EXTRA_LDFLAGS -lEGL"
           ]
           )
-        ])
+
+        COGL_EGL_INCLUDES="#include <EGL/egl.h>
+#include <EGL/eglext.h>"
+        AC_SUBST([COGL_EGL_INCLUDES])
+      ])
 
 AS_IF([test "x$NEED_EGL" = "xyes"],
       [
         SUPPORT_EGL=yes
         GL_WINSYS_APIS="$GL_WINSYS_APIS egl"
         COGL_DEFINES_SYMBOLS="$COGL_DEFINES_SYMBOLS COGL_HAS_EGL_SUPPORT"
-        AC_DEFINE([COGL_HAS_FULL_WINSYS], [1],
-                  [Cogl can create its own OpenGL context])
       ])
 
 AM_CONDITIONAL(SUPPORT_EGL, [test "x$SUPPORT_EGL" = "xyes"])
@@ -927,6 +895,7 @@ echo "        Driver: ${COGL_DRIVER} ${glesversion}"
 echo "        GL Window System APIs:${GL_WINSYS_APIS}"
 if test "x$SUPPORT_EGL" = "xyes"; then
 echo "        EGL Platforms:${EGL_PLATFORMS}"
+echo "        Wayland compositor support: ${enable_wayland_egl_server}"
 fi
 echo "        Image backend: ${COGL_IMAGE_BACKEND}"
 echo "        Cogl Pango: ${enable_cogl_pango}"

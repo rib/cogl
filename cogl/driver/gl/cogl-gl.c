@@ -148,20 +148,6 @@ static const CoglFeatureData cogl_feature_data[] =
 #include "cogl-feature-functions-gl.h"
   };
 
-#undef COGL_FEATURE_BEGIN
-#define COGL_FEATURE_BEGIN(a, b, c, d, e, f, g)
-#undef COGL_FEATURE_FUNCTION
-#define COGL_FEATURE_FUNCTION(ret, name, args) \
-  context->drv.pf_ ## name = NULL;
-#undef COGL_FEATURE_END
-#define COGL_FEATURE_END()
-
-static void
-initialize_function_table (CoglContext *context)
-{
-  #include "cogl-feature-functions-gl.h"
-}
-
 /* Query the GL extensions and lookup the corresponding function
  * pointers. Theoretically the list of extensions can change for
  * different GL contexts so it is the winsys backend's responsiblity
@@ -169,6 +155,7 @@ initialize_function_table (CoglContext *context)
 void
 _cogl_gl_update_features (CoglContext *context)
 {
+  CoglPrivateFeatureFlags private_flags = 0;
   CoglFeatureFlags flags = 0;
   const char *gl_extensions;
   int max_clip_planes = 0;
@@ -220,15 +207,18 @@ _cogl_gl_update_features (CoglContext *context)
   if (max_clip_planes >= 4)
     flags |= COGL_FEATURE_FOUR_CLIP_PLANES;
 
-  initialize_function_table (context);
-
   for (i = 0; i < G_N_ELEMENTS (cogl_feature_data); i++)
-    if (_cogl_feature_check ("GL", cogl_feature_data + i,
+    if (_cogl_feature_check (_cogl_context_get_winsys (context),
+                             "GL", cogl_feature_data + i,
                              gl_major, gl_minor,
                              gl_extensions,
                              context))
-      flags |= cogl_feature_data[i].feature_flags;
+      {
+        private_flags |= cogl_feature_data[i].feature_flags_private;
+        flags |= cogl_feature_data[i].feature_flags;
+      }
 
   /* Cache features */
+  context->private_feature_flags |= private_flags;
   context->feature_flags |= flags;
 }

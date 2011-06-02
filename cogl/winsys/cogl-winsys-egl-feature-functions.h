@@ -28,9 +28,7 @@
 
 /* Macro prototypes:
  * COGL_WINSYS_FEATURE_BEGIN (name, namespaces, extension_names,
- *                            implied_public_feature_flags,
- *                            implied_private_feature_flags,
- *                            implied_winsys_feature)
+ *                            implied_private_egl_feature_flags)
  * COGL_WINSYS_FEATURE_FUNCTION (return_type, function_name,
  *                               (arguments))
  * ...
@@ -46,12 +44,43 @@
 COGL_WINSYS_FEATURE_BEGIN (swap_region,
                            "NOK\0",
                            "swap_region\0",
-                           0,
-                           0,
-                           COGL_WINSYS_FEATURE_SWAP_REGION)
+                           COGL_EGL_WINSYS_FEATURE_SWAP_REGION)
 COGL_WINSYS_FEATURE_FUNCTION (EGLBoolean, eglSwapBuffersRegion,
                               (EGLDisplay dpy,
                                EGLSurface surface,
                                EGLint numRects,
                                const EGLint *rects))
+COGL_WINSYS_FEATURE_END ()
+/* XXX: These macros can't handle falling back to looking for
+ * EGL_KHR_image if EGL_KHR_image_base and EGL_KHR_image_pixmap aren't
+ * found... */
+COGL_WINSYS_FEATURE_BEGIN (image_base,
+                           "KHR\0",
+                           "image_base\0",
+                           0)
+COGL_WINSYS_FEATURE_FUNCTION (EGLImageKHR, eglCreateImage,
+                              (EGLDisplay dpy,
+                               EGLContext ctx,
+                               EGLenum target,
+                               EGLClientBuffer buffer,
+                               const EGLint *attrib_list))
+COGL_WINSYS_FEATURE_FUNCTION (EGLBoolean, eglDestroyImage,
+                              (EGLDisplay dpy,
+                               EGLImageKHR image))
+COGL_WINSYS_FEATURE_END ()
+COGL_WINSYS_FEATURE_BEGIN (image_pixmap,
+                           "KHR\0",
+                           "image_pixmap\0",
+                           COGL_EGL_WINSYS_FEATURE_EGL_IMAGE_FROM_X11_PIXMAP)
+COGL_WINSYS_FEATURE_END ()
+COGL_WINSYS_FEATURE_BEGIN (bind_wayland_display,
+                           "WL\0",
+                           "bind_wayland_display\0",
+                           COGL_EGL_WINSYS_FEATURE_EGL_IMAGE_FROM_WAYLAND_BUFFER)
+COGL_WINSYS_FEATURE_FUNCTION (EGLImageKHR, eglBindWaylandDisplay,
+                              (EGLDisplay dpy,
+                               struct wl_display *wayland_display))
+COGL_WINSYS_FEATURE_FUNCTION (EGLBoolean, eglUnbindWaylandDisplay,
+                              (EGLDisplay dpy,
+                               struct wl_display *wayland_display))
 COGL_WINSYS_FEATURE_END ()

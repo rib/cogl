@@ -75,6 +75,7 @@ cogl_public_h = \
 	$(srcdir)/cogl-shader.h 		\
 	$(srcdir)/cogl-texture.h 		\
 	$(srcdir)/cogl-texture-3d.h             \
+	$(srcdir)/cogl-texture-2d.h             \
 	$(srcdir)/cogl-types.h 			\
 	$(srcdir)/cogl-vertex-buffer.h 		\
 	$(srcdir)/cogl-index-buffer.h 		\
@@ -303,6 +304,7 @@ cogl_sources_c = \
 	$(srcdir)/cogl-point-in-poly-private.h       	\
 	$(srcdir)/cogl-point-in-poly.c       		\
 	$(srcdir)/cogl-clutter.c       			\
+	$(srcdir)/winsys/cogl-winsys-stub.c		\
 	$(NULL)
 
 if SUPPORT_XLIB
@@ -332,33 +334,30 @@ cogl_sources_c += \
 	$(srcdir)/winsys/cogl-winsys-wgl.c \
 	$(srcdir)/winsys/cogl-winsys-wgl-feature-functions.h
 endif
-if SUPPORT_QUARTZ
-cogl_sources_c += \
-	$(srcdir)/winsys/cogl-winsys-quartz.c
-endif
 if SUPPORT_EGL_PLATFORM_POWERVR_X11
 cogl_sources_c += \
-	$(srcdir)/winsys/cogl-winsys-egl.c
+	$(srcdir)/winsys/cogl-winsys-egl.c \
+	$(srcdir)/winsys/cogl-winsys-egl-private.h
 endif
 if SUPPORT_EGL_PLATFORM_POWERVR_NULL
 cogl_sources_c += \
-       $(srcdir)/winsys/cogl-winsys-egl.c
+       $(srcdir)/winsys/cogl-winsys-egl.c \
+       $(srcdir)/winsys/cogl-winsys-egl-private.h
 endif
 if SUPPORT_EGL_PLATFORM_GDL
 cogl_sources_c += \
-       $(srcdir)/winsys/cogl-winsys-egl.c
+       $(srcdir)/winsys/cogl-winsys-egl.c \
+       $(srcdir)/winsys/cogl-winsys-egl-private.h
 endif
 if SUPPORT_EGL_PLATFORM_WAYLAND
 cogl_sources_c += \
-       $(srcdir)/winsys/cogl-winsys-egl.c
+       $(srcdir)/winsys/cogl-winsys-egl.c \
+       $(srcdir)/winsys/cogl-winsys-egl-private.h
 endif
 if SUPPORT_EGL_PLATFORM_ANDROID
 cogl_sources_c += \
-       $(srcdir)/winsys/cogl-winsys-egl.c
-endif
-if SUPPORT_STUB
-cogl_sources_c += \
-       $(srcdir)/winsys/cogl-winsys-stub.c
+       $(srcdir)/winsys/cogl-winsys-egl.c \
+       $(srcdir)/winsys/cogl-winsys-egl-private.h
 endif
 
 EXTRA_DIST += stb_image.c
@@ -372,15 +371,9 @@ include $(top_srcdir)/build/autotools/Makefile.am.enums
 lib_LTLIBRARIES += libcogl.la
 
 libcogl_la_LIBADD = -lm $(COGL_DEP_LIBS) $(COGL_EXTRA_LDFLAGS)
-
 if SUPPORT_GLX
 libcogl_la_LIBADD += -ldl
 endif
-
-if SUPPORT_QUARTZ
-libcogl_la_LIBADD += -ldl
-endif
-
 # XXX: The aim is to eventually get rid of all private API exports
 # for cogl-pango.
 libcogl_la_LDFLAGS = \
@@ -458,7 +451,7 @@ Cogl_1_0_gir_NAMESPACE = Cogl
 Cogl_1_0_gir_VERSION = 1.0
 Cogl_1_0_gir_LIBS = libcogl.la
 Cogl_1_0_gir_FILES = $(cogl_public_h) cogl-enum-types.h
-Cogl_1_0_gir_CFLAGS = $(INCLUDES) $(AM_CPPFLAGS)
+Cogl_1_0_gir_CFLAGS = $(INCLUDES) $(AM_CPPFLAGS) $(COGL_DEP_CFLAGS)
 Cogl_1_0_gir_INCLUDES = GL-1.0 GObject-2.0
 Cogl_1_0_gir_EXPORT_PACKAGES = cogl-1.0
 Cogl_1_0_gir_SCANNERFLAGS = --warn-all --c-include='cogl/cogl.h'

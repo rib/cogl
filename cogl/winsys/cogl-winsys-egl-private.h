@@ -16,40 +16,31 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library. If not, see
- * <http://www.gnu.org/licenses/>.
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  *
  *
  */
 
-#ifndef __COGL_DISPLAY_PRIVATE_H
-#define __COGL_DISPLAY_PRIVATE_H
+#ifndef __COGL_WINSYS_EGL_PRIVATE_H
+#define __COGL_WINSYS_EGL_PRIVATE_H
 
-#include "cogl-object-private.h"
-#include "cogl-display.h"
-#include "cogl-renderer.h"
-#include "cogl-onscreen-template.h"
-#if COGL_HAS_WAYLAND_EGL_SERVER_SUPPORT
-#include <wayland-server.h>
+#include "cogl-defines.h"
+#include "cogl-winsys-private.h"
+#include "cogl-context.h"
+
+const CoglWinsysVtable *
+_cogl_winsys_egl_get_vtable (void);
+
+#ifdef EGL_KHR_image_base
+EGLImageKHR
+_cogl_egl_create_image (CoglContext *ctx,
+                        EGLenum target,
+                        EGLClientBuffer buffer,
+                        const EGLint *attribs);
+
+void
+_cogl_egl_destroy_image (CoglContext *ctx,
+                         EGLImageKHR image);
 #endif
 
-struct _CoglDisplay
-{
-  CoglObject _parent;
-
-  gboolean setup;
-  CoglRenderer *renderer;
-  CoglOnscreenTemplate *onscreen_template;
-
-#ifdef COGL_HAS_WAYLAND_EGL_SERVER_SUPPORT
-  struct wl_display *wayland_compositor_display;
-#endif
-
-#ifdef COGL_HAS_EGL_PLATFORM_GDL_SUPPORT
-  struct gdl_plane *gdl_plane;
-#endif
-
-  void *winsys;
-};
-
-#endif /* __COGL_DISPLAY_PRIVATE_H */
+#endif /* __COGL_WINSYS_EGL_PRIVATE_H */

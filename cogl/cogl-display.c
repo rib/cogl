@@ -104,18 +104,14 @@ gboolean
 cogl_display_setup (CoglDisplay *display,
                     GError **error)
 {
-#ifdef COGL_HAS_FULL_WINSYS
   const CoglWinsysVtable *winsys;
-#endif
 
   if (display->setup)
     return TRUE;
 
-#ifdef COGL_HAS_FULL_WINSYS
   winsys = _cogl_display_get_winsys (display);
   if (!winsys->display_setup (display, error))
     return FALSE;
-#endif
 
   display->setup = TRUE;
 
@@ -133,3 +129,13 @@ cogl_gdl_display_set_plane (CoglDisplay *display,
 }
 #endif
 
+#ifdef COGL_HAS_WAYLAND_EGL_SERVER_SUPPORT
+void
+cogl_wayland_display_set_compositor_display (CoglDisplay *display,
+                                             struct wl_display *wayland_display)
+{
+  g_return_if_fail (display->setup == FALSE);
+
+  display->wayland_compositor_display = wayland_display;
+}
+#endif
