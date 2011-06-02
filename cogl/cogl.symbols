@@ -325,6 +325,7 @@ cogl_is_shader
 cogl_is_texture
 
 #ifdef COGL_ENABLE_EXPERIMENTAL_API
+cogl_is_texture_2d_EXP
 cogl_is_texture_3d_EXP
 #endif
 
@@ -741,6 +742,7 @@ cogl_swap_chain_set_has_alpha_EXP
 cogl_swap_chain_set_length_EXP
 #endif
 
+cogl_texture_error_quark
 cogl_texture_flags_get_type
 cogl_texture_get_data
 cogl_texture_get_format
@@ -773,6 +775,10 @@ cogl_texture_unref
 #endif
 
 #ifdef COGL_ENABLE_EXPERIMENTAL_API
+cogl_texture_2d_new_from_data_EXP
+cogl_texture_2d_new_from_foreign_EXP
+cogl_texture_2d_new_with_size_EXP
+
 cogl_texture_3d_new_from_data_EXP
 cogl_texture_3d_new_with_size_EXP
 #endif
@@ -831,6 +837,10 @@ cogl_viewport
 #endif
 
 cogl_winsys_feature_get_type
+
+#ifdef COGL_HAS_WAYLAND_EGL_SERVER_SUPPORT
+cogl_wayland_texture_2d_new_from_buffer_EXP
+#endif
 
 #ifdef COGL_ENABLE_EXPERIMENTAL_API
 #ifdef COGL_HAS_XLIB
