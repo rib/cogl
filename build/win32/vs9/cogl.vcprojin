@@ -47,7 +47,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="opengl32.lib intl.lib gdk_pixbuf-2.0.lib gmodule-2.0.lib"
+				AdditionalDependencies="opengl32.lib intl.lib cairo.lib gdk_pixbuf-2.0.lib gmodule-2.0.lib"
 				OutputFile="$(OutDir)\$(CoglDllPrefix)$(ProjectName)$(CoglDllSuffix).dll"
 				LinkIncremental="2"
 				ModuleDefinitionFile="..\..\..\cogl\cogl.def"
@@ -85,7 +85,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="opengl32.lib intl.lib gdk_pixbuf-2.0.lib gmodule-2.0.lib"
+				AdditionalDependencies="opengl32.lib intl.lib cairo.lib gdk_pixbuf-2.0.lib gmodule-2.0.lib"
 				OutputFile="$(OutDir)\$(CoglDllPrefix)$(ProjectName)$(CoglDllSuffix).dll"
 				LinkIncremental="2"
 				ModuleDefinitionFile="..\..\..\cogl\cogl.def"
@@ -124,7 +124,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="opengl32.lib intl.lib gdk_pixbuf-2.0.lib gmodule-2.0.lib"
+				AdditionalDependencies="opengl32.lib intl.lib cairo.lib gdk_pixbuf-2.0.lib gmodule-2.0.lib"
 				OutputFile="$(OutDir)\$(CoglDllPrefix)$(ProjectName)$(CoglDllSuffix).dll"
 				LinkIncremental="1"
 				ModuleDefinitionFile="..\..\..\cogl\cogl.def"
@@ -161,7 +161,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="opengl32.lib intl.lib gdk_pixbuf-2.0.lib gmodule-2.0.lib"
+				AdditionalDependencies="opengl32.lib intl.lib cairo.lib gdk_pixbuf-2.0.lib gmodule-2.0.lib"
 				OutputFile="$(OutDir)\$(CoglDllPrefix)$(ProjectName)$(CoglDllSuffix).dll"
 				LinkIncremental="2"
 				ModuleDefinitionFile="..\..\..\cogl\cogl.def"
