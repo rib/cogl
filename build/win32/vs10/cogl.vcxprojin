@@ -134,7 +134,7 @@
 			<Optimization>MaxSpeed</Optimization>
 			<AdditionalIncludeDirectories>..\..\..\cogl\tesselator;..\..\..\cogl\winsys;..\..\..\cogl\driver\gl;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
 			<IntrinsicFunctions>true</IntrinsicFunctions>
-			<PreprocessorDefinitions>$(ReleaseBuildDefines);$(CoglBuildDefines);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+			<PreprocessorDefinitions>$(ReleaseLibBuildDefines);$(CoglBuildDefines);%(PreprocessorDefinitions)</PreprocessorDefinitions>
 			<RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
 			<FunctionLevelLinking>true</FunctionLevelLinking>
 			<PrecompiledHeader>
