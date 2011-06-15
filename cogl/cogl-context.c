@@ -30,7 +30,7 @@
 #include "cogl-internal.h"
 #include "cogl-private.h"
 #include "cogl-winsys-private.h"
-#include "cogl-winsys-stub-private.h"
+#include "winsys/cogl-winsys-stub-private.h"
 #include "cogl-profile.h"
 #include "cogl-util.h"
 #include "cogl-context-private.h"
@@ -111,7 +111,7 @@ cogl_context_new (CoglDisplay *display,
   const CoglWinsysVtable *winsys;
   int i;
 
-#ifdef CLUTTER_ENABLE_PROFILE
+#ifdef COGL_ENABLE_PROFILE
   /* We need to be absolutely sure that uprof has been initialized
    * before calling _cogl_uprof_init. uprof_init (NULL, NULL)
    * will be a NOP if it has been initialized but it will also

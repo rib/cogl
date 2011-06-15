@@ -85,6 +85,7 @@ typedef enum {
 #define COGL_DEBUG_N_INTS COGL_FLAGS_N_INTS_FOR_SIZE (COGL_DEBUG_N_FLAGS)
 
 COGL_EXP extern unsigned int _cogl_debug_flags[COGL_DEBUG_N_INTS];
+COGL_EXP extern GHashTable *_cogl_debug_instances;
 
 #define COGL_DEBUG_ENABLED(flag) \
   COGL_FLAGS_GET (_cogl_debug_flags, flag)

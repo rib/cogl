@@ -8,4 +8,20 @@ SUBDIRS += examples doc po build
 
 ACLOCAL_AMFLAGS = -I build/autotools ${ACLOCAL_FLAGS}
 
-EXTRA_DIST = README.in README config.h.win32 config.h.win32.in
+EXTRA_DIST = \
+	README.in \
+	README \
+	config-custom.h \
+	config.h.win32.in \
+	config.h.win32
+
+# .changelog expects these to be initializes
+CLEANFILES=
+DISTCLEANFILES=
+
+DISTCHECK_CONFIGURE_FLAGS = --enable-gtk-doc --enable-maintainer-flags --enable-profile
+
+# .release requires .changelog rules
+include $(top_srcdir)/build/autotools/Makefile.am.changelog
+include $(top_srcdir)/build/autotools/Makefile.am.release
+

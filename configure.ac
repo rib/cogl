@@ -3,7 +3,7 @@ AC_PREREQ(2.59)
 dnl ================================================================
 dnl XXX: If you are making a release then you need to check these
 dnl sections:
-dnl » API versions
+dnl » API versions (Only the 1.x version needs to change)
 dnl   (the pretty numbers that the users see)
 dnl
 dnl » Interface version details for libtool
@@ -24,8 +24,8 @@ m4_define([cogl_version],
 
 dnl Since the core Cogl library has to also maintain support for the
 dnl Cogl 1.x API for Clutter then we track the 1.x version separately.
-m4_define([cogl_1_minor_version], [6])
-m4_define([cogl_1_micro_version], [0])
+m4_define([cogl_1_minor_version], [7])
+m4_define([cogl_1_micro_version], [1])
 m4_define([cogl_1_version], [1.cogl_1_minor_version.cogl_1_micro_version])
 
 dnl ================================================================
@@ -86,7 +86,7 @@ m4_define([xfixes_req_version],         [3])
 m4_define([xcomposite_req_version],     [0.4])
 
 
-AC_INIT(cogl, [cogl_version])
+AC_INIT(cogl, [cogl_1_version])
 AC_CONFIG_SRCDIR(cogl/cogl.h)
 AC_CONFIG_AUX_DIR([build])
 AC_CONFIG_MACRO_DIR([build/autotools])
@@ -97,9 +97,10 @@ AC_CONFIG_HEADERS(config.h)
 cflags_set=${CFLAGS+set}
 
 AM_INIT_AUTOMAKE([1.11 foreign -Wno-portability no-define no-dist-gzip
-                  dist-bzip2])
+                  dist-bzip2 tar-ustar])
 AM_SILENT_RULES([yes])
 
+AH_BOTTOM([#include "config-custom.h"])
 
 dnl ================================================================
 dnl Export the API versioning
@@ -206,6 +207,29 @@ AS_IF([test "x$enable_cairo" = "xyes" && test "x$enable_debug" = "xyes"],
         COGL_PKG_REQUIRES="$COGL_PKG_REQUIRES cairo"
         AC_DEFINE([HAVE_CAIRO], [1], [Whether we have cairo or not])
       ])
+
+
+dnl     ============================================================
+dnl     Enable profiling
+dnl     ============================================================
+AC_ARG_ENABLE(profile,
+              AC_HELP_STRING([--enable-uprof=@<:@no/yes@:>@],
+                             [Turn on uprof profiling support. yes; All UProf profiling probe points are compiled in and may be runtime enabled. no; No profiling support will built into cogl.  @<:@default=no@:>@]),
+              [],
+              [enable_profile=no])
+AS_IF([test "x$enable_profile" = "xyes"],
+      [
+        AS_IF([test "x$GCC" = "xyes"],
+              [
+                COGL_PKG_REQUIRES="$COGL_PKG_REQUIRES uprof-0.3"
+                COGL_EXTRA_CFLAGS="$COGL_EXTRA_CFLAGS -DCOGL_ENABLE_PROFILE"
+                AS_IF([test "x$enable_debug" = "xyes"], [COGL_EXTRA_CFLAGS="$COGL_EXTRA_CFLAGS -DUPROF_DEBUG"])
+              ],
+              [
+                AC_MSG_ERROR([--enable-profile is currently only supported if using GCC])
+              ])
+      ])
+AM_CONDITIONAL(PROFILE, test "x$enable_profile" != "xno")
 
 
 dnl     ============================================================
@@ -862,17 +886,17 @@ build/win32/vs9/Makefile
 build/win32/vs10/Makefile
 cogl/Makefile
 cogl/cogl-1.0.pc
-cogl/cogl-$COGL_MAJOR_VERSION.0.pc:cogl/cogl.pc.in
+cogl/cogl-2.0-experimental.pc
 cogl/cogl-defines.h
 cogl-pango/Makefile
 cogl-pango/cogl-pango-1.0.pc
-cogl-pango/cogl-pango-$COGL_MAJOR_VERSION.0.pc:cogl-pango/cogl-pango.pc.in
+cogl-pango/cogl-pango-2.0-experimental.pc
 doc/Makefile
 doc/reference/Makefile
 doc/reference/cogl/Makefile
 doc/reference/cogl/cogl-docs.xml
-doc/reference/cogl-2.0/Makefile
-doc/reference/cogl-2.0/cogl-docs.xml
+doc/reference/cogl-2.0-experimental/Makefile
+doc/reference/cogl-2.0-experimental/cogl-docs.xml
 examples/Makefile
 po/Makefile.in
 )
@@ -899,6 +923,7 @@ echo "        Wayland compositor support: ${enable_wayland_egl_server}"
 fi
 echo "        Image backend: ${COGL_IMAGE_BACKEND}"
 echo "        Cogl Pango: ${enable_cogl_pango}"
+echo "        Profiling: ${enable_profile}"
 
 # Compiler/Debug related flags
 echo ""
