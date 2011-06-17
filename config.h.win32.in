@@ -49,6 +49,9 @@
 /* Have libdrm support */
 /*#undef HAVE_DRM*/
 
+/* Define to 1 if you have the <EGL/eglext.h> header file. */
+/*#undef HAVE_EGL_EGLEXT_H*/
+
 /* Define to 1 if you have the <EGL/egl.h> header file. */
 /*#undef HAVE_EGL_EGL_H*/
 
@@ -150,3 +153,5 @@
 
 /* Define to empty if `const' does not conform to ANSI C. */
 /*#undef const*/
+
+#include "config-custom.h"
