@@ -174,10 +174,9 @@ copy ..\..\..\cogl\cogl2-clip-state.h $(CopyDir)\include\cogl-$(CoglApiVersion)\
     <CoglDllSuffix>$(CoglSeparateVS10DllSuffix)</CoglDllSuffix>
   </PropertyGroup>
   <PropertyGroup>
-    <_ProjectFileVersion>10.0.40219.1</_ProjectFileVersion>
     <_PropertySheetDisplayName>coglprops</_PropertySheetDisplayName>
     <OutDir>$(SolutionDir)$(Configuration)\$(PlatformName)\bin\</OutDir>
-    <IntDir>$(SolutionDir)$(Configuration)\$(PlatformName)\obj\</IntDir>
+    <IntDir>$(SolutionDir)$(Configuration)\$(PlatformName)\obj\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
