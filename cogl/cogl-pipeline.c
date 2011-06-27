@@ -245,6 +245,9 @@ _cogl_pipeline_init_default_pipeline (void)
   _cogl_pipeline_node_init (COGL_PIPELINE_NODE (pipeline));
 
   pipeline->is_weak = FALSE;
+  /* We say the default pipeline is a user pipeline to stop it
+   * very being pruned. */
+  pipeline->is_user_pipeline = TRUE;
   pipeline->journal_ref_count = 0;
   pipeline->fragend = COGL_PIPELINE_FRAGEND_UNDEFINED;
   pipeline->vertend = COGL_PIPELINE_VERTEND_UNDEFINED;
@@ -439,6 +442,8 @@ _cogl_pipeline_copy (CoglPipeline *src, gboolean is_weak)
 
   pipeline->is_weak = is_weak;
 
+  pipeline->is_user_pipeline = FALSE;
+
   pipeline->journal_ref_count = 0;
 
   pipeline->differences = 0;
@@ -482,7 +487,9 @@ _cogl_pipeline_copy (CoglPipeline *src, gboolean is_weak)
 CoglPipeline *
 cogl_pipeline_copy (CoglPipeline *src)
 {
-  return _cogl_pipeline_copy (src, FALSE);
+  CoglPipeline *copy = _cogl_pipeline_copy (src, FALSE);
+  copy->is_user_pipeline = TRUE;
+  return copy;
 }
 
 CoglPipeline *
@@ -495,6 +502,7 @@ _cogl_pipeline_weak_copy (CoglPipeline *pipeline,
 
   copy = _cogl_pipeline_copy (pipeline, TRUE);
   copy_pipeline = COGL_PIPELINE (copy);
+  copy_pipeline->is_user_pipeline = TRUE;
   copy_pipeline->destroy_callback = callback;
   copy_pipeline->destroy_data = user_data;
 
@@ -510,6 +518,7 @@ cogl_pipeline_new (void)
 
   new = cogl_pipeline_copy (ctx->default_pipeline);
   _cogl_pipeline_set_static_breadcrumb (new, "new");
+  new->is_user_pipeline = TRUE;
   return new;
 }
 
@@ -3852,10 +3861,34 @@ _cogl_pipeline_get_colorubv (CoglPipeline *pipeline,
   _cogl_color_get_rgba_4ubv (&authority->color, color);
 }
 
+static gboolean
+_cogl_pipeline_can_prune_ancestor (CoglPipeline *pipeline,
+                                   CoglPipeline *ancestor)
+{
+  /* If a pipeline is only referenced by its dependant children, then
+   * we no longer care that the pipeline was originally created by the
+   * user and consider it a candidate for pruning. */
+  if (ancestor->is_user_pipeline &&
+      (COGL_OBJECT (ancestor)->ref_count ==
+       g_list_length (COGL_PIPELINE_NODE (pipeline)->children)))
+    ancestor->is_user_pipeline = FALSE;
+
+  /* XXX: is it even worth having this special consideration, are we
+   * ever going to  */
+
+  if (!ancestor->is_user_pipeline &&
+      _cogl_pipeline_get_parent (ancestor) &&
+      (ancestor->differences | pipeline->differences) ==
+      pipeline->differences)
+    return TRUE;
+  else
+    return FALSE;
+}
+
 static void
 _cogl_pipeline_prune_redundant_ancestry (CoglPipeline *pipeline)
 {
-  CoglPipeline *new_parent = _cogl_pipeline_get_parent (pipeline);
+  CoglPipeline *new_parent;
 
   /* Before considering pruning redundant ancestry we check if this
    * pipeline is an authority for layer state and if so only consider
@@ -3878,11 +3911,11 @@ _cogl_pipeline_prune_redundant_ancestry (CoglPipeline *pipeline)
         return;
     }
 
+  new_parent = _cogl_pipeline_get_parent (pipeline);
+
   /* walk up past ancestors that are now redundant and potentially
    * reparent the pipeline. */
-  while (_cogl_pipeline_get_parent (new_parent) &&
-         (new_parent->differences | pipeline->differences) ==
-          pipeline->differences)
+  while (_cogl_pipeline_can_prune_ancestor (pipeline, new_parent))
     new_parent = _cogl_pipeline_get_parent (new_parent);
 
   if (new_parent != _cogl_pipeline_get_parent (pipeline))

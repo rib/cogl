@@ -711,6 +711,16 @@ struct _CoglPipeline
    */
   unsigned int          fragend_priv_set_mask:COGL_PIPELINE_N_FRAGENDS;
 
+  /* If this pipeline was explicitly constructed/copied by the user
+   * then we'll avoid touching it during ancestor pruning. This way
+   * we'll only prune internal copy-on-write pipelines.
+   *
+   * NB: We used to do more agressive pruning, but it would negate the
+   * effort of users to create template pipelines that could be used
+   * to share state, including shaders, because those template
+   * materials would often be shadowed and then pruned. */
+  unsigned int          is_user_pipeline:1;
+
   /* Weak pipelines don't count as dependants on their parents which
    * means that the parent pipeline can be modified without
    * considering how the modifications may affect the weak pipeline.
