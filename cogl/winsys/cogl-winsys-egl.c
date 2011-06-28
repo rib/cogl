@@ -1710,7 +1710,7 @@ _cogl_winsys_egl_get_vtable (void)
  * points... */
 #ifdef COGL_HAS_EGL_PLATFORM_WAYLAND_SUPPORT
 void
-cogl_renderer_wayland_set_foreign_display (CoglRenderer *renderer,
+cogl_wayland_renderer_set_foreign_display (CoglRenderer *renderer,
                                            struct wl_display *display)
 {
   g_return_if_fail (cogl_is_renderer (renderer));
@@ -1722,7 +1722,7 @@ cogl_renderer_wayland_set_foreign_display (CoglRenderer *renderer,
 }
 
 struct wl_display *
-cogl_renderer_wayland_get_display (CoglRenderer *renderer)
+cogl_wayland_renderer_get_display (CoglRenderer *renderer)
 {
   g_return_val_if_fail (cogl_is_renderer (renderer), NULL);
 
@@ -1738,7 +1738,7 @@ cogl_renderer_wayland_get_display (CoglRenderer *renderer)
 }
 
 void
-cogl_renderer_wayland_set_foreign_compositor (CoglRenderer *renderer,
+cogl_wayland_renderer_set_foreign_compositor (CoglRenderer *renderer,
                                               struct wl_compositor *compositor)
 {
   g_return_if_fail (cogl_is_renderer (renderer));
@@ -1750,7 +1750,7 @@ cogl_renderer_wayland_set_foreign_compositor (CoglRenderer *renderer,
 }
 
 struct wl_compositor *
-cogl_renderer_wayland_get_compositor (CoglRenderer *renderer)
+cogl_wayland_renderer_get_compositor (CoglRenderer *renderer)
 {
   g_return_val_if_fail (cogl_is_renderer (renderer), NULL);
 
