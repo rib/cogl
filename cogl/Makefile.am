@@ -309,15 +309,18 @@ cogl_sources_c = \
 	$(NULL)
 
 if SUPPORT_XLIB
+cogl_public_h += \
+	$(srcdir)/cogl-xlib-renderer.h
+
 cogl_experimental_h += \
        $(srcdir)/winsys/cogl-texture-pixmap-x11.h \
        $(srcdir)/cogl-xlib.h
 
 cogl_sources_c += \
-	$(srcdir)/cogl-renderer-x11-private.h \
-	$(srcdir)/cogl-renderer-xlib-private.h \
-	$(srcdir)/cogl-renderer-xlib.c \
-	$(srcdir)/cogl-display-xlib-private.h \
+	$(srcdir)/cogl-x11-renderer-private.h \
+	$(srcdir)/cogl-xlib-renderer-private.h \
+	$(srcdir)/cogl-xlib-renderer.c \
+	$(srcdir)/cogl-xlib-display-private.h \
 	$(srcdir)/cogl-xlib.c \
 	$(srcdir)/cogl-xlib-private.h \
 	$(srcdir)/winsys/cogl-texture-pixmap-x11.c \
@@ -325,13 +328,17 @@ cogl_sources_c += \
 endif
 if SUPPORT_GLX
 cogl_sources_c += \
-	$(srcdir)/cogl-renderer-glx-private.h \
-	$(srcdir)/cogl-display-glx-private.h \
+	$(srcdir)/cogl-glx-renderer-private.h \
+	$(srcdir)/cogl-glx-display-private.h \
 	$(srcdir)/winsys/cogl-winsys-glx-feature-functions.h \
 	$(srcdir)/winsys/cogl-winsys-glx.c
 endif
 if SUPPORT_WGL
+cogl_public_h += \
+	$(srcdir)/cogl-win32-renderer.h
+
 cogl_sources_c += \
+	$(srcdir)/cogl-win32-renderer.c \
 	$(srcdir)/winsys/cogl-winsys-wgl.c \
 	$(srcdir)/winsys/cogl-winsys-wgl-feature-functions.h
 endif
@@ -351,6 +358,9 @@ cogl_sources_c += \
        $(srcdir)/winsys/cogl-winsys-egl-private.h
 endif
 if SUPPORT_EGL_PLATFORM_WAYLAND
+cogl_public_h += \
+	$(srcdir)/cogl-wayland-renderer.h
+
 cogl_sources_c += \
        $(srcdir)/winsys/cogl-winsys-egl.c \
        $(srcdir)/winsys/cogl-winsys-egl-private.h

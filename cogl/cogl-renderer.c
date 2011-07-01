@@ -33,6 +33,7 @@
 
 #include "cogl.h"
 #include "cogl-internal.h"
+#include "cogl-private.h"
 #include "cogl-object.h"
 
 #include "cogl-renderer.h"
@@ -112,6 +113,8 @@ cogl_renderer_new (void)
 {
   CoglRenderer *renderer = g_new0 (CoglRenderer, 1);
 
+  _cogl_init ();
+
   renderer->connected = FALSE;
   renderer->event_filters = NULL;
 
@@ -120,7 +123,7 @@ cogl_renderer_new (void)
 
 #if COGL_HAS_XLIB_SUPPORT
 void
-cogl_renderer_xlib_set_foreign_display (CoglRenderer *renderer,
+cogl_xlib_renderer_set_foreign_display (CoglRenderer *renderer,
                                         Display *xdisplay)
 {
   g_return_if_fail (cogl_is_renderer (renderer));
@@ -132,7 +135,7 @@ cogl_renderer_xlib_set_foreign_display (CoglRenderer *renderer,
 }
 
 Display *
-cogl_renderer_xlib_get_foreign_display (CoglRenderer *renderer)
+cogl_xlib_renderer_get_foreign_display (CoglRenderer *renderer)
 {
   g_return_val_if_fail (cogl_is_renderer (renderer), NULL);
 
@@ -169,7 +172,6 @@ gboolean
 cogl_renderer_connect (CoglRenderer *renderer, GError **error)
 {
   int i;
-  char *renderer_name = getenv ("COGL_RENDERER");
   GString *error_message;
 
   if (renderer->connected)
@@ -181,8 +183,17 @@ cogl_renderer_connect (CoglRenderer *renderer, GError **error)
       const CoglWinsysVtable *winsys = _cogl_winsys_vtable_getters[i]();
       GError *tmp_error = NULL;
 
-      if (renderer_name && strcmp (winsys->name, renderer_name) != 0)
-        continue;
+      if (renderer->winsys_id_override != COGL_WINSYS_ID_ANY)
+        {
+          if (renderer->winsys_id_override != winsys->id)
+            continue;
+        }
+      else
+        {
+          char *user_choice = getenv ("COGL_RENDERER");
+          if (user_choice && strcmp (winsys->name, user_choice) != 0)
+            continue;
+        }
 
       /* At least temporarily we will associate this winsys with
        * the renderer in-case ->renderer_connect calls API that
@@ -218,8 +229,8 @@ cogl_renderer_connect (CoglRenderer *renderer, GError **error)
 }
 
 CoglFilterReturn
-cogl_renderer_handle_native_event (CoglRenderer *renderer,
-                                   void *event)
+_cogl_renderer_handle_native_event (CoglRenderer *renderer,
+                                    void *event)
 {
   GSList *l, *next;
 
@@ -243,9 +254,9 @@ cogl_renderer_handle_native_event (CoglRenderer *renderer,
 }
 
 void
-cogl_renderer_add_native_filter (CoglRenderer *renderer,
-                                 CoglNativeFilterFunc func,
-                                 void *data)
+_cogl_renderer_add_native_filter (CoglRenderer *renderer,
+                                  CoglNativeFilterFunc func,
+                                  void *data)
 {
   CoglNativeFilterClosure *closure;
 
@@ -257,9 +268,9 @@ cogl_renderer_add_native_filter (CoglRenderer *renderer,
 }
 
 void
-cogl_renderer_remove_native_filter (CoglRenderer *renderer,
-                                    CoglNativeFilterFunc func,
-                                    void *data)
+_cogl_renderer_remove_native_filter (CoglRenderer *renderer,
+                                     CoglNativeFilterFunc func,
+                                     void *data)
 {
   GSList *l, *prev = NULL;
 
@@ -278,4 +289,21 @@ cogl_renderer_remove_native_filter (CoglRenderer *renderer,
           break;
         }
     }
+}
+
+void
+cogl_renderer_set_winsys_id (CoglRenderer *renderer,
+                             CoglWinsysID winsys_id)
+{
+  g_return_if_fail (!renderer->connected);
+
+  renderer->winsys_id_override = winsys_id;
+}
+
+CoglWinsysID
+cogl_renderer_get_winsys_id (CoglRenderer *renderer)
+{
+  g_return_val_if_fail (renderer->connected, 0);
+
+  return renderer->winsys_vtable->id;
 }

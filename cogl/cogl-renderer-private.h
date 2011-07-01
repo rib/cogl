@@ -40,6 +40,7 @@ struct _CoglRenderer
   CoglObject _parent;
   gboolean connected;
   const CoglWinsysVtable *winsys_vtable;
+  CoglWinsysID winsys_id_override;
 #ifdef COGL_HAS_XLIB_SUPPORT
   Display *foreign_xdpy;
 #endif
@@ -51,5 +52,22 @@ struct _CoglRenderer
   GSList *event_filters;
   void *winsys;
 };
+
+typedef CoglFilterReturn (* CoglNativeFilterFunc) (void *native_event,
+                                                   void *data);
+
+CoglFilterReturn
+_cogl_renderer_handle_native_event (CoglRenderer *renderer,
+                                    void *event);
+
+void
+_cogl_renderer_add_native_filter (CoglRenderer *renderer,
+                                  CoglNativeFilterFunc func,
+                                  void *data);
+
+void
+_cogl_renderer_remove_native_filter (CoglRenderer *renderer,
+                                     CoglNativeFilterFunc func,
+                                     void *data);
 
 #endif /* __COGL_RENDERER_PRIVATE_H */

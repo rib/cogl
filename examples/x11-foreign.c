@@ -71,7 +71,7 @@ main (int argc, char **argv)
   renderer = cogl_renderer_new ();
   /* FIXME: This should conceptually be part of the configuration of
    * a renderer. */
-  cogl_renderer_xlib_set_foreign_display (renderer, xdpy);
+  cogl_xlib_renderer_set_foreign_display (renderer, xdpy);
   if (!cogl_renderer_connect (renderer, &error))
     {
       fprintf (stderr, "Failed to connect to a renderer: %s\n",
@@ -175,8 +175,7 @@ main (int argc, char **argv)
             case ButtonRelease:
               return 0;
             }
-          /* FIXME: This should be replaced with some equivalent cogl_xlib_ typesafe API... */
-          cogl_renderer_handle_native_event (renderer, &event);
+          cogl_xlib_renderer_handle_event (renderer, &event);
         }
       cogl_clear (&black, COGL_BUFFER_BIT_COLOR);
       cogl_primitive_draw (triangle);
