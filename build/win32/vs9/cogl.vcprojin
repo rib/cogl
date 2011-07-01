@@ -181,7 +181,8 @@
 			Filter="cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx"
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
-			<File RelativePath="..\..\..\cogl\.\winsys\cogl-winsys-wgl.c" />
+			<File RelativePath="..\..\..\cogl\winsys\cogl-winsys-wgl.c" />
+			<File RelativePath="..\..\..\cogl\cogl-win32-renderer.c" />
 #include "cogl.sourcefiles"
 			<Filter Name="Driver_GL" >
 				<File RelativePath="..\..\..\cogl\driver\gl\cogl-gl.c" />

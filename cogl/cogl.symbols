@@ -669,7 +669,6 @@ cogl_rectangle_with_multitexture_coords
 cogl_rectangle_with_texture_coords
 
 #ifdef COGL_ENABLE_EXPERIMENTAL_API
-cogl_renderer_add_native_filter_EXP
 cogl_renderer_check_onscreen_template_EXP
 cogl_renderer_connect_EXP
 #endif
@@ -681,7 +680,6 @@ cogl_renderer_error_quark_EXP
 cogl_renderer_get_winsys_id_EXP
 cogl_renderer_new_EXP
 cogl_renderer_set_winsys_id_EXP
-cogl_renderer_remove_native_filter_EXP
 #endif
 
 cogl_rotate
