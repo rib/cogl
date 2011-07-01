@@ -6,5 +6,6 @@ EXTRA_DIST = \
 	cogl-pango.vcproj	\
 	cogl-pango.vcprojin	\
 	hello.vcproj	\
+	crate.vcproj	\
 	install.vcproj	\
 	README.txt

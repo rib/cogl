@@ -11,5 +11,7 @@ EXTRA_DIST = \
 	cogl-pango.vcxproj.filtersin	\
 	hello.vcxproj	\
 	hello.vcxproj.filters	\
+	crate.vcxproj	\
+	crate.vcxproj.filters	\
 	install.vcxproj	\
 	README.txt

@@ -59,6 +59,9 @@ copy $(SolutionDir)$(Configuration)\$(Platform)\bin\*.dll $(CopyDir)\bin
 copy $(SolutionDir)$(Configuration)\$(Platform)\bin\*.exe $(CopyDir)\bin
 
 
+copy ..\..\..\examples\*.jpg $(CopyDir)\bin
+
+
 mkdir $(CopyDir)\lib
 
 copy $(SolutionDir)$(Configuration)\$(Platform)\bin\*-$(CoglApiVersion).lib $(CopyDir)\lib

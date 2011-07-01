@@ -90,6 +90,10 @@
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+	<ProjectReference Include="crate.vcxproj">
+      <Project>{de1a2710-04bb-4c3d-90c1-b070e326b1cf}</Project>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
 	<ProjectReference Include="hello.vcxproj">
       <Project>{f5a43c12-7032-428e-a56a-d294075fa493}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
