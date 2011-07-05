@@ -40,6 +40,44 @@
 
 G_BEGIN_DECLS
 
+/**
+ * SECTION:cogl-framebuffer
+ * @short_description: A common interface for manipulating framebuffers
+ *
+ * Framebuffers are a collection of buffers that can be rendered too.
+ * A framebuffer may be comprised of one or more color buffers, an
+ * optional depth buffer and an optional stencil buffer. Other
+ * configuration parameters are associated with framebuffers too such
+ * as whether the framebuffer supports multi-sampling (an anti-aliasing
+ * technique) or dithering.
+ *
+ * There are two kinds of framebuffer in Cogl, #CoglOnscreen
+ * framebuffers and #CoglOffscreen framebuffers. As the names imply
+ * offscreen framebuffers are for rendering something offscreen
+ * (perhaps to a texture which is bound as one of the color buffers).
+ * The exact semantics of onscreen framebuffers depends on the window
+ * system backend that you are using, but typically you can expect
+ * rendering to a #CoglOnscreen framebuffer will be immediately
+ * visible to the user.
+ *
+ * If you want to create a new framebuffer then you should start by
+ * looking at the #CoglOnscreen and #CoglOffscreen constructor
+ * functions, such as cogl_offscreen_new_to_texture() or
+ * cogl_onscreen_new(). The #CoglFramebuffer interface deals with
+ * all aspects that are common between those two types of framebuffer.
+ *
+ * Setup of a new CoglFramebuffer happens in two stages. There is a
+ * configuration stage where you specify all the options and ancillary
+ * buffers you want associated with your framebuffer and then when you
+ * are happy with the configuration you can "allocate" the framebuffer
+ * using cogl_framebuffer_allocate (). Technically explicitly calling
+ * cogl_framebuffer_allocate () is optional for convenience and the
+ * framebuffer will automatically be allocated when you first try to
+ * draw to it, but if you do the allocation manually then you can
+ * also catch any possible errors that may arise from your
+ * configuration.
+ */
+
 #ifdef COGL_ENABLE_EXPERIMENTAL_API
 #define cogl_onscreen_new cogl_onscreen_new_EXP
 
@@ -86,6 +124,66 @@ cogl_framebuffer_get_viewport_height (CoglFramebuffer *framebuffer);
 void
 cogl_framebuffer_get_viewport4fv (CoglFramebuffer *framebuffer,
                                   float *viewport);
+
+/**
+ * cogl_framebuffer_get_red_bits:
+ * @framebuffer: a pointer to a #CoglFramebuffer
+ *
+ * Retrieves the number of red bits of @framebuffer
+ *
+ * Return value: the number of bits
+ *
+ * Since: 1.8
+ * Stability: unstable
+ */
+#define cogl_framebuffer_get_red_bits cogl_framebuffer_get_red_bits_EXP
+int
+cogl_framebuffer_get_red_bits (CoglFramebuffer *framebuffer);
+
+/**
+ * cogl_framebuffer_get_green_bits:
+ * @framebuffer: a pointer to a #CoglFramebuffer
+ *
+ * Retrieves the number of green bits of @framebuffer
+ *
+ * Return value: the number of bits
+ *
+ * Since: 1.8
+ * Stability: unstable
+ */
+#define cogl_framebuffer_get_green_bits cogl_framebuffer_get_green_bits_EXP
+int
+cogl_framebuffer_get_green_bits (CoglFramebuffer *framebuffer);
+
+/**
+ * cogl_framebuffer_get_blue_bits:
+ * @framebuffer: a pointer to a #CoglFramebuffer
+ *
+ * Retrieves the number of blue bits of @framebuffer
+ *
+ * Return value: the number of bits
+ *
+ * Since: 1.8
+ * Stability: unstable
+ */
+#define cogl_framebuffer_get_blue_bits cogl_framebuffer_get_blue_bits_EXP
+int
+cogl_framebuffer_get_blue_bits (CoglFramebuffer *framebuffer);
+
+/**
+ * cogl_framebuffer_get_alpha_bits:
+ * @framebuffer: a pointer to a #CoglFramebuffer
+ *
+ * Retrieves the number of alpha bits of @framebuffer
+ *
+ * Return value: the number of bits
+ *
+ * Since: 1.8
+ * Stability: unstable
+ */
+#define cogl_framebuffer_get_blue_bits cogl_framebuffer_get_blue_bits_EXP
+int
+cogl_framebuffer_get_alpha_bits (CoglFramebuffer *framebuffer);
 
 #define cogl_framebuffer_swap_buffers cogl_framebuffer_swap_buffers_EXP
 void
