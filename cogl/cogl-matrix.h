@@ -194,6 +194,44 @@ cogl_matrix_scale (CoglMatrix *matrix,
 		   float sz);
 
 /**
+ * cogl_matrix_init_looking_at:
+ * @matrix: A 4x4 transformation matrix
+ * @eye_position_x: The X coordinate to look from
+ * @eye_position_y: The Y coordinate to look from
+ * @eye_position_z: The Z coordinate to look from
+ * @object_x: The X coordinate of the object to look at
+ * @object_y: The Y coordinate of the object to look at
+ * @object_z: The Z coordinate of the object to look at
+ * @world_up_x: The X component of the world's up direction vector
+ * @world_up_y: The Y component of the world's up direction vector
+ * @world_up_z: The Z component of the world's up direction vector
+ *
+ * Initializes a view transform @matrix that positions the camera at
+ * the coordinate (@eye_position_x, @eye_position_y, @eye_position_z)
+ * looking towards an object at the coordinate (@object_x, @object_y,
+ * @object_z). The top of the camera is aligned to the given world up
+ * vector, which is normally simply (0, 1, 0) to map up to the
+ * positive direction of the y axis.
+ *
+ * <note>You should never look directly along the world-up
+ * vector</note>
+ *
+ * <note>It is assumed you are using a typical projection matrix where
+ * your origin maps to the center of your viewport.</note>
+ */
+void
+cogl_matrix_init_looking_at (CoglMatrix *matrix,
+                             float eye_position_x,
+                             float eye_position_y,
+                             float eye_position_z,
+                             float object_x,
+                             float object_y,
+                             float object_z,
+                             float world_up_x,
+                             float world_up_y,
+                             float world_up_z);
+
+/**
  * cogl_matrix_frustum:
  * @matrix: A 4x4 transformation matrix
  * @left: coord of left vertical clipping plane
