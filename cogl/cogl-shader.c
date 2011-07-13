@@ -36,32 +36,21 @@
 
 #include <string.h>
 
-#ifdef HAVE_COGL_GL
-#define glCreateShader             ctx->drv.pf_glCreateShader
-#define glGetShaderiv              ctx->drv.pf_glGetShaderiv
-#define glGetShaderInfoLog         ctx->drv.pf_glGetShaderInfoLog
-#define glCompileShader            ctx->drv.pf_glCompileShader
-#define glShaderSource             ctx->drv.pf_glShaderSource
-#define glDeleteShader             ctx->drv.pf_glDeleteShader
-#define glProgramString            ctx->drv.pf_glProgramString
-#define glBindProgram              ctx->drv.pf_glBindProgram
-#define glDeletePrograms           ctx->drv.pf_glDeletePrograms
-#define glGenPrograms              ctx->drv.pf_glGenPrograms
-#define GET_CONTEXT         _COGL_GET_CONTEXT
-#else
-#define GET_CONTEXT(CTXVAR,RETVAL) G_STMT_START { } G_STMT_END
-#endif
-
 static void _cogl_shader_free (CoglShader *shader);
 
 COGL_HANDLE_DEFINE (Shader, shader);
 COGL_OBJECT_DEFINE_DEPRECATED_REF_COUNTING (shader);
 
+#ifndef GL_FRAGMENT_SHADER
+#define GL_FRAGMENT_SHADER 0x8B30
+#endif
+#ifndef GL_VERTEX_SHADER
+#define GL_VERTEX_SHADER 0x8B31
+#endif
+
 static void
 _cogl_shader_free (CoglShader *shader)
 {
-#ifndef HAVE_COGL_GLES
-
   /* Frees shader resources but its handle is not
      released! Do that separately before this! */
   _COGL_GET_CONTEXT (ctx, NO_RETVAL);
@@ -70,14 +59,12 @@ _cogl_shader_free (CoglShader *shader)
   if (shader->language == COGL_SHADER_LANGUAGE_ARBFP)
     {
       if (shader->gl_handle)
-        GE (glDeletePrograms (1, &shader->gl_handle));
+        GE (ctx, glDeletePrograms (1, &shader->gl_handle));
     }
   else
 #endif
     if (shader->gl_handle)
-      GE (glDeleteShader (shader->gl_handle));
-
-#endif /* HAVE_COGL_GLES */
+      GE (ctx, glDeleteShader (shader->gl_handle));
 
   g_slice_free (CoglShader, shader);
 }
@@ -87,7 +74,7 @@ cogl_create_shader (CoglShaderType type)
 {
   CoglShader *shader;
 
-  GET_CONTEXT (ctx, COGL_INVALID_HANDLE);
+  _COGL_GET_CONTEXT (ctx, COGL_INVALID_HANDLE);
 
   switch (type)
     {
@@ -114,26 +101,22 @@ cogl_create_shader (CoglShaderType type)
 static void
 delete_shader (CoglShader *shader)
 {
-#ifndef HAVE_COGL_GLES
-
   _COGL_GET_CONTEXT (ctx, NO_RETVAL);
 
 #ifdef HAVE_COGL_GL
   if (shader->language == COGL_SHADER_LANGUAGE_ARBFP)
     {
       if (shader->gl_handle)
-        GE (glDeletePrograms (1, &shader->gl_handle));
+        GE (ctx, glDeletePrograms (1, &shader->gl_handle));
     }
   else
 #endif
     {
       if (shader->gl_handle)
-        GE (glDeleteShader (shader->gl_handle));
+        GE (ctx, glDeleteShader (shader->gl_handle));
     }
 
   shader->gl_handle = 0;
-
-#endif /* HAVE_COGL_GLES */
 }
 
 void
@@ -170,16 +153,15 @@ cogl_shader_source (CoglHandle   handle,
 void
 cogl_shader_compile (CoglHandle handle)
 {
-#ifdef HAVE_COGL_GL
   CoglShader *shader = handle;
-#endif
+
+  _COGL_GET_CONTEXT (ctx, NO_RETVAL);
 
   if (!cogl_is_shader (handle))
     return;
 
-#ifdef HAVE_COGL_GL
-  _cogl_shader_compile_real (shader, 0 /* ignored */);
-#endif
+  if (ctx->driver == COGL_DRIVER_GL)
+    _cogl_shader_compile_real (shader, 0 /* ignored */);
 
   /* XXX: For GLES2 we don't actually compile anything until the
    * shader gets used so we have an opportunity to add some
@@ -199,43 +181,49 @@ _cogl_shader_set_source_with_boilerplate (GLuint shader_gl_handle,
                                           const char **strings_in,
                                           const GLint *lengths_in)
 {
-#ifndef HAVE_COGL_GLES
-
-  static const char vertex_boilerplate[] = _COGL_VERTEX_SHADER_BOILERPLATE;
-  static const char fragment_boilerplate[] = _COGL_FRAGMENT_SHADER_BOILERPLATE;
+  const char *vertex_boilerplate;
+  const char *fragment_boilerplate;
 
   const char **strings = g_alloca (sizeof (char *) * (count_in + 3));
   GLint *lengths = g_alloca (sizeof (GLint) * (count_in + 3));
   int count = 0;
-#ifdef HAVE_COGL_GLES2
   char *tex_coord_declarations = NULL;
-#endif
 
-  GET_CONTEXT (ctx, NO_RETVAL);
+  _COGL_GET_CONTEXT (ctx, NO_RETVAL);
 
-#ifdef HAVE_COGL_GLES2
-  if (cogl_features_available (COGL_FEATURE_TEXTURE_3D))
+  if (ctx->driver == COGL_DRIVER_GLES2)
+    {
+      vertex_boilerplate = _COGL_VERTEX_SHADER_BOILERPLATE_GLES2;
+      fragment_boilerplate = _COGL_FRAGMENT_SHADER_BOILERPLATE_GLES2;
+    }
+  else
+    {
+      vertex_boilerplate = _COGL_VERTEX_SHADER_BOILERPLATE_GL;
+      fragment_boilerplate = _COGL_FRAGMENT_SHADER_BOILERPLATE_GL;
+    }
+
+  if (ctx->driver == COGL_DRIVER_GLES2 &&
+      cogl_features_available (COGL_FEATURE_TEXTURE_3D))
     {
       static const char texture_3d_extension[] =
         "#extension GL_OES_texture_3D : enable\n";
       strings[count] = texture_3d_extension;
       lengths[count++] = sizeof (texture_3d_extension) - 1;
     }
-#endif
 
   if (shader_gl_type == GL_VERTEX_SHADER)
     {
       strings[count] = vertex_boilerplate;
-      lengths[count++] = sizeof (vertex_boilerplate) - 1;
+      lengths[count++] = strlen (vertex_boilerplate);
     }
   else if (shader_gl_type == GL_FRAGMENT_SHADER)
     {
       strings[count] = fragment_boilerplate;
-      lengths[count++] = sizeof (fragment_boilerplate) - 1;
+      lengths[count++] = strlen (fragment_boilerplate);
     }
 
-#ifdef HAVE_COGL_GLES2
-  if (n_tex_coord_attribs)
+  if (ctx->driver == COGL_DRIVER_GLES2 &&
+      n_tex_coord_attribs)
     {
       GString *declarations = g_string_new (NULL);
 
@@ -261,7 +249,6 @@ _cogl_shader_set_source_with_boilerplate (GLuint shader_gl_handle,
       strings[count] = tex_coord_declarations;
       lengths[count++] = -1; /* null terminated */
     }
-#endif
 
   memcpy (strings + count, strings_in, sizeof (char *) * count_in);
   if (lengths_in)
@@ -295,22 +282,16 @@ _cogl_shader_set_source_with_boilerplate (GLuint shader_gl_handle,
       g_string_free (buf, TRUE);
     }
 
-  GE( glShaderSource (shader_gl_handle, count,
-                      (const char **) strings, lengths) );
+  GE( ctx, glShaderSource (shader_gl_handle, count,
+                           (const char **) strings, lengths) );
 
-#ifdef HAVE_COGL_GLES2
   g_free (tex_coord_declarations);
-#endif
-
-#endif /* HAVE_COGL_GLES */
 }
 
 void
 _cogl_shader_compile_real (CoglHandle handle,
                            int n_tex_coord_attribs)
 {
-#ifndef HAVE_COGL_GLES
-
   CoglShader *shader = handle;
 
   _COGL_GET_CONTEXT (ctx, NO_RETVAL);
@@ -325,30 +306,30 @@ _cogl_shader_compile_real (CoglHandle handle,
       if (shader->gl_handle)
         return;
 
-      GE (glGenPrograms (1, &shader->gl_handle));
+      GE (ctx, glGenPrograms (1, &shader->gl_handle));
 
-      GE (glBindProgram (GL_FRAGMENT_PROGRAM_ARB, shader->gl_handle));
+      GE (ctx, glBindProgram (GL_FRAGMENT_PROGRAM_ARB, shader->gl_handle));
 
       if (G_UNLIKELY (COGL_DEBUG_ENABLED (COGL_DEBUG_SHOW_SOURCE)))
         g_message ("user ARBfp program:\n%s", shader->source);
 
 #ifdef COGL_GL_DEBUG
-      while ((gl_error = glGetError ()) != GL_NO_ERROR)
+      while ((gl_error = ctx->glGetError ()) != GL_NO_ERROR)
         ;
 #endif
-      glProgramString (GL_FRAGMENT_PROGRAM_ARB,
-                       GL_PROGRAM_FORMAT_ASCII_ARB,
-                       strlen (shader->source),
-                       shader->source);
+      ctx->glProgramString (GL_FRAGMENT_PROGRAM_ARB,
+                            GL_PROGRAM_FORMAT_ASCII_ARB,
+                            strlen (shader->source),
+                            shader->source);
 #ifdef COGL_GL_DEBUG
-      gl_error = glGetError ();
+      gl_error = ctx->glGetError ();
       if (gl_error != GL_NO_ERROR)
         {
           g_warning ("%s: GL error (%d): Failed to compile ARBfp:\n%s\n%s",
                      G_STRLOC,
                      gl_error,
                      shader->source,
-                     glGetString (GL_PROGRAM_ERROR_STRING_ARB));
+                     ctx->glGetString (GL_PROGRAM_ERROR_STRING_ARB));
         }
 #endif
     }
@@ -359,7 +340,9 @@ _cogl_shader_compile_real (CoglHandle handle,
 
       if (shader->gl_handle
 #ifdef HAVE_COGL_GLES2
-          && shader->n_tex_coord_attribs >= n_tex_coord_attribs
+          &&
+          (ctx->driver != COGL_DRIVER_GLES2 ||
+           shader->n_tex_coord_attribs >= n_tex_coord_attribs)
 #endif
          )
         return;
@@ -380,7 +363,7 @@ _cogl_shader_compile_real (CoglHandle handle,
           break;
         }
 
-      shader->gl_handle = glCreateShader (gl_type);
+      shader->gl_handle = ctx->glCreateShader (gl_type);
 
       _cogl_shader_set_source_with_boilerplate (shader->gl_handle,
                                                 gl_type,
@@ -389,7 +372,7 @@ _cogl_shader_compile_real (CoglHandle handle,
                                                 (const char **) &shader->source,
                                                 NULL);
 
-      GE (glCompileShader (shader->gl_handle));
+      GE (ctx, glCompileShader (shader->gl_handle));
 
 #ifdef HAVE_COGL_GLES2
       shader->n_tex_coord_attribs = n_tex_coord_attribs;
@@ -405,22 +388,14 @@ _cogl_shader_compile_real (CoglHandle handle,
         }
 #endif
     }
-
-#endif /* HAVE_COGL_GLES */
 }
 
 char *
 cogl_shader_get_info_log (CoglHandle handle)
 {
-#ifdef HAVE_COGL_GLES
-
-  return NULL;
-
-#else /* HAVE_COGL_GLES */
-
   CoglShader *shader;
 
-  GET_CONTEXT (ctx, NULL);
+  _COGL_GET_CONTEXT (ctx, NULL);
 
   if (!cogl_is_shader (handle))
     return NULL;
@@ -455,12 +430,10 @@ cogl_shader_get_info_log (CoglHandle handle)
       if (!shader->gl_handle)
         _cogl_shader_compile_real (handle, 4);
 
-      glGetShaderInfoLog (shader->gl_handle, 511, &len, buffer);
+      ctx->glGetShaderInfoLog (shader->gl_handle, 511, &len, buffer);
       buffer[len] = '\0';
       return g_strdup (buffer);
     }
-
-#endif /* HAVE_COGL_GLES */
 }
 
 CoglShaderType
@@ -468,7 +441,7 @@ cogl_shader_get_type (CoglHandle  handle)
 {
   CoglShader *shader;
 
-  GET_CONTEXT (ctx, COGL_SHADER_TYPE_VERTEX);
+  _COGL_GET_CONTEXT (ctx, COGL_SHADER_TYPE_VERTEX);
 
   if (!cogl_is_shader (handle))
     {
@@ -483,16 +456,11 @@ cogl_shader_get_type (CoglHandle  handle)
 gboolean
 cogl_shader_is_compiled (CoglHandle handle)
 {
-#ifdef HAVE_COGL_GLES
-
-  return FALSE;
-
-#else /* HAVE_COGL_GLES */
-
+#if defined (HAVE_COGL_GL) || defined (HAVE_COGL_GLES2)
   GLint status;
   CoglShader *shader;
 
-  GET_CONTEXT (ctx, FALSE);
+  _COGL_GET_CONTEXT (ctx, FALSE);
 
   if (!cogl_is_shader (handle))
     return FALSE;
@@ -523,12 +491,13 @@ cogl_shader_is_compiled (CoglHandle handle)
       if (!shader->gl_handle)
         _cogl_shader_compile_real (handle, 4);
 
-      GE (glGetShaderiv (shader->gl_handle, GL_COMPILE_STATUS, &status));
+      GE (ctx, glGetShaderiv (shader->gl_handle, GL_COMPILE_STATUS, &status));
       if (status == GL_TRUE)
         return TRUE;
       else
         return FALSE;
     }
-
-#endif /* HAVE_COGL_GLES */
+#else
+  return FALSE;
+#endif
 }

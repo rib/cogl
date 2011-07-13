@@ -40,25 +40,6 @@
 #include "cogl-journal-private.h"
 #include "cogl-winsys-private.h"
 
-#ifndef HAVE_COGL_GLES2
-
-#define glGenRenderbuffers                ctx->drv.pf_glGenRenderbuffers
-#define glDeleteRenderbuffers             ctx->drv.pf_glDeleteRenderbuffers
-#define glBindRenderbuffer                ctx->drv.pf_glBindRenderbuffer
-#define glRenderbufferStorage             ctx->drv.pf_glRenderbufferStorage
-#define glGenFramebuffers                 ctx->drv.pf_glGenFramebuffers
-#define glBindFramebuffer                 ctx->drv.pf_glBindFramebuffer
-#define glFramebufferTexture2D            ctx->drv.pf_glFramebufferTexture2D
-#define glFramebufferRenderbuffer         ctx->drv.pf_glFramebufferRenderbuffer
-#define glCheckFramebufferStatus          ctx->drv.pf_glCheckFramebufferStatus
-#define glDeleteFramebuffers              ctx->drv.pf_glDeleteFramebuffers
-#define glGetFramebufferAttachmentParameteriv \
-                                          ctx->drv.pf_glGetFramebufferAttachmentParameteriv
-
-#endif
-
-#define glBlitFramebuffer                 ctx->drv.pf_glBlitFramebuffer
-
 #ifndef GL_FRAMEBUFFER
 #define GL_FRAMEBUFFER		0x8D40
 #endif
@@ -252,9 +233,11 @@ _cogl_clear4f (unsigned long buffers,
 {
   GLbitfield gl_buffers = 0;
 
+  _COGL_GET_CONTEXT (ctx, NO_RETVAL);
+
   if (buffers & COGL_BUFFER_BIT_COLOR)
     {
-      GE( glClearColor (red, green, blue, alpha) );
+      GE( ctx, glClearColor (red, green, blue, alpha) );
       gl_buffers |= GL_COLOR_BUFFER_BIT;
     }
 
@@ -277,7 +260,7 @@ _cogl_clear4f (unsigned long buffers,
       return;
     }
 
-  GE (glClear (gl_buffers));
+  GE (ctx, glClear (gl_buffers));
 }
 
 void
@@ -626,52 +609,54 @@ _cogl_framebuffer_flush_dependency_journals (CoglFramebuffer *framebuffer)
 static inline void
 _cogl_framebuffer_init_bits (CoglFramebuffer *framebuffer)
 {
-#ifdef HAVE_COGL_GL
   CoglContext *ctx = framebuffer->context;
-#endif
 
   if (G_LIKELY (!framebuffer->dirty_bitmasks))
     return;
 
 #ifdef HAVE_COGL_GL
-  if (cogl_features_available (COGL_FEATURE_OFFSCREEN)
-      && framebuffer->type == COGL_FRAMEBUFFER_TYPE_OFFSCREEN)
+  if (ctx->driver == COGL_DRIVER_GL &&
+      cogl_features_available (COGL_FEATURE_OFFSCREEN) &&
+      framebuffer->type == COGL_FRAMEBUFFER_TYPE_OFFSCREEN)
     {
       GLenum attachment, pname;
 
       attachment = GL_COLOR_ATTACHMENT0;
 
       pname = GL_FRAMEBUFFER_ATTACHMENT_RED_SIZE;
-      GE( glGetFramebufferAttachmentParameteriv (GL_FRAMEBUFFER,
-                                                 attachment,
-                                                 pname,
-                                                 &framebuffer->red_bits) );
+      GE( ctx, glGetFramebufferAttachmentParameteriv (GL_FRAMEBUFFER,
+                                                      attachment,
+                                                      pname,
+                                                      &framebuffer->red_bits) );
 
       pname = GL_FRAMEBUFFER_ATTACHMENT_GREEN_SIZE;
-      GE( glGetFramebufferAttachmentParameteriv (GL_FRAMEBUFFER,
-                                                 attachment,
-                                                 pname,
-                                                 &framebuffer->green_bits) );
+      GE( ctx, glGetFramebufferAttachmentParameteriv (GL_FRAMEBUFFER,
+                                                      attachment,
+                                                      pname,
+                                                      &framebuffer->green_bits)
+          );
 
       pname = GL_FRAMEBUFFER_ATTACHMENT_BLUE_SIZE;
-      GE( glGetFramebufferAttachmentParameteriv (GL_FRAMEBUFFER,
-                                                 attachment,
-                                                 pname,
-                                                 &framebuffer->blue_bits) );
+      GE( ctx, glGetFramebufferAttachmentParameteriv (GL_FRAMEBUFFER,
+                                                      attachment,
+                                                      pname,
+                                                      &framebuffer->blue_bits)
+          );
 
       pname = GL_FRAMEBUFFER_ATTACHMENT_ALPHA_SIZE;
-      GE( glGetFramebufferAttachmentParameteriv (GL_FRAMEBUFFER,
-                                                 attachment,
-                                                 pname,
-                                                 &framebuffer->alpha_bits) );
+      GE( ctx, glGetFramebufferAttachmentParameteriv (GL_FRAMEBUFFER,
+                                                      attachment,
+                                                      pname,
+                                                      &framebuffer->alpha_bits)
+          );
     }
   else
 #endif /* HAVE_COGL_GL */
     {
-      GE( glGetIntegerv (GL_RED_BITS,   &framebuffer->red_bits)   );
-      GE( glGetIntegerv (GL_GREEN_BITS, &framebuffer->green_bits) );
-      GE( glGetIntegerv (GL_BLUE_BITS,  &framebuffer->blue_bits)  );
-      GE( glGetIntegerv (GL_ALPHA_BITS, &framebuffer->alpha_bits) );
+      GE( ctx, glGetIntegerv (GL_RED_BITS,   &framebuffer->red_bits)   );
+      GE( ctx, glGetIntegerv (GL_GREEN_BITS, &framebuffer->green_bits) );
+      GE( ctx, glGetIntegerv (GL_BLUE_BITS,  &framebuffer->blue_bits)  );
+      GE( ctx, glGetIntegerv (GL_ALPHA_BITS, &framebuffer->alpha_bits) );
     }
 
 
@@ -729,28 +714,30 @@ try_creating_fbo (CoglOffscreen *offscreen,
   ctx->dirty_bound_framebuffer = 1;
 
   /* Generate framebuffer */
-  glGenFramebuffers (1, &fbo_gl_handle);
-  GE (glBindFramebuffer (GL_FRAMEBUFFER, fbo_gl_handle));
+  ctx->glGenFramebuffers (1, &fbo_gl_handle);
+  GE (ctx, glBindFramebuffer (GL_FRAMEBUFFER, fbo_gl_handle));
   offscreen->fbo_handle = fbo_gl_handle;
 
-  GE (glFramebufferTexture2D (GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-                              tex_gl_target, tex_gl_handle, data->level));
+  GE (ctx, glFramebufferTexture2D (GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                                   tex_gl_target, tex_gl_handle, data->level));
 
   if (flags & _TRY_DEPTH_STENCIL)
     {
       /* Create a renderbuffer for depth and stenciling */
-      GE (glGenRenderbuffers (1, &gl_depth_stencil_handle));
-      GE (glBindRenderbuffer (GL_RENDERBUFFER, gl_depth_stencil_handle));
-      GE (glRenderbufferStorage (GL_RENDERBUFFER, GL_DEPTH_STENCIL,
-                                 data->level_width,
-                                 data->level_height));
-      GE (glBindRenderbuffer (GL_RENDERBUFFER, 0));
-      GE (glFramebufferRenderbuffer (GL_FRAMEBUFFER,
-                                     GL_STENCIL_ATTACHMENT,
-                                     GL_RENDERBUFFER, gl_depth_stencil_handle));
-      GE (glFramebufferRenderbuffer (GL_FRAMEBUFFER,
-                                     GL_DEPTH_ATTACHMENT,
-                                     GL_RENDERBUFFER, gl_depth_stencil_handle));
+      GE (ctx, glGenRenderbuffers (1, &gl_depth_stencil_handle));
+      GE (ctx, glBindRenderbuffer (GL_RENDERBUFFER, gl_depth_stencil_handle));
+      GE (ctx, glRenderbufferStorage (GL_RENDERBUFFER, GL_DEPTH_STENCIL,
+                                      data->level_width,
+                                      data->level_height));
+      GE (ctx, glBindRenderbuffer (GL_RENDERBUFFER, 0));
+      GE (ctx, glFramebufferRenderbuffer (GL_FRAMEBUFFER,
+                                          GL_STENCIL_ATTACHMENT,
+                                          GL_RENDERBUFFER,
+                                          gl_depth_stencil_handle));
+      GE (ctx, glFramebufferRenderbuffer (GL_FRAMEBUFFER,
+                                          GL_DEPTH_ATTACHMENT,
+                                          GL_RENDERBUFFER,
+                                          gl_depth_stencil_handle));
       offscreen->renderbuffers =
         g_slist_prepend (offscreen->renderbuffers,
                          GUINT_TO_POINTER (gl_depth_stencil_handle));
@@ -758,15 +745,15 @@ try_creating_fbo (CoglOffscreen *offscreen,
 
   if (flags & _TRY_DEPTH)
     {
-      GE (glGenRenderbuffers (1, &gl_depth_handle));
-      GE (glBindRenderbuffer (GL_RENDERBUFFER, gl_depth_handle));
+      GE (ctx, glGenRenderbuffers (1, &gl_depth_handle));
+      GE (ctx, glBindRenderbuffer (GL_RENDERBUFFER, gl_depth_handle));
       /* For now we just ask for GL_DEPTH_COMPONENT16 since this is all that's
        * available under GLES */
-      GE (glRenderbufferStorage (GL_RENDERBUFFER, GL_DEPTH_COMPONENT16,
+      GE (ctx, glRenderbufferStorage (GL_RENDERBUFFER, GL_DEPTH_COMPONENT16,
                                  data->level_width,
                                  data->level_height));
-      GE (glBindRenderbuffer (GL_RENDERBUFFER, 0));
-      GE (glFramebufferRenderbuffer (GL_FRAMEBUFFER,
+      GE (ctx, glBindRenderbuffer (GL_RENDERBUFFER, 0));
+      GE (ctx, glFramebufferRenderbuffer (GL_FRAMEBUFFER,
                                      GL_DEPTH_ATTACHMENT,
                                      GL_RENDERBUFFER, gl_depth_handle));
       offscreen->renderbuffers =
@@ -776,13 +763,13 @@ try_creating_fbo (CoglOffscreen *offscreen,
 
   if (flags & _TRY_STENCIL)
     {
-      GE (glGenRenderbuffers (1, &gl_stencil_handle));
-      GE (glBindRenderbuffer (GL_RENDERBUFFER, gl_stencil_handle));
-      GE (glRenderbufferStorage (GL_RENDERBUFFER, GL_STENCIL_INDEX8,
+      GE (ctx, glGenRenderbuffers (1, &gl_stencil_handle));
+      GE (ctx, glBindRenderbuffer (GL_RENDERBUFFER, gl_stencil_handle));
+      GE (ctx, glRenderbufferStorage (GL_RENDERBUFFER, GL_STENCIL_INDEX8,
                                  data->level_width,
                                  data->level_height));
-      GE (glBindRenderbuffer (GL_RENDERBUFFER, 0));
-      GE (glFramebufferRenderbuffer (GL_FRAMEBUFFER,
+      GE (ctx, glBindRenderbuffer (GL_RENDERBUFFER, 0));
+      GE (ctx, glFramebufferRenderbuffer (GL_FRAMEBUFFER,
                                      GL_STENCIL_ATTACHMENT,
                                      GL_RENDERBUFFER, gl_stencil_handle));
       offscreen->renderbuffers =
@@ -791,18 +778,18 @@ try_creating_fbo (CoglOffscreen *offscreen,
     }
 
   /* Make sure it's complete */
-  status = glCheckFramebufferStatus (GL_FRAMEBUFFER);
+  status = ctx->glCheckFramebufferStatus (GL_FRAMEBUFFER);
 
   if (status != GL_FRAMEBUFFER_COMPLETE)
     {
       GSList *l;
 
-      GE (glDeleteFramebuffers (1, &fbo_gl_handle));
+      GE (ctx, glDeleteFramebuffers (1, &fbo_gl_handle));
 
       for (l = offscreen->renderbuffers; l; l = l->next)
         {
           GLuint renderbuffer = GPOINTER_TO_UINT (l->data);
-          GE (glDeleteRenderbuffers (1, &renderbuffer));
+          GE (ctx, glDeleteRenderbuffers (1, &renderbuffer));
         }
 
       g_slist_free (offscreen->renderbuffers);
@@ -825,6 +812,8 @@ _cogl_offscreen_new_to_texture_full (CoglHandle texhandle,
   unsigned int        i;
   CoglFramebufferTryFBOData data;
   gboolean            fbo_created;
+
+  _COGL_GET_CONTEXT (ctx, COGL_INVALID_HANDLE);
 
   if (!cogl_features_available (COGL_FEATURE_OFFSCREEN))
     return COGL_INVALID_HANDLE;
@@ -880,7 +869,8 @@ _cogl_offscreen_new_to_texture_full (CoglHandle texhandle,
       if ((have_working_flags &&
            try_creating_fbo (offscreen, flags, &data)) ||
 #ifdef HAVE_COGL_GL
-          try_creating_fbo (offscreen, flags = _TRY_DEPTH_STENCIL, &data) ||
+          (ctx->driver == COGL_DRIVER_GL &&
+           try_creating_fbo (offscreen, flags = _TRY_DEPTH_STENCIL, &data)) ||
 #endif
           try_creating_fbo (offscreen, flags = _TRY_DEPTH | _TRY_STENCIL,
                             &data) ||
@@ -941,9 +931,7 @@ static void
 _cogl_offscreen_free (CoglOffscreen *offscreen)
 {
   CoglFramebuffer *framebuffer = COGL_FRAMEBUFFER (offscreen);
-#ifndef HAVE_COGL_GLES2
   CoglContext *ctx = framebuffer->context;
-#endif
   GSList *l;
 
   /* Chain up to parent */
@@ -952,11 +940,11 @@ _cogl_offscreen_free (CoglOffscreen *offscreen)
   for (l = offscreen->renderbuffers; l; l = l->next)
     {
       GLuint renderbuffer = GPOINTER_TO_UINT (l->data);
-      GE (glDeleteRenderbuffers (1, &renderbuffer));
+      GE (ctx, glDeleteRenderbuffers (1, &renderbuffer));
     }
   g_slist_free (offscreen->renderbuffers);
 
-  GE (glDeleteFramebuffers (1, &offscreen->fbo_handle));
+  GE (ctx, glDeleteFramebuffers (1, &offscreen->fbo_handle));
 
   if (offscreen->texture != COGL_INVALID_HANDLE)
     cogl_handle_unref (offscreen->texture);
@@ -1368,7 +1356,7 @@ bind_gl_framebuffer (CoglContext *ctx,
                      CoglFramebuffer *framebuffer)
 {
   if (framebuffer->type == COGL_FRAMEBUFFER_TYPE_OFFSCREEN)
-    GE (glBindFramebuffer (target,
+    GE (ctx, glBindFramebuffer (target,
                            COGL_OFFSCREEN (framebuffer)->fbo_handle));
   else
     {
@@ -1377,7 +1365,7 @@ bind_gl_framebuffer (CoglContext *ctx,
       winsys->onscreen_bind (COGL_ONSCREEN (framebuffer));
       /* glBindFramebuffer is an an extension with OpenGL ES 1.1 */
       if (cogl_features_available (COGL_FEATURE_OFFSCREEN))
-        GE (glBindFramebuffer (target, 0));
+        GE (ctx, glBindFramebuffer (target, 0));
     }
 }
 
@@ -1435,7 +1423,7 @@ _cogl_framebuffer_flush_state (CoglFramebuffer *draw_buffer,
                  draw_buffer->viewport_width,
                  draw_buffer->viewport_height);
 
-      GE (glViewport (draw_buffer->viewport_x,
+      GE (ctx, glViewport (draw_buffer->viewport_x,
                       gl_viewport_y,
                       draw_buffer->viewport_width,
                       draw_buffer->viewport_height));
@@ -1596,7 +1584,7 @@ _cogl_blit_framebuffer (unsigned int src_x,
      the scissor */
   _cogl_clip_stack_flush (NULL);
 
-  glBlitFramebuffer (src_x, src_y,
+  ctx->glBlitFramebuffer (src_x, src_y,
                      src_x + width, src_y + height,
                      dst_x, dst_y,
                      dst_x + width, dst_y + height,
@@ -1641,7 +1629,7 @@ cogl_framebuffer_swap_region (CoglFramebuffer *framebuffer,
 
 #ifdef COGL_HAS_X11_SUPPORT
 void
-cogl_onscreen_x11_set_foreign_window_xid (CoglOnscreen *onscreen,
+cogl_x11_onscreen_set_foreign_window_xid (CoglOnscreen *onscreen,
                                           guint32 xid,
                                           CoglOnscreenX11MaskCallback update,
                                           void *user_data)
@@ -1656,7 +1644,7 @@ cogl_onscreen_x11_set_foreign_window_xid (CoglOnscreen *onscreen,
 }
 
 guint32
-cogl_onscreen_x11_get_window_xid (CoglOnscreen *onscreen)
+cogl_x11_onscreen_get_window_xid (CoglOnscreen *onscreen)
 {
   CoglFramebuffer *framebuffer = COGL_FRAMEBUFFER (onscreen);
 
@@ -1674,7 +1662,7 @@ cogl_onscreen_x11_get_window_xid (CoglOnscreen *onscreen)
 }
 
 guint32
-cogl_onscreen_x11_get_visual_xid (CoglOnscreen *onscreen)
+cogl_x11_onscreen_get_visual_xid (CoglOnscreen *onscreen)
 {
   CoglFramebuffer *framebuffer = COGL_FRAMEBUFFER (onscreen);
   const CoglWinsysVtable *winsys = _cogl_framebuffer_get_winsys (framebuffer);
@@ -1695,14 +1683,14 @@ cogl_onscreen_x11_get_visual_xid (CoglOnscreen *onscreen)
 #ifdef COGL_HAS_WIN32_SUPPORT
 
 void
-cogl_onscreen_win32_set_foreign_window (CoglOnscreen *onscreen,
+cogl_win32_onscreen_set_foreign_window (CoglOnscreen *onscreen,
                                         HWND hwnd)
 {
   onscreen->foreign_hwnd = hwnd;
 }
 
 HWND
-cogl_onscreen_win32_get_window (CoglOnscreen *onscreen)
+cogl_win32_onscreen_get_window (CoglOnscreen *onscreen)
 {
   if (onscreen->foreign_hwnd)
     return onscreen->foreign_hwnd;

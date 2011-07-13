@@ -48,32 +48,6 @@ COGL_OBJECT_DEFINE_DEPRECATED_REF_COUNTING (program);
    an array and then flushed whenever the material backend requests
    it. */
 
-#ifndef HAVE_COGL_GLES2
-
-#define glGetUniformLocation       ctx->drv.pf_glGetUniformLocation
-#define glUniform1f                ctx->drv.pf_glUniform1f
-#define glUniform2f                ctx->drv.pf_glUniform2f
-#define glUniform3f                ctx->drv.pf_glUniform3f
-#define glUniform4f                ctx->drv.pf_glUniform4f
-#define glUniform1fv               ctx->drv.pf_glUniform1fv
-#define glUniform2fv               ctx->drv.pf_glUniform2fv
-#define glUniform3fv               ctx->drv.pf_glUniform3fv
-#define glUniform4fv               ctx->drv.pf_glUniform4fv
-#define glUniform1i                ctx->drv.pf_glUniform1i
-#define glUniform2i                ctx->drv.pf_glUniform2i
-#define glUniform3i                ctx->drv.pf_glUniform3i
-#define glUniform4i                ctx->drv.pf_glUniform4i
-#define glUniform1iv               ctx->drv.pf_glUniform1iv
-#define glUniform2iv               ctx->drv.pf_glUniform2iv
-#define glUniform3iv               ctx->drv.pf_glUniform3iv
-#define glUniform4iv               ctx->drv.pf_glUniform4iv
-#define glUniformMatrix2fv         ctx->drv.pf_glUniformMatrix2fv
-#define glUniformMatrix3fv         ctx->drv.pf_glUniformMatrix3fv
-#define glUniformMatrix4fv         ctx->drv.pf_glUniformMatrix4fv
-#define glProgramLocalParameter4fv ctx->drv.pf_glProgramLocalParameter4fv
-
-#endif /* HAVE_COGL_GLES2 */
-
 static void
 _cogl_program_free (CoglProgram *program)
 {
@@ -132,13 +106,11 @@ cogl_program_attach_shader (CoglHandle program_handle,
   shader = _cogl_shader_pointer_from_handle (shader_handle);
 
   /* Only one shader is allowed if the type is ARBfp */
-#ifdef HAVE_COGL_GL
   if (shader->language == COGL_SHADER_LANGUAGE_ARBFP)
     g_return_if_fail (program->attached_shaders == NULL);
   else if (shader->language == COGL_SHADER_LANGUAGE_GLSL)
     g_return_if_fail (_cogl_program_get_language (program) ==
                       COGL_SHADER_LANGUAGE_GLSL);
-#endif
 
   program->attached_shaders
     = g_slist_prepend (program->attached_shaders,
@@ -392,8 +364,6 @@ cogl_program_uniform_matrix (int uniform_no,
                                    uniform_no, size, count, transpose, value);
 }
 
-#ifndef HAVE_COGL_GLES
-
 /* ARBfp local parameters can be referenced like:
  *
  * "program.local[5]"
@@ -448,10 +418,10 @@ _cogl_program_flush_uniform_glsl (GLint location,
 
         switch (value->size)
           {
-          case 1: glUniform1iv (location, value->count, ptr); break;
-          case 2: glUniform2iv (location, value->count, ptr); break;
-          case 3: glUniform3iv (location, value->count, ptr); break;
-          case 4: glUniform4iv (location, value->count, ptr); break;
+          case 1: ctx->glUniform1iv (location, value->count, ptr); break;
+          case 2: ctx->glUniform2iv (location, value->count, ptr); break;
+          case 3: ctx->glUniform3iv (location, value->count, ptr); break;
+          case 4: ctx->glUniform4iv (location, value->count, ptr); break;
           }
       }
       break;
@@ -467,10 +437,10 @@ _cogl_program_flush_uniform_glsl (GLint location,
 
         switch (value->size)
           {
-          case 1: glUniform1fv (location, value->count, ptr); break;
-          case 2: glUniform2fv (location, value->count, ptr); break;
-          case 3: glUniform3fv (location, value->count, ptr); break;
-          case 4: glUniform4fv (location, value->count, ptr); break;
+          case 1: ctx->glUniform1fv (location, value->count, ptr); break;
+          case 2: ctx->glUniform2fv (location, value->count, ptr); break;
+          case 3: ctx->glUniform3fv (location, value->count, ptr); break;
+          case 4: ctx->glUniform4fv (location, value->count, ptr); break;
           }
       }
       break;
@@ -487,21 +457,22 @@ _cogl_program_flush_uniform_glsl (GLint location,
         switch (value->size)
           {
           case 2:
-            glUniformMatrix2fv (location, value->count, value->transpose, ptr);
+            ctx->glUniformMatrix2fv (location, value->count,
+                                     value->transpose, ptr);
             break;
           case 3:
-            glUniformMatrix3fv (location, value->count, value->transpose, ptr);
+            ctx->glUniformMatrix3fv (location, value->count,
+                                     value->transpose, ptr);
             break;
           case 4:
-            glUniformMatrix4fv (location, value->count, value->transpose, ptr);
+            ctx->glUniformMatrix4fv (location, value->count,
+                                     value->transpose, ptr);
             break;
           }
       }
       break;
     }
 }
-
-#endif /* HAVE_COGL_GLES */
 
 #ifdef HAVE_COGL_GL
 
@@ -517,8 +488,8 @@ _cogl_program_flush_uniform_arbfp (GLint location,
       g_return_if_fail (value->size == 4);
       g_return_if_fail (value->count == 1);
 
-      GE( glProgramLocalParameter4fv (GL_FRAGMENT_PROGRAM_ARB, location,
-                                      value->v.float_value) );
+      GE( ctx, glProgramLocalParameter4fv (GL_FRAGMENT_PROGRAM_ARB, location,
+                                           value->v.float_value) );
     }
 }
 
@@ -529,16 +500,12 @@ _cogl_program_flush_uniforms (CoglProgram *program,
                               GLuint gl_program,
                               gboolean gl_program_changed)
 {
-#ifdef HAVE_COGL_GLES
-
-  g_return_if_reached ();
-
-#else /* HAVE_COGL_GLES */
-
   CoglProgramUniform *uniform;
   int i;
 
   _COGL_GET_CONTEXT (ctx, NO_RETVAL);
+
+  g_return_if_fail (ctx->driver != COGL_DRIVER_GLES1);
 
   for (i = 0; i < program->custom_uniforms->len; i++)
     {
@@ -552,7 +519,7 @@ _cogl_program_flush_uniforms (CoglProgram *program,
               if (_cogl_program_get_language (program) ==
                   COGL_SHADER_LANGUAGE_GLSL)
                 uniform->location =
-                  glGetUniformLocation (gl_program, uniform->name);
+                  ctx->glGetUniformLocation (gl_program, uniform->name);
               else
                 uniform->location =
                   get_local_param_index (uniform->name);
@@ -571,20 +538,18 @@ _cogl_program_flush_uniforms (CoglProgram *program,
                                                     &uniform->value);
                   break;
 
-#ifdef HAVE_COGL_GL
                 case COGL_SHADER_LANGUAGE_ARBFP:
+#ifdef HAVE_COGL_GL
                   _cogl_program_flush_uniform_arbfp (uniform->location,
                                                      &uniform->value);
-                  break;
 #endif
+                  break;
                 }
             }
 
           uniform->dirty = FALSE;
         }
     }
-
-#endif /* HAVE_COGL_GLES */
 }
 
 CoglShaderLanguage

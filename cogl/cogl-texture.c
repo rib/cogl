@@ -181,6 +181,8 @@ _cogl_texture_prepare_for_upload (CoglBitmap      *src_bmp,
   CoglPixelFormat src_format = _cogl_bitmap_get_format (src_bmp);
   CoglBitmap *dst_bmp;
 
+  _COGL_GET_CONTEXT (ctx, NULL);
+
   dst_format = _cogl_texture_determine_internal_format (src_format,
                                                         dst_format);
 
@@ -192,54 +194,54 @@ _cogl_texture_prepare_for_upload (CoglBitmap      *src_bmp,
      limited number of formats so we must convert using the Cogl
      bitmap code instead */
 
-#ifdef HAVE_COGL_GL
-
-  /* If the source format does not have the same premult flag as the
-     dst format then we need to copy and convert it */
-  if (_cogl_texture_needs_premult_conversion (src_format,
-                                              dst_format))
+  if (ctx->driver == COGL_DRIVER_GL)
     {
-      dst_bmp = _cogl_bitmap_copy (src_bmp);
-
-      if (!_cogl_bitmap_convert_premult_status (dst_bmp,
-                                                src_format ^
-                                                COGL_PREMULT_BIT))
+      /* If the source format does not have the same premult flag as the
+         dst format then we need to copy and convert it */
+      if (_cogl_texture_needs_premult_conversion (src_format,
+                                                  dst_format))
         {
-          cogl_object_unref (dst_bmp);
-          return NULL;
+          dst_bmp = _cogl_bitmap_copy (src_bmp);
+
+          if (!_cogl_bitmap_convert_premult_status (dst_bmp,
+                                                    src_format ^
+                                                    COGL_PREMULT_BIT))
+            {
+              cogl_object_unref (dst_bmp);
+              return NULL;
+            }
         }
-    }
-  else
-    dst_bmp = cogl_object_ref (src_bmp);
+      else
+        dst_bmp = cogl_object_ref (src_bmp);
 
-  /* Use the source format from the src bitmap type and the internal
-     format from the dst format type so that GL can do the
-     conversion */
-  _cogl_pixel_format_to_gl (src_format,
-                            NULL, /* internal format */
-                            out_glformat,
-                            out_gltype);
-  _cogl_pixel_format_to_gl (dst_format,
-                            out_glintformat,
-                            NULL,
-                            NULL);
-
-#else /* HAVE_COGL_GL */
-  {
-    CoglPixelFormat closest_format;
-
-    closest_format = _cogl_pixel_format_to_gl (dst_format,
-                                               out_glintformat,
+      /* Use the source format from the src bitmap type and the internal
+         format from the dst format type so that GL can do the
+         conversion */
+      ctx->texture_driver->pixel_format_to_gl (src_format,
+                                               NULL, /* internal format */
                                                out_glformat,
                                                out_gltype);
+      ctx->texture_driver->pixel_format_to_gl (dst_format,
+                                               out_glintformat,
+                                               NULL,
+                                               NULL);
 
-    if (closest_format != src_format)
-      dst_bmp = _cogl_bitmap_convert_format_and_premult (src_bmp,
-                                                         closest_format);
-    else
-      dst_bmp = cogl_object_ref (src_bmp);
-  }
-#endif /* HAVE_COGL_GL */
+    }
+  else
+    {
+      CoglPixelFormat closest_format;
+
+      closest_format = ctx->texture_driver->pixel_format_to_gl (dst_format,
+                                                                out_glintformat,
+                                                                out_glformat,
+                                                                out_gltype);
+
+      if (closest_format != src_format)
+        dst_bmp = _cogl_bitmap_convert_format_and_premult (src_bmp,
+                                                           closest_format);
+      else
+        dst_bmp = cogl_object_ref (src_bmp);
+    }
 
   if (dst_format_out)
     *dst_format_out = dst_format;
@@ -250,27 +252,31 @@ _cogl_texture_prepare_for_upload (CoglBitmap      *src_bmp,
 void
 _cogl_texture_prep_gl_alignment_for_pixels_upload (int pixels_rowstride)
 {
+  _COGL_GET_CONTEXT (ctx, NO_RETVAL);
+
   if (!(pixels_rowstride & 0x7))
-    GE( glPixelStorei (GL_UNPACK_ALIGNMENT, 8) );
+    GE( ctx, glPixelStorei (GL_UNPACK_ALIGNMENT, 8) );
   else if (!(pixels_rowstride & 0x3))
-    GE( glPixelStorei (GL_UNPACK_ALIGNMENT, 4) );
+    GE( ctx, glPixelStorei (GL_UNPACK_ALIGNMENT, 4) );
   else if (!(pixels_rowstride & 0x1))
-    GE( glPixelStorei (GL_UNPACK_ALIGNMENT, 2) );
+    GE( ctx, glPixelStorei (GL_UNPACK_ALIGNMENT, 2) );
   else
-    GE( glPixelStorei (GL_UNPACK_ALIGNMENT, 1) );
+    GE( ctx, glPixelStorei (GL_UNPACK_ALIGNMENT, 1) );
 }
 
 void
 _cogl_texture_prep_gl_alignment_for_pixels_download (int pixels_rowstride)
 {
+  _COGL_GET_CONTEXT (ctx, NO_RETVAL);
+
   if (!(pixels_rowstride & 0x7))
-    GE( glPixelStorei (GL_PACK_ALIGNMENT, 8) );
+    GE( ctx, glPixelStorei (GL_PACK_ALIGNMENT, 8) );
   else if (!(pixels_rowstride & 0x3))
-    GE( glPixelStorei (GL_PACK_ALIGNMENT, 4) );
+    GE( ctx, glPixelStorei (GL_PACK_ALIGNMENT, 4) );
   else if (!(pixels_rowstride & 0x1))
-    GE( glPixelStorei (GL_PACK_ALIGNMENT, 2) );
+    GE( ctx, glPixelStorei (GL_PACK_ALIGNMENT, 2) );
   else
-    GE( glPixelStorei (GL_PACK_ALIGNMENT, 1) );
+    GE( ctx, glPixelStorei (GL_PACK_ALIGNMENT, 1) );
 }
 
 /* FIXME: wrap modes should be set on pipelines not textures */
@@ -1119,10 +1125,10 @@ _cogl_texture_draw_and_read (CoglHandle   handle,
      still doesn't seem to have an alpha buffer. This might be just
      a PowerVR issue.
   GLint r_bits, g_bits, b_bits, a_bits;
-  GE( glGetIntegerv (GL_ALPHA_BITS, &a_bits) );
-  GE( glGetIntegerv (GL_RED_BITS, &r_bits) );
-  GE( glGetIntegerv (GL_GREEN_BITS, &g_bits) );
-  GE( glGetIntegerv (GL_BLUE_BITS, &b_bits) );
+  GE( ctx, glGetIntegerv (GL_ALPHA_BITS, &a_bits) );
+  GE( ctx, glGetIntegerv (GL_RED_BITS, &r_bits) );
+  GE( ctx, glGetIntegerv (GL_GREEN_BITS, &g_bits) );
+  GE( ctx, glGetIntegerv (GL_BLUE_BITS, &b_bits) );
   printf ("R bits: %d\n", r_bits);
   printf ("G bits: %d\n", g_bits);
   printf ("B bits: %d\n", b_bits);
@@ -1374,6 +1380,8 @@ cogl_texture_get_data (CoglHandle       handle,
 
   CoglTextureGetData tg_data;
 
+  _COGL_GET_CONTEXT (ctx, 0);
+
   if (!cogl_is_texture (handle))
     return 0;
 
@@ -1397,7 +1405,7 @@ cogl_texture_get_data (CoglHandle       handle,
     return byte_size;
 
   closest_format =
-    _cogl_texture_driver_find_best_gl_get_data_format (format,
+    ctx->texture_driver->find_best_gl_get_data_format (format,
                                                        &closest_gl_format,
                                                        &closest_gl_type);
   closest_bpp = _cogl_get_format_bpp (closest_format);

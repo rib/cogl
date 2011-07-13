@@ -50,19 +50,6 @@
 #include <glib/gprintf.h>
 #include <string.h>
 
-/*
- * GL/GLES compatability defines for pipeline thingies:
- */
-
-#ifdef HAVE_COGL_GL
-#define glProgramString ctx->drv.pf_glProgramString
-#define glBindProgram ctx->drv.pf_glBindProgram
-#define glDeletePrograms ctx->drv.pf_glDeletePrograms
-#define glGenPrograms ctx->drv.pf_glGenPrograms
-#define glProgramLocalParameter4fv ctx->drv.pf_glProgramLocalParameter4fv
-#define glUseProgram ctx->drv.pf_glUseProgram
-#endif
-
 /* This might not be defined on GLES */
 #ifndef GL_TEXTURE_3D
 #define GL_TEXTURE_3D                           0x806F
@@ -135,7 +122,7 @@ arbfp_program_state_unref (ArbfpProgramState *state)
     {
       if (state->gl_program)
         {
-          GE (glDeletePrograms (1, &state->gl_program));
+          GE (ctx, glDeletePrograms (1, &state->gl_program));
           state->gl_program = 0;
         }
 
@@ -238,9 +225,9 @@ _cogl_pipeline_fragend_arbfp_start (CoglPipeline *pipeline,
    */
   authority = _cogl_pipeline_find_equivalent_parent
     (pipeline,
-     COGL_PIPELINE_STATE_AFFECTS_FRAGMENT_CODEGEN &
+     _cogl_pipeline_get_state_for_fragment_codegen (ctx) &
      ~COGL_PIPELINE_STATE_LAYERS,
-     COGL_PIPELINE_LAYER_STATE_AFFECTS_FRAGMENT_CODEGEN);
+     _cogl_pipeline_get_layer_state_for_fragment_codegen (ctx));
   authority_priv = get_arbfp_priv (authority);
   if (authority_priv &&
       authority_priv->arbfp_program_state)
@@ -331,12 +318,18 @@ _cogl_pipeline_fragend_arbfp_start (CoglPipeline *pipeline,
 unsigned int
 _cogl_pipeline_fragend_arbfp_hash (const void *data)
 {
-  unsigned long fragment_state =
-    COGL_PIPELINE_STATE_AFFECTS_FRAGMENT_CODEGEN;
-  unsigned long layer_fragment_state =
-    COGL_PIPELINE_LAYER_STATE_AFFECTS_FRAGMENT_CODEGEN;
+  unsigned int fragment_state;
+  unsigned int layer_fragment_state;
+
+  _COGL_GET_CONTEXT (ctx, 0);
+
+  fragment_state =
+    _cogl_pipeline_get_state_for_fragment_codegen (ctx);
+  layer_fragment_state =
+    _cogl_pipeline_get_layer_state_for_fragment_codegen (ctx);
 
   return _cogl_pipeline_hash ((CoglPipeline *)data,
+
                               fragment_state, layer_fragment_state,
                               0);
 }
@@ -344,10 +337,15 @@ _cogl_pipeline_fragend_arbfp_hash (const void *data)
 gboolean
 _cogl_pipeline_fragend_arbfp_equal (const void *a, const void *b)
 {
-  unsigned long fragment_state =
-    COGL_PIPELINE_STATE_AFFECTS_FRAGMENT_CODEGEN;
-  unsigned long layer_fragment_state =
-    COGL_PIPELINE_LAYER_STATE_AFFECTS_FRAGMENT_CODEGEN;
+  unsigned int fragment_state;
+  unsigned int layer_fragment_state;
+
+  _COGL_GET_CONTEXT (ctx, 0);
+
+  fragment_state =
+    _cogl_pipeline_get_state_for_fragment_codegen (ctx);
+  layer_fragment_state =
+    _cogl_pipeline_get_layer_state_for_fragment_codegen (ctx);
 
   return _cogl_pipeline_equal ((CoglPipeline *)a, (CoglPipeline *)b,
                                fragment_state, layer_fragment_state,
@@ -357,12 +355,9 @@ _cogl_pipeline_fragend_arbfp_equal (const void *a, const void *b)
 static const char *
 gl_target_to_arbfp_string (GLenum gl_target)
 {
-#ifndef HAVE_COGL_GLES2
   if (gl_target == GL_TEXTURE_1D)
     return "1D";
-  else
-#endif
-    if (gl_target == GL_TEXTURE_2D)
+  else if (gl_target == GL_TEXTURE_2D)
     return "2D";
 #ifdef GL_ARB_texture_rectangle
   else if (gl_target == GL_TEXTURE_RECTANGLE_ARB)
@@ -866,9 +861,9 @@ update_constants_cb (CoglPipeline *pipeline,
       _cogl_pipeline_get_layer_combine_constant (pipeline,
                                                  layer_index,
                                                  constant);
-      GE (glProgramLocalParameter4fv (GL_FRAGMENT_PROGRAM_ARB,
-                                      unit_state->constant_id,
-                                      constant));
+      GE (ctx, glProgramLocalParameter4fv (GL_FRAGMENT_PROGRAM_ARB,
+                                           unit_state->constant_id,
+                                           constant));
       unit_state->dirty_combine_constant = FALSE;
     }
   return TRUE;
@@ -901,22 +896,22 @@ _cogl_pipeline_fragend_arbfp_end (CoglPipeline *pipeline,
       if (G_UNLIKELY (COGL_DEBUG_ENABLED (COGL_DEBUG_SHOW_SOURCE)))
         g_message ("pipeline program:\n%s", arbfp_program_state->source->str);
 
-      GE (glGenPrograms (1, &arbfp_program_state->gl_program));
+      GE (ctx, glGenPrograms (1, &arbfp_program_state->gl_program));
 
-      GE (glBindProgram (GL_FRAGMENT_PROGRAM_ARB,
+      GE (ctx, glBindProgram (GL_FRAGMENT_PROGRAM_ARB,
                          arbfp_program_state->gl_program));
 
-      while ((gl_error = glGetError ()) != GL_NO_ERROR)
+      while ((gl_error = ctx->glGetError ()) != GL_NO_ERROR)
         ;
-      glProgramString (GL_FRAGMENT_PROGRAM_ARB,
-                       GL_PROGRAM_FORMAT_ASCII_ARB,
-                       arbfp_program_state->source->len,
-                       arbfp_program_state->source->str);
-      if (glGetError () != GL_NO_ERROR)
+      ctx->glProgramString (GL_FRAGMENT_PROGRAM_ARB,
+                            GL_PROGRAM_FORMAT_ASCII_ARB,
+                            arbfp_program_state->source->len,
+                            arbfp_program_state->source->str);
+      if (ctx->glGetError () != GL_NO_ERROR)
         {
           g_warning ("\n%s\n%s",
                      arbfp_program_state->source->str,
-                     glGetString (GL_PROGRAM_ERROR_STRING_ARB));
+                     ctx->glGetString (GL_PROGRAM_ERROR_STRING_ARB));
         }
 
       arbfp_program_state->source = NULL;
@@ -979,7 +974,7 @@ _cogl_pipeline_fragend_arbfp_end (CoglPipeline *pipeline,
   else
     gl_program = arbfp_program_state->gl_program;
 
-  GE (glBindProgram (GL_FRAGMENT_PROGRAM_ARB, gl_program));
+  GE (ctx, glBindProgram (GL_FRAGMENT_PROGRAM_ARB, gl_program));
   _cogl_use_fragment_program (0, COGL_PIPELINE_PROGRAM_TYPE_ARBFP);
 
   if (arbfp_program_state->user_program == COGL_INVALID_HANDLE)
@@ -1041,7 +1036,9 @@ _cogl_pipeline_fragend_arbfp_pipeline_pre_change_notify (
                                                    CoglPipelineState change,
                                                    const CoglColor *new_color)
 {
-  if ((change & COGL_PIPELINE_STATE_AFFECTS_FRAGMENT_CODEGEN))
+  _COGL_GET_CONTEXT (ctx, NO_RETVAL);
+
+  if ((change & _cogl_pipeline_get_state_for_fragment_codegen (ctx)))
     dirty_arbfp_program_state (pipeline);
 }
 
@@ -1060,10 +1057,13 @@ _cogl_pipeline_fragend_arbfp_layer_pre_change_notify (
                                                 CoglPipelineLayerState change)
 {
   CoglPipelineFragendARBfpPrivate *priv = get_arbfp_priv (owner);
+
+  _COGL_GET_CONTEXT (ctx, NO_RETVAL);
+
   if (!priv)
     return;
 
-  if ((change & COGL_PIPELINE_LAYER_STATE_AFFECTS_FRAGMENT_CODEGEN))
+  if ((change & _cogl_pipeline_get_layer_state_for_fragment_codegen (ctx)))
     {
       dirty_arbfp_program_state (owner);
       return;

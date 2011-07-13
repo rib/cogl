@@ -107,7 +107,7 @@ typedef struct _CoglOnscreenWgl
 #define COGL_WINSYS_FEATURE_BEGIN(name, namespaces, extension_names,    \
                                   feature_flags, feature_flags_private, \
                                   winsys_feature)                       \
-  { 255, 255, namespaces, extension_names,                              \
+  { 255, 255, 0, namespaces, extension_names,                            \
       feature_flags, feature_flags_private,                             \
       winsys_feature,                                                   \
       cogl_wgl_feature_ ## name ## _funcs },
@@ -513,6 +513,8 @@ get_wgl_extensions_string (HDC dc)
   const char * (APIENTRY *pf_wglGetExtensionsStringARB) (HDC);
   const char * (APIENTRY *pf_wglGetExtensionsStringEXT) (void);
 
+  _COGL_GET_CONTEXT (ctx, NULL);
+
   /* According to the docs for these two extensions, you are supposed
      to use wglGetProcAddress to detect their availability so
      presumably it will return NULL if they are not available */
@@ -534,7 +536,7 @@ get_wgl_extensions_string (HDC dc)
      extensions isn't supported then we can at least fake it to
      support the swap control extension */
   if (_cogl_check_extension ("WGL_EXT_swap_control",
-                             (char *) glGetString (GL_EXTENSIONS)))
+                             (char *) ctx->glGetString (GL_EXTENSIONS)))
     return "WGL_EXT_swap_control";
 
   return NULL;
@@ -550,7 +552,7 @@ update_winsys_features (CoglContext *context)
 
   g_return_if_fail (wgl_display->wgl_context);
 
-  _cogl_gl_update_features (context);
+  _cogl_context_update_features (context);
 
   memset (context->winsys_features, 0, sizeof (context->winsys_features));
 
@@ -568,6 +570,7 @@ update_winsys_features (CoglContext *context)
       for (i = 0; i < G_N_ELEMENTS (winsys_feature_data); i++)
         if (_cogl_feature_check (_cogl_context_get_winsys (context),
                                  "WGL", winsys_feature_data + i, 0, 0,
+                                 COGL_DRIVER_GL,
                                  wgl_extensions,
                                  wgl_renderer))
           {

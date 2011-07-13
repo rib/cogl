@@ -41,17 +41,6 @@
 #include "cogl-program-private.h"
 #include "cogl-pipeline-vertend-glsl-private.h"
 
-#ifndef HAVE_COGL_GLES2
-
-#define glCreateShader       ctx->drv.pf_glCreateShader
-#define glGetShaderiv        ctx->drv.pf_glGetShaderiv
-#define glGetShaderInfoLog   ctx->drv.pf_glGetShaderInfoLog
-#define glCompileShader      ctx->drv.pf_glCompileShader
-#define glShaderSource       ctx->drv.pf_glShaderSource
-#define glDeleteShader       ctx->drv.pf_glDeleteShader
-
-#endif /* HAVE_COGL_GLES2 */
-
 const CoglPipelineVertend _cogl_pipeline_glsl_vertend;
 
 typedef struct
@@ -86,7 +75,7 @@ destroy_glsl_priv (void *user_data)
   if (--priv->ref_count == 0)
     {
       if (priv->gl_shader)
-        GE( glDeleteShader (priv->gl_shader) );
+        GE( ctx, glDeleteShader (priv->gl_shader) );
 
       g_slice_free (CoglPipelineVertendPrivate, priv);
     }
@@ -185,7 +174,7 @@ _cogl_pipeline_vertend_glsl_start (CoglPipeline *pipeline,
         return TRUE;
 
       /* We need to recreate the shader so destroy the existing one */
-      GE( glDeleteShader (priv->gl_shader) );
+      GE( ctx, glDeleteShader (priv->gl_shader) );
       priv->gl_shader = 0;
     }
 
@@ -217,29 +206,23 @@ _cogl_pipeline_vertend_glsl_start (CoglPipeline *pipeline,
                    "main ()\n"
                    "{\n");
 
-#ifdef HAVE_COGL_GLES2
-
-  /* There is no builtin uniform for the pointsize on GLES2 so we need
-     to copy it from the custom uniform in the vertex shader */
-  g_string_append (priv->source,
-                   "  cogl_point_size_out = cogl_point_size_in;\n");
-
-#else /* HAVE_COGL_GLES2 */
-
+  if (ctx->driver == COGL_DRIVER_GLES2)
+    /* There is no builtin uniform for the pointsize on GLES2 so we need
+       to copy it from the custom uniform in the vertex shader */
+    g_string_append (priv->source,
+                     "  cogl_point_size_out = cogl_point_size_in;\n");
   /* On regular OpenGL we'll just flush the point size builtin */
-  if (pipelines_difference & COGL_PIPELINE_STATE_POINT_SIZE)
+  else if (pipelines_difference & COGL_PIPELINE_STATE_POINT_SIZE)
     {
       CoglPipeline *authority =
         _cogl_pipeline_get_authority (pipeline, COGL_PIPELINE_STATE_POINT_SIZE);
 
       if (ctx->point_size_cache != authority->big_state->point_size)
         {
-          GE( glPointSize (authority->big_state->point_size) );
+          GE( ctx, glPointSize (authority->big_state->point_size) );
           ctx->point_size_cache = authority->big_state->point_size;
         }
     }
-
-#endif /* HAVE_COGL_GLES2 */
 
   return TRUE;
 }
@@ -252,31 +235,33 @@ _cogl_pipeline_vertend_glsl_add_layer (CoglPipeline *pipeline,
   CoglPipelineVertendPrivate *priv;
   int unit_index;
 
+  _COGL_GET_CONTEXT (ctx, FALSE);
+
   priv = get_glsl_priv (pipeline);
 
   unit_index = _cogl_pipeline_layer_get_unit_index (layer);
 
-#ifndef HAVE_COGL_GLES2
-
-  /* We are using the fixed function uniforms for the user matrices
-     and the only way to set them is with the fixed function API so we
-     still need to flush them here */
-  if (layers_difference & COGL_PIPELINE_LAYER_STATE_USER_MATRIX)
+  if (ctx->driver != COGL_DRIVER_GLES2)
     {
-      CoglPipelineLayerState state = COGL_PIPELINE_LAYER_STATE_USER_MATRIX;
-      CoglPipelineLayer *authority =
-        _cogl_pipeline_layer_get_authority (layer, state);
-      CoglTextureUnit *unit = _cogl_get_texture_unit (unit_index);
+      /* We are using the fixed function uniforms for the user matrices
+         and the only way to set them is with the fixed function API so we
+         still need to flush them here */
+      if (layers_difference & COGL_PIPELINE_LAYER_STATE_USER_MATRIX)
+        {
+          CoglPipelineLayerState state = COGL_PIPELINE_LAYER_STATE_USER_MATRIX;
+          CoglPipelineLayer *authority =
+            _cogl_pipeline_layer_get_authority (layer, state);
+          CoglTextureUnit *unit = _cogl_get_texture_unit (unit_index);
 
-      _cogl_matrix_stack_set (unit->matrix_stack,
-                              &authority->big_state->matrix);
+          _cogl_matrix_stack_set (unit->matrix_stack,
+                                  &authority->big_state->matrix);
 
-      _cogl_set_active_texture_unit (unit_index);
+          _cogl_set_active_texture_unit (unit_index);
 
-      _cogl_matrix_stack_flush_to_gl (unit->matrix_stack, COGL_MATRIX_TEXTURE);
+          _cogl_matrix_stack_flush_to_gl (unit->matrix_stack,
+                                          COGL_MATRIX_TEXTURE);
+        }
     }
-
-#endif /* HAVE_COGL_GLES2 */
 
   if (priv->source == NULL)
     return TRUE;
@@ -332,7 +317,7 @@ _cogl_pipeline_vertend_glsl_end (CoglPipeline *pipeline,
                        "  cogl_color_out = cogl_color_in;\n"
                        "}\n");
 
-      GE_RET( shader, glCreateShader (GL_VERTEX_SHADER) );
+      GE_RET( shader, ctx, glCreateShader (GL_VERTEX_SHADER) );
 
       lengths[0] = priv->header->len;
       source_strings[0] = priv->header->str;
@@ -346,17 +331,17 @@ _cogl_pipeline_vertend_glsl_end (CoglPipeline *pipeline,
                                                 2, /* count */
                                                 source_strings, lengths);
 
-      GE( glCompileShader (shader) );
-      GE( glGetShaderiv (shader, GL_COMPILE_STATUS, &compile_status) );
+      GE( ctx, glCompileShader (shader) );
+      GE( ctx, glGetShaderiv (shader, GL_COMPILE_STATUS, &compile_status) );
 
       if (!compile_status)
         {
           GLint len = 0;
           char *shader_log;
 
-          GE( glGetShaderiv (shader, GL_INFO_LOG_LENGTH, &len) );
+          GE( ctx, glGetShaderiv (shader, GL_INFO_LOG_LENGTH, &len) );
           shader_log = g_alloca (len);
-          GE( glGetShaderInfoLog (shader, len, &len, shader_log) );
+          GE( ctx, glGetShaderInfoLog (shader, len, &len, shader_log) );
           g_warning ("Shader compilation failed:\n%s", shader_log);
         }
 

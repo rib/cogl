@@ -49,7 +49,12 @@ _cogl_pipeline_vertend_fixed_start (CoglPipeline *pipeline,
 {
   CoglProgram *user_program;
 
+  _COGL_GET_CONTEXT (ctx, FALSE);
+
   if (G_UNLIKELY (COGL_DEBUG_ENABLED (COGL_DEBUG_DISABLE_FIXED)))
+    return FALSE;
+
+  if (ctx->driver == COGL_DRIVER_GLES2)
     return FALSE;
 
   /* If there is a user program with a vertex shader then the
@@ -104,7 +109,7 @@ _cogl_pipeline_vertend_fixed_end (CoglPipeline *pipeline,
 
       if (ctx->point_size_cache != authority->big_state->point_size)
         {
-          GE( glPointSize (authority->big_state->point_size) );
+          GE( ctx, glPointSize (authority->big_state->point_size) );
           ctx->point_size_cache = authority->big_state->point_size;
         }
     }

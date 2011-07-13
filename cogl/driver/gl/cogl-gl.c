@@ -40,8 +40,10 @@ _cogl_get_gl_version (int *major_out, int *minor_out)
   const char *version_string, *major_end, *minor_end;
   int major = 0, minor = 0;
 
+  _COGL_GET_CONTEXT (ctx, FALSE);
+
   /* Get the OpenGL version number */
-  if ((version_string = (const char *) glGetString (GL_VERSION)) == NULL)
+  if ((version_string = (const char *) ctx->glGetString (GL_VERSION)) == NULL)
     return FALSE;
 
   /* Extract the major number */
@@ -70,7 +72,8 @@ _cogl_get_gl_version (int *major_out, int *minor_out)
 }
 
 gboolean
-_cogl_gl_check_version (GError **error)
+_cogl_gl_check_gl_version (CoglContext *ctx,
+                           GError **error)
 {
   int major, minor;
   const char *gl_extensions;
@@ -88,7 +91,7 @@ _cogl_gl_check_version (GError **error)
   if (COGL_CHECK_GL_VERSION (major, minor, 1, 3))
     return TRUE;
 
-  gl_extensions = (const char*) glGetString (GL_EXTENSIONS);
+  gl_extensions = (const char*) ctx->glGetString (GL_EXTENSIONS);
 
   /* OpenGL 1.2 is only supported if we have the multitexturing
      extension */
@@ -117,37 +120,6 @@ _cogl_gl_check_version (GError **error)
   return TRUE;
 }
 
-/* Define a set of arrays containing the functions required from GL
-   for each feature */
-#define COGL_FEATURE_BEGIN(name, min_gl_major, min_gl_minor,            \
-                           namespaces, extension_names,                 \
-                           feature_flags, feature_flags_private)        \
-  static const CoglFeatureFunction cogl_feature_ ## name ## _funcs[] = {
-#define COGL_FEATURE_FUNCTION(ret, name, args)                          \
-  { G_STRINGIFY (name), G_STRUCT_OFFSET (CoglContext, drv.pf_ ## name) },
-#define COGL_FEATURE_END()                      \
-  { NULL, 0 },                                  \
-  };
-#include "cogl-feature-functions-gl.h"
-
-/* Define an array of features */
-#undef COGL_FEATURE_BEGIN
-#define COGL_FEATURE_BEGIN(name, min_gl_major, min_gl_minor,            \
-                           namespaces, extension_names,                 \
-                           feature_flags, feature_flags_private)        \
-  { min_gl_major, min_gl_minor, namespaces,                             \
-    extension_names, feature_flags, feature_flags_private, 0,           \
-    cogl_feature_ ## name ## _funcs },
-#undef COGL_FEATURE_FUNCTION
-#define COGL_FEATURE_FUNCTION(ret, name, args)
-#undef COGL_FEATURE_END
-#define COGL_FEATURE_END()
-
-static const CoglFeatureData cogl_feature_data[] =
-  {
-#include "cogl-feature-functions-gl.h"
-  };
-
 /* Query the GL extensions and lookup the corresponding function
  * pointers. Theoretically the list of extensions can change for
  * different GL contexts so it is the winsys backend's responsiblity
@@ -161,7 +133,15 @@ _cogl_gl_update_features (CoglContext *context)
   int max_clip_planes = 0;
   int num_stencil_bits = 0;
   int gl_major = 0, gl_minor = 0;
-  int i;
+
+  _COGL_GET_CONTEXT (ctx, NO_RETVAL);
+
+  /* We have to special case getting the pointer to the glGetString
+     function because we need to use it to determine what functions we
+     can expect */
+  context->glGetString =
+    (void *) _cogl_get_proc_address (_cogl_context_get_winsys (context),
+                                     "glGetString");
 
   COGL_NOTE (WINSYS,
              "Checking features\n"
@@ -169,10 +149,10 @@ _cogl_gl_update_features (CoglContext *context)
              "  GL_RENDERER: %s\n"
              "  GL_VERSION: %s\n"
              "  GL_EXTENSIONS: %s",
-             glGetString (GL_VENDOR),
-             glGetString (GL_RENDERER),
-             glGetString (GL_VERSION),
-             glGetString (GL_EXTENSIONS));
+             ctx->glGetString (GL_VENDOR),
+             ctx->glGetString (GL_RENDERER),
+             ctx->glGetString (GL_VERSION),
+             ctx->glGetString (GL_EXTENSIONS));
 
   _cogl_get_gl_version (&gl_major, &gl_minor);
 
@@ -180,7 +160,12 @@ _cogl_gl_update_features (CoglContext *context)
            | COGL_FEATURE_UNSIGNED_INT_INDICES
            | COGL_FEATURE_DEPTH_RANGE);
 
-  gl_extensions = (const char *)glGetString (GL_EXTENSIONS);
+  gl_extensions = (const char *)ctx->glGetString (GL_EXTENSIONS);
+
+  _cogl_feature_check_ext_functions (context,
+                                     gl_major,
+                                     gl_minor,
+                                     gl_extensions);
 
   if (COGL_CHECK_GL_VERSION (gl_major, gl_minor, 2, 0) ||
       _cogl_check_extension ("GL_ARB_texture_non_power_of_two", gl_extensions))
@@ -198,25 +183,47 @@ _cogl_gl_update_features (CoglContext *context)
     }
 #endif
 
-  GE( glGetIntegerv (GL_STENCIL_BITS, &num_stencil_bits) );
+  GE( ctx, glGetIntegerv (GL_STENCIL_BITS, &num_stencil_bits) );
   /* We need at least three stencil bits to combine clips */
   if (num_stencil_bits > 2)
     flags |= COGL_FEATURE_STENCIL_BUFFER;
 
-  GE( glGetIntegerv (GL_MAX_CLIP_PLANES, &max_clip_planes) );
+  GE( ctx, glGetIntegerv (GL_MAX_CLIP_PLANES, &max_clip_planes) );
   if (max_clip_planes >= 4)
     flags |= COGL_FEATURE_FOUR_CLIP_PLANES;
 
-  for (i = 0; i < G_N_ELEMENTS (cogl_feature_data); i++)
-    if (_cogl_feature_check (_cogl_context_get_winsys (context),
-                             "GL", cogl_feature_data + i,
-                             gl_major, gl_minor,
-                             gl_extensions,
-                             context))
-      {
-        private_flags |= cogl_feature_data[i].feature_flags_private;
-        flags |= cogl_feature_data[i].feature_flags;
-      }
+  if (context->glGenRenderbuffers)
+    flags |= COGL_FEATURE_OFFSCREEN;
+
+  if (context->glBlitFramebuffer)
+    flags |= COGL_FEATURE_OFFSCREEN_BLIT;
+
+  if (context->glRenderbufferStorageMultisample)
+    flags |= COGL_FEATURE_OFFSCREEN_MULTISAMPLE;
+
+  if (COGL_CHECK_GL_VERSION (gl_major, gl_minor, 2, 1) ||
+      _cogl_check_extension ("GL_EXT_pixel_buffer_object", gl_extensions))
+    flags |= COGL_FEATURE_PBOS;
+
+  if (context->glGenPrograms)
+    flags |= COGL_FEATURE_SHADERS_ARBFP;
+
+  if (context->glCreateProgram)
+    flags |= COGL_FEATURE_SHADERS_GLSL;
+
+  if (context->glGenBuffers)
+    flags |= (COGL_FEATURE_VBOS |
+              COGL_FEATURE_MAP_BUFFER_FOR_READ |
+              COGL_FEATURE_MAP_BUFFER_FOR_WRITE);
+
+  if (_cogl_check_extension ("GL_ARB_texture_rectangle", gl_extensions))
+    flags |= COGL_FEATURE_TEXTURE_RECTANGLE;
+
+  if (context->glTexImage3D)
+    flags |= COGL_FEATURE_TEXTURE_3D;
+
+  if (context->glEGLImageTargetTexture2D)
+    private_flags |= COGL_PRIVATE_FEATURE_TEXTURE_2D_FROM_EGL_IMAGE;
 
   /* Cache features */
   context->private_feature_flags |= private_flags;

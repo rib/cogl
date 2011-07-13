@@ -47,10 +47,6 @@
 #include "cogl-attribute-private.h"
 #include "cogl-framebuffer-private.h"
 
-#ifdef HAVE_COGL_GL
-#define glClientActiveTexture ctx->drv.pf_glClientActiveTexture
-#endif
-
 #ifdef COGL_GL_DEBUG
 /* GL error to string conversion */
 static const struct {
@@ -154,29 +150,21 @@ toggle_flag (CoglContext *ctx,
     {
       if (!(ctx->enable_flags & flag))
 	{
-	  GE( glEnable (gl_flag) );
+	  GE( ctx, glEnable (gl_flag) );
 	  ctx->enable_flags |= flag;
 	  return TRUE;
 	}
     }
   else if (ctx->enable_flags & flag)
     {
-      GE( glDisable (gl_flag) );
+      GE( ctx, glDisable (gl_flag) );
       ctx->enable_flags &= ~flag;
     }
 
   return FALSE;
 }
 
-#ifdef HAVE_COGL_GLES2
-
-/* Under GLES2 there are no builtin client flags so toggle_client_flag
-   should never be reached */
-
-#define toggle_client_flag(ctx, new_flags, flag, gl_flag) \
-  g_assert (((new_flags) & (flag)) == 0)
-
-#else /* HAVE_COGL_GLES2 */
+#if defined (HAVE_COGL_GL) || defined (HAVE_COGL_GLES)
 
 static gboolean
 toggle_client_flag (CoglContext *ctx,
@@ -184,6 +172,8 @@ toggle_client_flag (CoglContext *ctx,
 		    unsigned long flag,
 		    GLenum gl_flag)
 {
+  g_return_val_if_fail (ctx->driver != COGL_DRIVER_GLES2, FALSE);
+
   /* Toggles and caches a single client-side enable flag
    * on or off by comparing to current state
    */
@@ -191,21 +181,21 @@ toggle_client_flag (CoglContext *ctx,
     {
       if (!(ctx->enable_flags & flag))
 	{
-	  GE( glEnableClientState (gl_flag) );
+	  GE( ctx, glEnableClientState (gl_flag) );
 	  ctx->enable_flags |= flag;
 	  return TRUE;
 	}
     }
   else if (ctx->enable_flags & flag)
     {
-      GE( glDisableClientState (gl_flag) );
+      GE( ctx, glDisableClientState (gl_flag) );
       ctx->enable_flags &= ~flag;
     }
 
   return FALSE;
 }
 
-#endif /* HAVE_COGL_GLES2 */
+#endif
 
 void
 _cogl_enable (unsigned long flags)
@@ -219,13 +209,18 @@ _cogl_enable (unsigned long flags)
                COGL_ENABLE_BACKFACE_CULLING,
                GL_CULL_FACE);
 
-  toggle_client_flag (ctx, flags,
-		      COGL_ENABLE_VERTEX_ARRAY,
-		      GL_VERTEX_ARRAY);
+#if defined (HAVE_COGL_GL) || defined (HAVE_COGL_GLES)
+  if (ctx->driver != COGL_DRIVER_GLES2)
+    {
+      toggle_client_flag (ctx, flags,
+                          COGL_ENABLE_VERTEX_ARRAY,
+                          GL_VERTEX_ARRAY);
 
-  toggle_client_flag (ctx, flags,
-		      COGL_ENABLE_COLOR_ARRAY,
-		      GL_COLOR_ARRAY);
+      toggle_client_flag (ctx, flags,
+                          COGL_ENABLE_COLOR_ARRAY,
+                          GL_COLOR_ARRAY);
+    }
+#endif
 }
 
 unsigned long
@@ -307,9 +302,9 @@ _cogl_flush_face_winding (void)
     {
 
       if (winding == COGL_FRONT_WINDING_CLOCKWISE)
-        GE (glFrontFace (GL_CW));
+        GE (ctx, glFrontFace (GL_CW));
       else
-        GE (glFrontFace (GL_CCW));
+        GE (ctx, glFrontFace (GL_CCW));
       ctx->flushed_front_winding = winding;
     }
 }
@@ -546,7 +541,10 @@ _cogl_read_pixels_with_rowstride (int x,
                                     bmp_format, width, height, rowstride,
                                     NULL, NULL);
 
-  _cogl_pixel_format_to_gl (format, &gl_intformat, &gl_format, &gl_type);
+  ctx->texture_driver->pixel_format_to_gl (format,
+                                           &gl_intformat,
+                                           &gl_format,
+                                           &gl_type);
 
   /* Under GLES only GL_RGBA with GL_UNSIGNED_BYTE as well as an
      implementation specific format under
@@ -558,9 +556,9 @@ _cogl_read_pixels_with_rowstride (int x,
      GL_RGBA/GL_UNSIGNED_BYTE and convert if necessary. We also need
      to use this intermediate buffer if the rowstride has padding
      because GLES does not support setting GL_ROW_LENGTH */
-#ifndef COGL_HAS_GL
-  if (gl_format != GL_RGBA || gl_type != GL_UNSIGNED_BYTE ||
-      rowstride != 4 * width)
+  if (ctx->driver != COGL_DRIVER_GL &&
+      (gl_format != GL_RGBA || gl_type != GL_UNSIGNED_BYTE ||
+       rowstride != 4 * width))
     {
       CoglBitmap *tmp_bmp, *dst_bmp;
       guint8 *tmp_data = g_malloc (width * height * 4);
@@ -572,11 +570,11 @@ _cogl_read_pixels_with_rowstride (int x,
                                             (CoglBitmapDestroyNotify) g_free,
                                             NULL);
 
-      _cogl_texture_driver_prep_gl_for_pixels_download (4 * width, 4);
+      ctx->texture_driver->prep_gl_for_pixels_download (4 * width, 4);
 
-      GE( glReadPixels (x, y, width, height,
-                        GL_RGBA, GL_UNSIGNED_BYTE,
-                        tmp_data) );
+      GE( ctx, glReadPixels (x, y, width, height,
+                             GL_RGBA, GL_UNSIGNED_BYTE,
+                             tmp_data) );
 
       /* CoglBitmap doesn't currently have a way to convert without
          allocating its own buffer so we have to copy the data
@@ -600,11 +598,10 @@ _cogl_read_pixels_with_rowstride (int x,
       cogl_object_unref (tmp_bmp);
     }
   else
-#endif
     {
-      _cogl_texture_driver_prep_gl_for_pixels_download (rowstride, bpp);
+      ctx->texture_driver->prep_gl_for_pixels_download (rowstride, bpp);
 
-      GE( glReadPixels (x, y, width, height, gl_format, gl_type, pixels) );
+      GE( ctx, glReadPixels (x, y, width, height, gl_format, gl_type, pixels) );
 
       /* Convert to the premult format specified by the caller
          in-place. This will do nothing if the premult status is already

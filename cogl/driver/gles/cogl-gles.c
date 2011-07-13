@@ -33,58 +33,30 @@
 #include "cogl-feature-private.h"
 
 gboolean
-_cogl_gl_check_version (GError **error)
+_cogl_gles_check_gl_version (GError **error)
 {
   /* The GLES backend doesn't have any particular version requirements */
   return TRUE;
 }
-
-/* Define a set of arrays containing the functions required from GL
-   for each feature */
-#define COGL_FEATURE_BEGIN(name, min_gl_major, min_gl_minor,            \
-                           namespaces, extension_names,                 \
-                           feature_flags, feature_flags_private)        \
-  static const CoglFeatureFunction cogl_feature_ ## name ## _funcs[] = {
-#define COGL_FEATURE_FUNCTION(ret, name, args)                          \
-  { G_STRINGIFY (name), G_STRUCT_OFFSET (CoglContext, drv.pf_ ## name) },
-#define COGL_FEATURE_END()                      \
-  { NULL, 0 },                                  \
-  };
-#include "cogl-feature-functions-gles.h"
-
-/* Define an array of features */
-#undef COGL_FEATURE_BEGIN
-#define COGL_FEATURE_BEGIN(name, min_gl_major, min_gl_minor,            \
-                           namespaces, extension_names,                 \
-                           feature_flags, feature_flags_private)        \
-  { min_gl_major, min_gl_minor, namespaces,                             \
-    extension_names, feature_flags, feature_flags_private, 0,           \
-    cogl_feature_ ## name ## _funcs },
-#undef COGL_FEATURE_FUNCTION
-#define COGL_FEATURE_FUNCTION(ret, name, args)
-#undef COGL_FEATURE_END
-#define COGL_FEATURE_END()
-
-static const CoglFeatureData cogl_feature_data[] =
-  {
-#include "cogl-feature-functions-gles.h"
-  };
 
 /* Query the GL extensions and lookup the corresponding function
  * pointers. Theoretically the list of extensions can change for
  * different GL contexts so it is the winsys backend's responsiblity
  * to know when to re-query the GL extensions. */
 void
-_cogl_gl_update_features (CoglContext *context)
+_cogl_gles_update_features (CoglContext *context)
 {
   CoglPrivateFeatureFlags private_flags = 0;
   CoglFeatureFlags flags = 0;
   const char *gl_extensions;
-#ifndef HAVE_COGL_GLES2
-  int max_clip_planes = 0;
-#endif
   int num_stencil_bits = 0;
-  int i;
+
+  /* We have to special case getting the pointer to the glGetString
+     function because we need to use it to determine what functions we
+     can expect */
+  context->glGetString =
+    (void *) _cogl_get_proc_address (_cogl_context_get_winsys (context),
+                                     "glGetString");
 
   COGL_NOTE (WINSYS,
              "Checking features\n"
@@ -92,48 +64,73 @@ _cogl_gl_update_features (CoglContext *context)
              "  GL_RENDERER: %s\n"
              "  GL_VERSION: %s\n"
              "  GL_EXTENSIONS: %s",
-             glGetString (GL_VENDOR),
-             glGetString (GL_RENDERER),
-             glGetString (GL_VERSION),
-             glGetString (GL_EXTENSIONS));
+             context->glGetString (GL_VENDOR),
+             context->glGetString (GL_RENDERER),
+             context->glGetString (GL_VERSION),
+             context->glGetString (GL_EXTENSIONS));
 
-  gl_extensions = (const char*) glGetString (GL_EXTENSIONS);
+  gl_extensions = (const char*) context->glGetString (GL_EXTENSIONS);
 
+  _cogl_feature_check_ext_functions (context,
+                                     -1 /* GL major version */,
+                                     -1 /* GL minor version */,
+                                     gl_extensions);
 
-  GE( glGetIntegerv (GL_STENCIL_BITS, &num_stencil_bits) );
+  GE( context, glGetIntegerv (GL_STENCIL_BITS, &num_stencil_bits) );
   /* We need at least three stencil bits to combine clips */
   if (num_stencil_bits > 2)
     flags |= COGL_FEATURE_STENCIL_BUFFER;
 
-#ifndef HAVE_COGL_GLES2
-  GE( glGetIntegerv (GL_MAX_CLIP_PLANES, &max_clip_planes) );
-  if (max_clip_planes >= 4)
-    flags |= COGL_FEATURE_FOUR_CLIP_PLANES;
+#ifdef HAVE_COGL_GLES
+  if (context->driver == COGL_DRIVER_GLES1)
+    {
+      int max_clip_planes;
+      GE( context, glGetIntegerv (GL_MAX_CLIP_PLANES, &max_clip_planes) );
+      if (max_clip_planes >= 4)
+        flags |= COGL_FEATURE_FOUR_CLIP_PLANES;
+    }
 #endif
 
-#ifdef HAVE_COGL_GLES2
-  flags |= COGL_FEATURE_SHADERS_GLSL | COGL_FEATURE_OFFSCREEN;
-  /* Note GLES 2 core doesn't support mipmaps for npot textures or
-   * repeat modes other than CLAMP_TO_EDGE. */
-  flags |= COGL_FEATURE_TEXTURE_NPOT_BASIC;
-  flags |= COGL_FEATURE_DEPTH_RANGE;
-#endif
+  if (context->driver == COGL_DRIVER_GLES2)
+    {
+      flags |= COGL_FEATURE_SHADERS_GLSL | COGL_FEATURE_OFFSCREEN;
+      /* Note GLES 2 core doesn't support mipmaps for npot textures or
+       * repeat modes other than CLAMP_TO_EDGE. */
+      flags |= COGL_FEATURE_TEXTURE_NPOT_BASIC;
+      flags |= COGL_FEATURE_DEPTH_RANGE;
+    }
 
   flags |= COGL_FEATURE_VBOS;
 
   /* Both GLES 1.1 and GLES 2.0 support point sprites in core */
   flags |= COGL_FEATURE_POINT_SPRITE;
 
-  for (i = 0; i < G_N_ELEMENTS (cogl_feature_data); i++)
-    if (_cogl_feature_check (_cogl_context_get_winsys (context),
-                             "GL", cogl_feature_data + i,
-                             0, 0,
-                             gl_extensions,
-                             context))
-      {
-        private_flags |= cogl_feature_data[i].feature_flags_private;
-        flags |= cogl_feature_data[i].feature_flags;
-      }
+  if (context->glGenRenderbuffers)
+    flags |= COGL_FEATURE_OFFSCREEN;
+
+  if (context->glBlitFramebuffer)
+    flags |= COGL_FEATURE_OFFSCREEN_BLIT;
+
+  if (_cogl_check_extension ("GL_OES_element_index_uint", gl_extensions))
+    flags |= COGL_FEATURE_UNSIGNED_INT_INDICES;
+
+  if (_cogl_check_extension ("GL_OES_texture_npot", gl_extensions) ||
+      _cogl_check_extension ("GL_IMG_texture_npot", gl_extensions))
+    flags |= (COGL_FEATURE_TEXTURE_NPOT |
+              COGL_FEATURE_TEXTURE_NPOT_BASIC |
+              COGL_FEATURE_TEXTURE_NPOT_MIPMAP |
+              COGL_FEATURE_TEXTURE_NPOT_REPEAT);
+
+  if (context->glTexImage3D)
+    flags |= COGL_FEATURE_TEXTURE_3D;
+
+  if (context->glMapBuffer)
+    /* The GL_OES_mapbuffer extension doesn't support mapping for
+       read */
+    flags |= COGL_FEATURE_MAP_BUFFER_FOR_WRITE;
+
+  if (context->glEGLImageTargetTexture2D)
+    flags |= COGL_PRIVATE_FEATURE_TEXTURE_2D_FROM_EGL_IMAGE;
 
   /* Cache features */
   context->private_feature_flags |= private_flags;

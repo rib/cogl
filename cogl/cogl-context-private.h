@@ -33,14 +33,6 @@
 #include "cogl-xlib-private.h"
 #endif
 
-#if HAVE_COGL_GL
-#include "cogl-context-driver-gl.h"
-#endif
-
-#if HAVE_COGL_GLES || HAVE_COGL_GLES2
-#include "cogl-context-driver-gles.h"
-#endif
-
 #include "cogl-display-private.h"
 #include "cogl-primitives.h"
 #include "cogl-clip-stack.h"
@@ -49,6 +41,7 @@
 #include "cogl-buffer-private.h"
 #include "cogl-bitmask.h"
 #include "cogl-atlas.h"
+#include "cogl-texture-driver.h"
 
 typedef struct
 {
@@ -62,6 +55,11 @@ struct _CoglContext
   CoglObject _parent;
 
   CoglDisplay *display;
+
+  CoglDriver driver;
+
+  /* vtable for the texture driver functions */
+  const CoglTextureDriver *texture_driver;
 
   /* Features cache */
   CoglFeatureFlags feature_flags;
@@ -90,10 +88,8 @@ struct _CoglContext
      API. We keep track of the matrix stack that Cogl is trying to
      flush so we can flush it later after the program is generated. A
      reference is taken on the stacks. */
-#ifdef HAVE_COGL_GLES2
   CoglMatrixStack  *flushed_modelview_stack;
   CoglMatrixStack  *flushed_projection_stack;
-#endif /* HAVE_COGL_GLES2 */
 
   GArray           *texture_units;
   int               active_texture_unit;
@@ -259,11 +255,30 @@ struct _CoglContext
   CoglXlibTrapState *trap_state;
 #endif
 
-  CoglContextDriver drv;
-
   unsigned int winsys_features
     [COGL_FLAGS_N_INTS_FOR_SIZE (COGL_WINSYS_FEATURE_N_FEATURES)];
   void *winsys;
+
+  /* This defines a list of function pointers that Cogl uses from
+     either GL or GLES. All functions are accessed indirectly through
+     these pointers rather than linking to them directly */
+#ifndef APIENTRY
+#define APIENTRY
+#endif
+
+#define COGL_EXT_BEGIN(name, \
+                       min_gl_major, min_gl_minor, \
+                       gles_availability, \
+                       extension_suffixes, extension_names)
+#define COGL_EXT_FUNCTION(ret, name, args) \
+  ret (APIENTRY * name) args;
+#define COGL_EXT_END()
+
+#include "cogl-ext-functions.h"
+
+#undef COGL_EXT_BEGIN
+#undef COGL_EXT_FUNCTION
+#undef COGL_EXT_END
 };
 
 CoglContext *
@@ -271,6 +286,18 @@ _cogl_context_get_default ();
 
 const CoglWinsysVtable *
 _cogl_context_get_winsys (CoglContext *context);
+
+/* Check whether the current GL context is supported by Cogl */
+gboolean
+_cogl_context_check_gl_version (CoglContext *context,
+                                GError **error);
+
+/* Query the GL extensions and lookup the corresponding function
+ * pointers. Theoretically the list of extensions can change for
+ * different GL contexts so it is the winsys backend's responsiblity
+ * to know when to re-query the GL extensions. */
+void
+_cogl_context_update_features (CoglContext *context);
 
 /* Obtains the context and returns retval if NULL */
 #define _COGL_GET_CONTEXT(ctxvar, retval) \

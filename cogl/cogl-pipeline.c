@@ -49,6 +49,10 @@
 #include <glib/gprintf.h>
 #include <string.h>
 
+#ifndef GL_FUNC_ADD
+#define GL_FUNC_ADD 0x8006
+#endif
+
 typedef gboolean (*CoglPipelineStateComparitor) (CoglPipeline *authority0,
                                                  CoglPipeline *authority1);
 
@@ -275,7 +279,7 @@ _cogl_pipeline_init_default_pipeline (void)
   alpha_state->alpha_func_reference = 0.0;
 
   /* Not the same as the GL default, but seems saner... */
-#ifndef HAVE_COGL_GLES
+#if defined(HAVE_COGL_GLES2) || defined(HAVE_COGL_GL)
   blend_state->blend_equation_rgb = GL_FUNC_ADD;
   blend_state->blend_equation_alpha = GL_FUNC_ADD;
   blend_state->blend_src_factor_alpha = GL_ONE;
@@ -375,37 +379,40 @@ _cogl_pipeline_promote_weak_ancestors (CoglPipeline *strong)
 
   g_return_if_fail (!strong->is_weak);
 
-  for (n = COGL_PIPELINE_NODE (strong)->parent; n; n = n->parent)
-    {
-      CoglPipeline *pipeline = COGL_PIPELINE (n);
+  /* If the parent of strong is weak, then we want to promote it by
+     taking a reference on strong's grandparent. We don't need to take
+     a reference on strong's direct parent */
 
-      cogl_object_ref (pipeline);
+  if (COGL_PIPELINE_NODE (strong)->parent == NULL)
+    return;
 
-      if (!pipeline->is_weak)
-        return;
-    }
+  for (n = COGL_PIPELINE_NODE (strong)->parent;
+       /* We can assume that all weak pipelines have a parent */
+       COGL_PIPELINE (n)->is_weak;
+       n = n->parent)
+    /* 'n' is weak so we take a reference on its parent */
+    cogl_object_ref (n->parent);
 }
 
 static void
 _cogl_pipeline_revert_weak_ancestors (CoglPipeline *strong)
 {
-  CoglPipeline *parent = _cogl_pipeline_get_parent (strong);
   CoglPipelineNode *n;
 
   g_return_if_fail (!strong->is_weak);
 
-  if (!parent || !parent->is_weak)
+  /* This reverts the effect of calling
+     _cogl_pipeline_promote_weak_ancestors */
+
+  if (COGL_PIPELINE_NODE (strong)->parent == NULL)
     return;
 
-  for (n = COGL_PIPELINE_NODE (strong)->parent; n; n = n->parent)
-    {
-      CoglPipeline *pipeline = COGL_PIPELINE (n);
-
-      cogl_object_unref (pipeline);
-
-      if (!pipeline->is_weak)
-        return;
-    }
+  for (n = COGL_PIPELINE_NODE (strong)->parent;
+       /* We can assume that all weak pipelines have a parent */
+       COGL_PIPELINE (n)->is_weak;
+       n = n->parent)
+    /* 'n' is weak so we unref its parent */
+    cogl_object_unref (n->parent);
 }
 
 /* XXX: Always have an eye out for opportunities to lower the cost of
@@ -437,6 +444,7 @@ _cogl_pipeline_copy (CoglPipeline *src, gboolean is_weak)
    */
 
   pipeline->layers_cache_dirty = TRUE;
+  pipeline->deprecated_get_layers_list = NULL;
   pipeline->deprecated_get_layers_list_dirty = TRUE;
 
   pipeline->fragend = src->fragend;
@@ -554,6 +562,8 @@ _cogl_pipeline_free (CoglPipeline *pipeline)
                       (GFunc)cogl_object_unref, NULL);
       g_list_free (pipeline->layer_differences);
     }
+
+  g_list_free (pipeline->deprecated_get_layers_list);
 
   g_slice_free (CoglPipeline, pipeline);
 }
@@ -818,6 +828,8 @@ _cogl_pipeline_needs_blending_enabled (CoglPipeline    *pipeline,
   CoglPipelineBlendEnable enabled;
   unsigned long other_state;
 
+  _COGL_GET_CONTEXT (ctx, FALSE);
+
   if (G_UNLIKELY (COGL_DEBUG_ENABLED (COGL_DEBUG_DISABLE_BLENDING)))
     return FALSE;
 
@@ -843,15 +855,18 @@ _cogl_pipeline_needs_blending_enabled (CoglPipeline    *pipeline,
    * functions...
    */
 
-#ifndef HAVE_COGL_GLES
-  /* GLES 1 can't change the function or have separate alpha factors */
-  if (blend_state->blend_equation_rgb != GL_FUNC_ADD ||
-      blend_state->blend_equation_alpha != GL_FUNC_ADD)
-    return TRUE;
+#if defined (HAVE_COGL_GLES2) || defined (HAVE_COGL_GL)
+  if (ctx->driver != COGL_DRIVER_GLES1)
+    {
+      /* GLES 1 can't change the function or have separate alpha factors */
+      if (blend_state->blend_equation_rgb != GL_FUNC_ADD ||
+          blend_state->blend_equation_alpha != GL_FUNC_ADD)
+        return TRUE;
 
-  if (blend_state->blend_src_factor_alpha != GL_ONE ||
-      blend_state->blend_dst_factor_alpha != GL_ONE_MINUS_SRC_ALPHA)
-    return TRUE;
+      if (blend_state->blend_src_factor_alpha != GL_ONE ||
+          blend_state->blend_dst_factor_alpha != GL_ONE_MINUS_SRC_ALPHA)
+        return TRUE;
+    }
 #endif
 
   if (blend_state->blend_src_factor_rgb != GL_ONE ||
@@ -3397,18 +3412,23 @@ _cogl_pipeline_blend_state_equal (CoglPipeline *authority0,
   CoglPipelineBlendState *blend_state0 = &authority0->big_state->blend_state;
   CoglPipelineBlendState *blend_state1 = &authority1->big_state->blend_state;
 
-#ifndef HAVE_COGL_GLES
-  if (blend_state0->blend_equation_rgb != blend_state1->blend_equation_rgb)
-    return FALSE;
-  if (blend_state0->blend_equation_alpha !=
-      blend_state1->blend_equation_alpha)
-    return FALSE;
-  if (blend_state0->blend_src_factor_alpha !=
-      blend_state1->blend_src_factor_alpha)
-    return FALSE;
-  if (blend_state0->blend_dst_factor_alpha !=
-      blend_state1->blend_dst_factor_alpha)
-    return FALSE;
+  _COGL_GET_CONTEXT (ctx, FALSE);
+
+#if defined(HAVE_COGL_GLES2) || defined(HAVE_COGL_GL)
+  if (ctx->driver != COGL_DRIVER_GLES1)
+    {
+      if (blend_state0->blend_equation_rgb != blend_state1->blend_equation_rgb)
+        return FALSE;
+      if (blend_state0->blend_equation_alpha !=
+          blend_state1->blend_equation_alpha)
+        return FALSE;
+      if (blend_state0->blend_src_factor_alpha !=
+          blend_state1->blend_src_factor_alpha)
+        return FALSE;
+      if (blend_state0->blend_dst_factor_alpha !=
+          blend_state1->blend_dst_factor_alpha)
+        return FALSE;
+    }
 #endif
   if (blend_state0->blend_src_factor_rgb !=
       blend_state1->blend_src_factor_rgb)
@@ -3416,11 +3436,12 @@ _cogl_pipeline_blend_state_equal (CoglPipeline *authority0,
   if (blend_state0->blend_dst_factor_rgb !=
       blend_state1->blend_dst_factor_rgb)
     return FALSE;
-#ifndef HAVE_COGL_GLES
-  if (blend_state0->blend_src_factor_rgb == GL_ONE_MINUS_CONSTANT_COLOR ||
-      blend_state0->blend_src_factor_rgb == GL_CONSTANT_COLOR ||
-      blend_state0->blend_dst_factor_rgb == GL_ONE_MINUS_CONSTANT_COLOR ||
-      blend_state0->blend_dst_factor_rgb == GL_CONSTANT_COLOR)
+#if defined(HAVE_COGL_GLES2) || defined(HAVE_COGL_GL)
+  if (ctx->driver != COGL_DRIVER_GLES1 &&
+      (blend_state0->blend_src_factor_rgb == GL_ONE_MINUS_CONSTANT_COLOR ||
+       blend_state0->blend_src_factor_rgb == GL_CONSTANT_COLOR ||
+       blend_state0->blend_dst_factor_rgb == GL_ONE_MINUS_CONSTANT_COLOR ||
+       blend_state0->blend_dst_factor_rgb == GL_CONSTANT_COLOR))
     {
       if (!cogl_color_equal (&blend_state0->blend_constant,
                              &blend_state1->blend_constant))
@@ -4408,7 +4429,7 @@ arg_to_gl_blend_factor (CoglBlendStringArgument *arg)
             return GL_DST_ALPHA;
         }
     }
-#ifndef HAVE_COGL_GLES
+#if defined(HAVE_COGL_GLES2) || defined(HAVE_COGL_GL)
   else if (arg->factor.source.info->type ==
            COGL_BLEND_STRING_COLOR_SOURCE_CONSTANT)
     {
@@ -4439,7 +4460,6 @@ setup_blend_state (CoglBlendStringStatement *statement,
                    GLint *blend_src_factor,
                    GLint *blend_dst_factor)
 {
-#ifndef HAVE_COGL_GLES
   switch (statement->function->type)
     {
     case COGL_BLEND_STRING_FUNCTION_ADD:
@@ -4450,7 +4470,6 @@ setup_blend_state (CoglBlendStringStatement *statement,
       g_warning ("Unsupported blend function given");
       *blend_equation = GL_FUNC_ADD;
     }
-#endif
 
   *blend_src_factor = arg_to_gl_blend_factor (&statement->args[0]);
   *blend_dst_factor = arg_to_gl_blend_factor (&statement->args[1]);
@@ -4469,6 +4488,8 @@ cogl_pipeline_set_blend (CoglPipeline *pipeline,
   GError *internal_error = NULL;
   int count;
   CoglPipelineBlendState *blend_state;
+
+  _COGL_GET_CONTEXT (ctx, FALSE);
 
   g_return_val_if_fail (cogl_is_pipeline (pipeline), FALSE);
 
@@ -4509,21 +4530,26 @@ cogl_pipeline_set_blend (CoglPipeline *pipeline,
   _cogl_pipeline_pre_change_notify (pipeline, state, NULL, FALSE);
 
   blend_state = &pipeline->big_state->blend_state;
-#ifndef HAVE_COGL_GLES
-  setup_blend_state (rgb,
-                     &blend_state->blend_equation_rgb,
-                     &blend_state->blend_src_factor_rgb,
-                     &blend_state->blend_dst_factor_rgb);
-  setup_blend_state (a,
-                     &blend_state->blend_equation_alpha,
-                     &blend_state->blend_src_factor_alpha,
-                     &blend_state->blend_dst_factor_alpha);
-#else
-  setup_blend_state (rgb,
-                     NULL,
-                     &blend_state->blend_src_factor_rgb,
-                     &blend_state->blend_dst_factor_rgb);
+#if defined (HAVE_COGL_GL) || defined (HAVE_COGL_GLES2)
+  if (ctx->driver != COGL_DRIVER_GLES1)
+    {
+      setup_blend_state (rgb,
+                         &blend_state->blend_equation_rgb,
+                         &blend_state->blend_src_factor_rgb,
+                         &blend_state->blend_dst_factor_rgb);
+      setup_blend_state (a,
+                         &blend_state->blend_equation_alpha,
+                         &blend_state->blend_src_factor_alpha,
+                         &blend_state->blend_dst_factor_alpha);
+    }
+  else
 #endif
+    {
+      setup_blend_state (rgb,
+                         NULL,
+                         &blend_state->blend_src_factor_rgb,
+                         &blend_state->blend_dst_factor_rgb);
+    }
 
   /* If we are the current authority see if we can revert to one of our
    * ancestors being the authority */
@@ -4557,33 +4583,40 @@ void
 cogl_pipeline_set_blend_constant (CoglPipeline *pipeline,
                                   const CoglColor *constant_color)
 {
-#ifndef HAVE_COGL_GLES
-  CoglPipelineState state = COGL_PIPELINE_STATE_BLEND;
-  CoglPipeline *authority;
-  CoglPipelineBlendState *blend_state;
+  _COGL_GET_CONTEXT (ctx, NO_RETVAL);
 
   g_return_if_fail (cogl_is_pipeline (pipeline));
 
-  authority = _cogl_pipeline_get_authority (pipeline, state);
-
-  blend_state = &authority->big_state->blend_state;
-  if (cogl_color_equal (constant_color, &blend_state->blend_constant))
+  if (ctx->driver == COGL_DRIVER_GLES1)
     return;
 
-  /* - Flush journal primitives referencing the current state.
-   * - Make sure the pipeline has no dependants so it may be modified.
-   * - If the pipeline isn't currently an authority for the state being
-   *   changed, then initialize that state from the current authority.
-   */
-  _cogl_pipeline_pre_change_notify (pipeline, state, NULL, FALSE);
+#if defined(HAVE_COGL_GLES2) || defined(HAVE_COGL_GL)
+  {
+    CoglPipelineState state = COGL_PIPELINE_STATE_BLEND;
+    CoglPipeline *authority;
+    CoglPipelineBlendState *blend_state;
 
-  blend_state = &pipeline->big_state->blend_state;
-  blend_state->blend_constant = *constant_color;
+    authority = _cogl_pipeline_get_authority (pipeline, state);
 
-  _cogl_pipeline_update_authority (pipeline, authority, state,
-                                   _cogl_pipeline_blend_state_equal);
+    blend_state = &authority->big_state->blend_state;
+    if (cogl_color_equal (constant_color, &blend_state->blend_constant))
+      return;
 
-  handle_automatic_blend_enable (pipeline, state);
+    /* - Flush journal primitives referencing the current state.
+     * - Make sure the pipeline has no dependants so it may be modified.
+     * - If the pipeline isn't currently an authority for the state being
+     *   changed, then initialize that state from the current authority.
+     */
+    _cogl_pipeline_pre_change_notify (pipeline, state, NULL, FALSE);
+
+    blend_state = &pipeline->big_state->blend_state;
+    blend_state->blend_constant = *constant_color;
+
+    _cogl_pipeline_update_authority (pipeline, authority, state,
+                                     _cogl_pipeline_blend_state_equal);
+
+    handle_automatic_blend_enable (pipeline, state);
+  }
 #endif
 }
 
@@ -4674,6 +4707,8 @@ cogl_pipeline_set_depth_state (CoglPipeline *pipeline,
   CoglPipeline *authority;
   CoglDepthState *orig_state;
 
+  _COGL_GET_CONTEXT (ctx, FALSE);
+
   g_return_val_if_fail (cogl_is_pipeline (pipeline), FALSE);
   g_return_val_if_fail (depth_state->magic == COGL_DEPTH_STATE_MAGIC, FALSE);
 
@@ -4687,9 +4722,9 @@ cogl_pipeline_set_depth_state (CoglPipeline *pipeline,
       orig_state->range_far == depth_state->range_far)
     return TRUE;
 
-#ifdef COGL_HAS_GLES
-  if (depth_state->range_near != 0 ||
-      depth_state->range_far != 1)
+  if (ctx->driver == COGL_DRIVER_GLES1 &&
+      (depth_state->range_near != 0 ||
+       depth_state->range_far != 1))
     {
       g_set_error (error,
                    COGL_ERROR,
@@ -4697,7 +4732,6 @@ cogl_pipeline_set_depth_state (CoglPipeline *pipeline,
                    "glDepthRange not available on GLES 1");
       return FALSE;
     }
-#endif
 
   /* - Flush journal primitives referencing the current state.
    * - Make sure the pipeline has no dependants so it may be modified.
@@ -6067,33 +6101,38 @@ _cogl_pipeline_hash_blend_state (CoglPipeline *authority,
   CoglPipelineBlendState *blend_state = &authority->big_state->blend_state;
   unsigned int hash;
 
+  _COGL_GET_CONTEXT (ctx, NO_RETVAL);
+
   if (!authority->real_blend_enable)
     return;
 
   hash = state->hash;
 
-#ifndef HAVE_COGL_GLES
-  hash =
-    _cogl_util_one_at_a_time_hash (hash, &blend_state->blend_equation_rgb,
-                                   sizeof (blend_state->blend_equation_rgb));
-  hash =
-    _cogl_util_one_at_a_time_hash (hash, &blend_state->blend_equation_alpha,
-                                   sizeof (blend_state->blend_equation_alpha));
-  hash =
-    _cogl_util_one_at_a_time_hash (hash, &blend_state->blend_src_factor_alpha,
-                                   sizeof (blend_state->blend_src_factor_alpha));
-  hash =
-    _cogl_util_one_at_a_time_hash (hash, &blend_state->blend_dst_factor_alpha,
-                                   sizeof (blend_state->blend_dst_factor_alpha));
-
-  if (blend_state->blend_src_factor_rgb == GL_ONE_MINUS_CONSTANT_COLOR ||
-      blend_state->blend_src_factor_rgb == GL_CONSTANT_COLOR ||
-      blend_state->blend_dst_factor_rgb == GL_ONE_MINUS_CONSTANT_COLOR ||
-      blend_state->blend_dst_factor_rgb == GL_CONSTANT_COLOR)
+#if defined(HAVE_COGL_GLES2) || defined(HAVE_COGL_GL)
+  if (ctx->driver != COGL_DRIVER_GLES1)
     {
       hash =
-        _cogl_util_one_at_a_time_hash (hash, &blend_state->blend_constant,
-                                       sizeof (blend_state->blend_constant));
+        _cogl_util_one_at_a_time_hash (hash, &blend_state->blend_equation_rgb,
+                                       sizeof (blend_state->blend_equation_rgb));
+      hash =
+        _cogl_util_one_at_a_time_hash (hash, &blend_state->blend_equation_alpha,
+                                       sizeof (blend_state->blend_equation_alpha));
+      hash =
+        _cogl_util_one_at_a_time_hash (hash, &blend_state->blend_src_factor_alpha,
+                                       sizeof (blend_state->blend_src_factor_alpha));
+      hash =
+        _cogl_util_one_at_a_time_hash (hash, &blend_state->blend_dst_factor_alpha,
+                                       sizeof (blend_state->blend_dst_factor_alpha));
+
+      if (blend_state->blend_src_factor_rgb == GL_ONE_MINUS_CONSTANT_COLOR ||
+          blend_state->blend_src_factor_rgb == GL_CONSTANT_COLOR ||
+          blend_state->blend_dst_factor_rgb == GL_ONE_MINUS_CONSTANT_COLOR ||
+          blend_state->blend_dst_factor_rgb == GL_CONSTANT_COLOR)
+        {
+          hash =
+            _cogl_util_one_at_a_time_hash (hash, &blend_state->blend_constant,
+                                           sizeof (blend_state->blend_constant));
+        }
     }
 #endif
 
@@ -6694,4 +6733,31 @@ _cogl_pipeline_find_equivalent_parent (CoglPipeline *pipeline,
     }
 
   return authority1;
+}
+
+CoglPipelineLayerState
+_cogl_pipeline_get_layer_state_for_fragment_codegen (CoglContext *context)
+{
+  CoglPipelineLayerState state =
+    (COGL_PIPELINE_LAYER_STATE_COMBINE |
+     COGL_PIPELINE_LAYER_STATE_TEXTURE_TARGET |
+     COGL_PIPELINE_LAYER_STATE_POINT_SPRITE_COORDS |
+     COGL_PIPELINE_LAYER_STATE_UNIT);
+
+  if (context->driver == COGL_DRIVER_GLES2)
+    state |= COGL_PIPELINE_LAYER_STATE_POINT_SPRITE_COORDS;
+
+  return state;
+}
+
+CoglPipelineState
+_cogl_pipeline_get_state_for_fragment_codegen (CoglContext *context)
+{
+  CoglPipelineState state = (COGL_PIPELINE_STATE_LAYERS |
+                             COGL_PIPELINE_STATE_USER_SHADER);
+
+  if (context->driver == COGL_DRIVER_GLES2)
+    state |= COGL_PIPELINE_STATE_ALPHA_FUNC;
+
+  return state;
 }

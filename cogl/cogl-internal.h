@@ -66,10 +66,10 @@ typedef struct _CoglBoxedValue
 const char *
 cogl_gl_error_to_string (GLenum error_code);
 
-#define GE(x)                           G_STMT_START {  \
+#define GE(ctx, x)                      G_STMT_START {  \
   GLenum __err;                                         \
-  (x);                                                  \
-  while ((__err = glGetError ()) != GL_NO_ERROR)        \
+  (ctx)->x;                                             \
+  while ((__err = (ctx)->glGetError ()) != GL_NO_ERROR) \
     {                                                   \
       g_warning ("%s: GL error (%d): %s\n",             \
                  G_STRLOC,                              \
@@ -77,10 +77,10 @@ cogl_gl_error_to_string (GLenum error_code);
                  cogl_gl_error_to_string (__err));      \
     }                                   } G_STMT_END
 
-#define GE_RET(ret, x)                  G_STMT_START {  \
+#define GE_RET(ret, ctx, x)             G_STMT_START {  \
   GLenum __err;                                         \
-  ret = (x);                                            \
-  while ((__err = glGetError ()) != GL_NO_ERROR)        \
+  ret = (ctx)->x;                                       \
+  while ((__err = (ctx)->glGetError ()) != GL_NO_ERROR) \
     {                                                   \
       g_warning ("%s: GL error (%d): %s\n",             \
                  G_STRLOC,                              \
@@ -90,8 +90,8 @@ cogl_gl_error_to_string (GLenum error_code);
 
 #else /* !COGL_GL_DEBUG */
 
-#define GE(x) (x)
-#define GE_RET(ret, x)  (ret = (x))
+#define GE(ctx, x) ((ctx)->x)
+#define GE_RET(ret, ctx, x) (ret = ((ctx)->x))
 
 #endif /* COGL_GL_DEBUG */
 
@@ -123,8 +123,17 @@ _cogl_transform_point (const CoglMatrix *matrix_mv,
 
 typedef enum { /*< prefix=COGL_DRIVER_ERROR >*/
   COGL_DRIVER_ERROR_UNKNOWN_VERSION,
-  COGL_DRIVER_ERROR_INVALID_VERSION
+  COGL_DRIVER_ERROR_INVALID_VERSION,
+  COGL_DRIVER_ERROR_NO_SUITABLE_DRIVER_FOUND,
+  COGL_DRIVER_ERROR_FAILED_TO_LOAD_LIBRARY
 } CoglDriverError;
+
+typedef enum
+{
+  COGL_DRIVER_GL,
+  COGL_DRIVER_GLES1,
+  COGL_DRIVER_GLES2
+} CoglDriver;
 
 typedef enum
 {

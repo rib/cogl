@@ -197,7 +197,7 @@ typedef struct _CoglTexturePixmapEGL
 #undef COGL_WINSYS_FEATURE_BEGIN
 #define COGL_WINSYS_FEATURE_BEGIN(name, namespaces, extension_names,    \
                                   egl_private_flags)                    \
-  { 255, 255, namespaces, extension_names,                              \
+  { 255, 255, 0, namespaces, extension_names,                           \
       0, egl_private_flags,                                             \
       0,                                                                \
       cogl_egl_feature_ ## name ## _funcs },
@@ -354,6 +354,7 @@ check_egl_extensions (CoglRenderer *renderer)
   for (i = 0; i < G_N_ELEMENTS (winsys_feature_data); i++)
     if (_cogl_feature_check (winsys,
                              "EGL", winsys_feature_data + i, 0, 0,
+                             COGL_DRIVER_GL, /* the driver isn't used */
                              egl_extensions,
                              egl_renderer))
       {
@@ -514,7 +515,7 @@ update_winsys_features (CoglContext *context)
 
   check_egl_extensions (context->display->renderer);
 
-  _cogl_gl_update_features (context);
+  _cogl_context_update_features (context);
 
 #if defined (COGL_HAS_EGL_PLATFORM_POWERVR_X11_SUPPORT) || \
     defined (COGL_HAS_EGL_PLATFORM_WAYLAND_SUPPORT)
@@ -619,23 +620,17 @@ try_create_context (CoglDisplay *display,
 
     EGL_BUFFER_SIZE,     EGL_DONT_CARE,
 
-#if defined (HAVE_COGL_GL)
-    EGL_RENDERABLE_TYPE, EGL_OPENGL_BIT,
-#elif defined (HAVE_COGL_GLES2)
-    EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
-#else
-    EGL_RENDERABLE_TYPE, EGL_OPENGL_ES_BIT,
-#endif
+    EGL_RENDERABLE_TYPE, (display->renderer->driver == COGL_DRIVER_GL ?
+                          EGL_OPENGL_BIT :
+                          display->renderer->driver == COGL_DRIVER_GLES1 ?
+                          EGL_OPENGL_ES_BIT :
+                          EGL_OPENGL_ES2_BIT),
 
     EGL_SURFACE_TYPE,    EGL_WINDOW_BIT,
 
     EGL_NONE
   };
-#if defined (HAVE_COGL_GLES2)
-  EGLint attribs[] = { EGL_CONTEXT_CLIENT_VERSION, 2, EGL_NONE };
-#else
-  EGLint *attribs = NULL;
-#endif
+  EGLint attribs[3];
 
 #ifdef COGL_HAS_EGL_PLATFORM_POWERVR_X11_SUPPORT
   XVisualInfo *xvisinfo;
@@ -646,11 +641,19 @@ try_create_context (CoglDisplay *display,
 #endif
   const char *error_message;
 
+  if (display->renderer->driver == COGL_DRIVER_GLES2)
+    {
+      attribs[0] = EGL_CONTEXT_CLIENT_VERSION;
+      attribs[1] = 2;
+      attribs[2] = EGL_NONE;
+    }
+  else
+    attribs[0] = EGL_NONE;
+
   edpy = egl_renderer->edpy;
 
-#ifdef HAVE_COGL_GL
-  eglBindAPI (EGL_OPENGL_API);
-#endif
+  if (display->renderer->driver == COGL_DRIVER_GL)
+    eglBindAPI (EGL_OPENGL_API);
 
   /* Some GLES hardware can't support a stencil buffer: */
   if (retry_cookie == 1)

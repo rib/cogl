@@ -45,17 +45,6 @@
 #include "cogl-shader-private.h"
 #include "cogl-program-private.h"
 
-#ifndef HAVE_COGL_GLES2
-
-#define glCreateShader       ctx->drv.pf_glCreateShader
-#define glGetShaderiv        ctx->drv.pf_glGetShaderiv
-#define glGetShaderInfoLog   ctx->drv.pf_glGetShaderInfoLog
-#define glCompileShader      ctx->drv.pf_glCompileShader
-#define glShaderSource       ctx->drv.pf_glShaderSource
-#define glDeleteShader       ctx->drv.pf_glDeleteShader
-
-#endif /* HAVE_COGL_GLES2 */
-
 #include <glib.h>
 
 /*
@@ -124,7 +113,7 @@ glsl_shader_state_unref (GlslShaderState *state)
   if (state->ref_count == 0)
     {
       if (state->gl_shader)
-        GE( glDeleteShader (state->gl_shader) );
+        GE( ctx, glDeleteShader (state->gl_shader) );
 
       g_free (state->unit_state);
 
@@ -238,9 +227,9 @@ _cogl_pipeline_fragend_glsl_start (CoglPipeline *pipeline,
        */
       authority = _cogl_pipeline_find_equivalent_parent
         (pipeline,
-         COGL_PIPELINE_STATE_AFFECTS_FRAGMENT_CODEGEN &
+         _cogl_pipeline_get_state_for_fragment_codegen (ctx) &
          ~COGL_PIPELINE_STATE_LAYERS,
-         COGL_PIPELINE_LAYER_STATE_AFFECTS_FRAGMENT_CODEGEN);
+         _cogl_pipeline_get_layer_state_for_fragment_codegen (ctx));
 
       authority_priv = get_glsl_priv (authority);
       if (!authority_priv)
@@ -277,7 +266,7 @@ _cogl_pipeline_fragend_glsl_start (CoglPipeline *pipeline,
         return TRUE;
 
       /* We need to recreate the shader so destroy the existing one */
-      GE( glDeleteShader (priv->glsl_shader_state->gl_shader) );
+      GE( ctx, glDeleteShader (priv->glsl_shader_state->gl_shader) );
       priv->glsl_shader_state->gl_shader = 0;
     }
 
@@ -350,6 +339,8 @@ add_texture_lookup (GlslShaderState *glsl_shader_state,
   int unit_index = _cogl_pipeline_layer_get_unit_index (layer);
   const char *target_string, *tex_coord_swizzle;
 
+  _COGL_GET_CONTEXT (ctx, NO_RETVAL);
+
   if (G_UNLIKELY (COGL_DEBUG_ENABLED (COGL_DEBUG_DISABLE_TEXTURING)))
     {
       g_string_append (glsl_shader_state->source,
@@ -373,7 +364,7 @@ add_texture_lookup (GlslShaderState *glsl_shader_state,
       cogl_texture_get_gl_texture (texture, NULL, &gl_target);
       switch (gl_target)
         {
-#ifndef HAVE_COGL_GLES2
+#ifdef HAVE_COGL_GL
         case GL_TEXTURE_1D:
           target_string = "1D";
           tex_coord_swizzle = "s";
@@ -424,14 +415,13 @@ add_texture_lookup (GlslShaderState *glsl_shader_state,
      supports the gl_PointCoord variable, it requires GLSL 1.2 which
      would mean we would have to declare the GLSL version and check
      for it */
-#ifdef HAVE_COGL_GLES2
-  if (cogl_pipeline_get_layer_point_sprite_coords_enabled (pipeline,
+  if (ctx->driver == COGL_DRIVER_GLES2 &&
+      cogl_pipeline_get_layer_point_sprite_coords_enabled (pipeline,
                                                            layer->index))
     g_string_append_printf (glsl_shader_state->source,
                             "gl_PointCoord.%s",
                             tex_coord_swizzle);
   else
-#endif
     g_string_append_printf (glsl_shader_state->source,
                             "cogl_tex_coord_in[%d].%s",
                             unit_index, tex_coord_swizzle);
@@ -793,12 +783,13 @@ _cogl_pipeline_fragend_glsl_end (CoglPipeline *pipeline,
       COGL_COUNTER_INC (_cogl_uprof_context, fragend_glsl_compile_counter);
 
 #ifdef HAVE_COGL_GLES2
-      add_alpha_test_snippet (pipeline, glsl_shader_state);
+      if (ctx->driver == COGL_DRIVER_GLES2)
+        add_alpha_test_snippet (pipeline, glsl_shader_state);
 #endif
 
       g_string_append (glsl_shader_state->source, "}\n");
 
-      GE_RET( shader, glCreateShader (GL_FRAGMENT_SHADER) );
+      GE_RET( shader, ctx, glCreateShader (GL_FRAGMENT_SHADER) );
 
       lengths[0] = glsl_shader_state->header->len;
       source_strings[0] = glsl_shader_state->header->str;
@@ -817,17 +808,17 @@ _cogl_pipeline_fragend_glsl_end (CoglPipeline *pipeline,
                                                 2, /* count */
                                                 source_strings, lengths);
 
-      GE( glCompileShader (shader) );
-      GE( glGetShaderiv (shader, GL_COMPILE_STATUS, &compile_status) );
+      GE( ctx, glCompileShader (shader) );
+      GE( ctx, glGetShaderiv (shader, GL_COMPILE_STATUS, &compile_status) );
 
       if (!compile_status)
         {
           GLint len = 0;
           char *shader_log;
 
-          GE( glGetShaderiv (shader, GL_INFO_LOG_LENGTH, &len) );
+          GE( ctx, glGetShaderiv (shader, GL_INFO_LOG_LENGTH, &len) );
           shader_log = g_alloca (len);
-          GE( glGetShaderInfoLog (shader, len, &len, shader_log) );
+          GE( ctx, glGetShaderInfoLog (shader, len, &len, shader_log) );
           g_warning ("Shader compilation failed:\n%s", shader_log);
         }
 
@@ -844,7 +835,9 @@ _cogl_pipeline_fragend_glsl_pre_change_notify (CoglPipeline *pipeline,
                                                CoglPipelineState change,
                                                const CoglColor *new_color)
 {
-  if ((change & COGL_PIPELINE_STATE_AFFECTS_FRAGMENT_CODEGEN))
+  _COGL_GET_CONTEXT (ctx, NO_RETVAL);
+
+  if ((change & _cogl_pipeline_get_state_for_fragment_codegen (ctx)))
     dirty_glsl_shader_state (pipeline);
 }
 
@@ -864,11 +857,13 @@ _cogl_pipeline_fragend_glsl_layer_pre_change_notify (
 {
   CoglPipelineFragendGlslPrivate *priv;
 
+  _COGL_GET_CONTEXT (ctx, NO_RETVAL);
+
   priv = get_glsl_priv (owner);
   if (!priv)
     return;
 
-  if ((change & COGL_PIPELINE_LAYER_STATE_AFFECTS_FRAGMENT_CODEGEN))
+  if ((change & _cogl_pipeline_get_layer_state_for_fragment_codegen (ctx)))
     {
       dirty_glsl_shader_state (owner);
       return;
