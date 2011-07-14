@@ -152,6 +152,8 @@ copy ..\..\..\cogl\cogl-display.h $(CopyDir)\include\cogl-$(CoglApiVersion)\cogl
 
 copy ..\..\..\cogl\cogl-context.h $(CopyDir)\include\cogl-$(CoglApiVersion)\cogl
 
+copy ..\..\..\cogl\cogl-win32-renderer.h $(CopyDir)\include\cogl-$(CoglApiVersion)\cogl
+
 copy ..\..\..\cogl\cogl2-path.h $(CopyDir)\include\cogl-$(CoglApiVersion)\cogl
 
 copy ..\..\..\cogl\cogl2-clip-state.h $(CopyDir)\include\cogl-$(CoglApiVersion)\cogl

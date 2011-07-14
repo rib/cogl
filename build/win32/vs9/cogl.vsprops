@@ -132,6 +132,7 @@ copy ..\..\..\cogl\cogl-swap-chain.h $(OutDir)\include\cogl-$(CoglApiVersion)\co
 copy ..\..\..\cogl\cogl-onscreen-template.h $(OutDir)\include\cogl-$(CoglApiVersion)\cogl&#x0D;&#x0A;
 copy ..\..\..\cogl\cogl-display.h $(OutDir)\include\cogl-$(CoglApiVersion)\cogl&#x0D;&#x0A;
 copy ..\..\..\cogl\cogl-context.h $(OutDir)\include\cogl-$(CoglApiVersion)\cogl&#x0D;&#x0A;
+copy ..\..\..\cogl\cogl-win32-renderer.h $(OutDir)\include\cogl-$(CoglApiVersion)\cogl&#x0D;&#x0A;
 copy ..\..\..\cogl\cogl2-path.h $(OutDir)\include\cogl-$(CoglApiVersion)\cogl&#x0D;&#x0A;
 copy ..\..\..\cogl\cogl2-clip-state.h $(OutDir)\include\cogl-$(CoglApiVersion)\cogl&#x0D;&#x0A;
 "
