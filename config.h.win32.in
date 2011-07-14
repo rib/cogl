@@ -43,6 +43,9 @@
    */
 #define HAVE_DCGETTEXT 1
 
+/* Defined if the GL library shouldn't be dlopened */
+#define HAVE_DIRECTLY_LINKED_GL_LIBRARY 1
+
 /* Define to 1 if you have the <dlfcn.h> header file. */
 /*#undef HAVE_DLFCN_H*/
 
@@ -67,7 +70,6 @@
 /* Define to 1 if you have the <GLES/egl.h> header file. */
 /*#undef HAVE_GLES_EGL_H*/
 
-
 /* Define if you have the iconv() function and it works. */
 #define HAVE_ICONV 1
 
@@ -78,6 +80,9 @@
 
 /* Define to 1 if you have the <libgdl.h> header file. */
 /*#undef HAVE_LIBGDL_H*/
+
+/* Define to 1 if you have the `GL' library (-lGL). */
+#define HAVE_LIBGL 1
 
 /* Define to 1 if you have the <limits.h> header file. */
 #define HAVE_LIMITS_H 1
