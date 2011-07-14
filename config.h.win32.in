@@ -7,7 +7,7 @@
 /*#undef COGL_HAS_GLX_SUPPORT*/
 
 /* Cogl supports OpenGL using the WGL API */
-#define COGL_HAS_WGL_SUPPORT 1
+#define COGL_HAS_WIN32_SUPPORT 1
 
 /* Define to 1 if translation of program messages to the user's native
    language is requested. */
