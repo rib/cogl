@@ -8,7 +8,7 @@
 	>
 	<Tool
 		Name="VCCLCompilerTool"
-		AdditionalIncludeDirectories="..\..\..;..\..\..\cogl;$(GlibEtcInstallRoot)\include;$(GlibEtcInstallRoot)\include\glib-2.0;$(GlibEtcInstallRoot)\include\cairo;$(GlibEtcInstallRoot)\include\atk-2.0;$(GlibEtcInstallRoot)\include\pango-1.0;$(GlibEtcInstallRoot)\include\gdk-pixbuf-2.0;$(GlibEtcInstallRoot)\lib\glib-2.0\include"
+		AdditionalIncludeDirectories="..\..\..;..\..\..\cogl;..\..\..\cogl\winsys;$(GlibEtcInstallRoot)\include;$(GlibEtcInstallRoot)\include\glib-2.0;$(GlibEtcInstallRoot)\include\cairo;$(GlibEtcInstallRoot)\include\atk-2.0;$(GlibEtcInstallRoot)\include\pango-1.0;$(GlibEtcInstallRoot)\include\gdk-pixbuf-2.0;$(GlibEtcInstallRoot)\lib\glib-2.0\include"
 		PreprocessorDefinitions="G_DISABLE_SINGLE_INCLUDES;G_DISABLE_DEPRECATED"
 		ForcedIncludeFiles="msvc_recommended_pragmas.h"
 		DisableSpecificWarnings="4819"
@@ -44,7 +44,7 @@
 	/>
 	<UserMacro
 		Name="CoglBuildDefines"
-		Value="G_LOG_DOMAIN=\&quot;Cogl\&quot;;COGL_HAS_WIN32_SUPPORT;COGL_BUILD_EXP"
+		Value="G_LOG_DOMAIN=\&quot;Cogl\&quot;;COGL_HAS_WIN32_SUPPORT;COGL_BUILD_EXP;COGL_GL_LIBNAME=\&quot;\&quot;"
 	/>
 	<UserMacro
 		Name="CoglPangoBuildDefines"
