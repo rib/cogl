@@ -55,6 +55,8 @@
 #define GL_TEXTURE_3D                           0x806F
 #endif
 
+const CoglPipelineFragend _cogl_pipeline_arbfp_fragend;
+
 typedef struct _UnitState
 {
   int constant_id; /* The program.local[] index */
@@ -63,12 +65,9 @@ typedef struct _UnitState
   unsigned int sampled:1;
 } UnitState;
 
-typedef struct _ArbfpProgramState
+typedef struct
 {
   int ref_count;
-
-  /* XXX: only valid during codegen */
-  CoglPipeline *arbfp_authority;
 
   CoglHandle user_program;
   /* XXX: only valid during codegen */
@@ -84,82 +83,65 @@ typedef struct _ArbfpProgramState
   /* We need to track the last pipeline that an ARBfp program was used
    * with so know if we need to update any program.local parameters. */
   CoglPipeline *last_used_for_pipeline;
-} ArbfpProgramState;
+} CoglPipelineShaderState;
 
-typedef struct _CoglPipelineFragendARBfpPrivate
+static CoglUserDataKey shader_state_key;
+
+static CoglPipelineShaderState *
+shader_state_new (int n_layers)
 {
-  ArbfpProgramState *arbfp_program_state;
-} CoglPipelineFragendARBfpPrivate;
+  CoglPipelineShaderState *shader_state;
 
-const CoglPipelineFragend _cogl_pipeline_arbfp_fragend;
+  shader_state = g_slice_new0 (CoglPipelineShaderState);
+  shader_state->ref_count = 1;
+  shader_state->unit_state = g_new0 (UnitState, n_layers);
 
-
-static ArbfpProgramState *
-arbfp_program_state_new (int n_layers)
-{
-  ArbfpProgramState *state = g_slice_new0 (ArbfpProgramState);
-  state->ref_count = 1;
-  state->unit_state = g_new0 (UnitState, n_layers);
-  return state;
+  return shader_state;
 }
 
-static ArbfpProgramState *
-arbfp_program_state_ref (ArbfpProgramState *state)
+static CoglPipelineShaderState *
+get_shader_state (CoglPipeline *pipeline)
 {
-  state->ref_count++;
-  return state;
-}
-
-void
-arbfp_program_state_unref (ArbfpProgramState *state)
-{
-  _COGL_GET_CONTEXT (ctx, NO_RETVAL);
-
-  g_return_if_fail (state->ref_count > 0);
-
-  state->ref_count--;
-  if (state->ref_count == 0)
-    {
-      if (state->gl_program)
-        {
-          GE (ctx, glDeletePrograms (1, &state->gl_program));
-          state->gl_program = 0;
-        }
-
-      g_free (state->unit_state);
-
-      g_slice_free (ArbfpProgramState, state);
-    }
-}
-
-static CoglPipelineFragendARBfpPrivate *
-get_arbfp_priv (CoglPipeline *pipeline)
-{
-  if (!(pipeline->fragend_priv_set_mask & COGL_PIPELINE_FRAGEND_ARBFP_MASK))
-    return NULL;
-
-  return pipeline->fragend_privs[COGL_PIPELINE_FRAGEND_ARBFP];
+  return cogl_object_get_user_data (COGL_OBJECT (pipeline), &shader_state_key);
 }
 
 static void
-set_arbfp_priv (CoglPipeline *pipeline, CoglPipelineFragendARBfpPrivate *priv)
+destroy_shader_state (void *user_data)
 {
-  if (priv)
+  CoglPipelineShaderState *shader_state = user_data;
+
+  _COGL_GET_CONTEXT (ctx, NO_RETVAL);
+
+  if (--shader_state->ref_count == 0)
     {
-      pipeline->fragend_privs[COGL_PIPELINE_FRAGEND_ARBFP] = priv;
-      pipeline->fragend_priv_set_mask |= COGL_PIPELINE_FRAGEND_ARBFP_MASK;
+      if (shader_state->gl_program)
+        {
+          GE (ctx, glDeletePrograms (1, &shader_state->gl_program));
+          shader_state->gl_program = 0;
+        }
+
+      g_free (shader_state->unit_state);
+
+      g_slice_free (CoglPipelineShaderState, shader_state);
     }
-  else
-    pipeline->fragend_priv_set_mask &= ~COGL_PIPELINE_FRAGEND_ARBFP_MASK;
 }
 
-static ArbfpProgramState *
-get_arbfp_program_state (CoglPipeline *pipeline)
+static void
+set_shader_state (CoglPipeline *pipeline, CoglPipelineShaderState *shader_state)
 {
-  CoglPipelineFragendARBfpPrivate *priv = get_arbfp_priv (pipeline);
-  if (!priv)
-    return NULL;
-  return priv->arbfp_program_state;
+  cogl_object_set_user_data (COGL_OBJECT (pipeline),
+                             &shader_state_key,
+                             shader_state,
+                             destroy_shader_state);
+}
+
+static void
+dirty_shader_state (CoglPipeline *pipeline)
+{
+  cogl_object_set_user_data (COGL_OBJECT (pipeline),
+                             &shader_state_key,
+                             NULL,
+                             NULL);
 }
 
 static gboolean
@@ -168,10 +150,9 @@ _cogl_pipeline_fragend_arbfp_start (CoglPipeline *pipeline,
                                     unsigned long pipelines_difference,
                                     int n_tex_coord_attribs)
 {
-  CoglPipelineFragendARBfpPrivate *priv;
+  CoglPipelineShaderState *shader_state;
   CoglPipeline *authority;
-  CoglPipelineFragendARBfpPrivate *authority_priv;
-  ArbfpProgramState *arbfp_program_state;
+  CoglPipeline *template_pipeline;
   CoglHandle user_program;
 
   _COGL_GET_CONTEXT (ctx, FALSE);
@@ -201,18 +182,12 @@ _cogl_pipeline_fragend_arbfp_start (CoglPipeline *pipeline,
         return FALSE;
     }
 
-  /* Now lookup our ARBfp backend private state (allocating if
-   * necessary) */
-  priv = get_arbfp_priv (pipeline);
-  if (!priv)
-    {
-      priv = g_slice_new0 (CoglPipelineFragendARBfpPrivate);
-      set_arbfp_priv (pipeline, priv);
-    }
+  /* Now lookup our ARBfp backend private state */
+  shader_state = get_shader_state (pipeline);
 
-  /* If we have a valid arbfp_program_state pointer then we are all
-   * set and don't need to generate a new program. */
-  if (priv->arbfp_program_state)
+  /* If we have a valid shader_state then we are all set and don't
+   * need to generate a new program. */
+  if (shader_state)
     return TRUE;
 
   /* If we don't have an associated arbfp program yet then find the
@@ -228,128 +203,84 @@ _cogl_pipeline_fragend_arbfp_start (CoglPipeline *pipeline,
      _cogl_pipeline_get_state_for_fragment_codegen (ctx) &
      ~COGL_PIPELINE_STATE_LAYERS,
      _cogl_pipeline_get_layer_state_for_fragment_codegen (ctx));
-  authority_priv = get_arbfp_priv (authority);
-  if (authority_priv &&
-      authority_priv->arbfp_program_state)
+  shader_state = get_shader_state (authority);
+  if (shader_state)
     {
       /* If we are going to share our program state with an arbfp-authority
-       * then steal a reference to the program state associated with that
+       * then add a reference to the program state associated with that
        * arbfp-authority... */
-      priv->arbfp_program_state =
-        arbfp_program_state_ref (authority_priv->arbfp_program_state);
+      shader_state->ref_count++;
+      set_shader_state (pipeline, shader_state);
       return TRUE;
-    }
-
-  if (!authority_priv)
-    {
-      authority_priv = g_slice_new0 (CoglPipelineFragendARBfpPrivate);
-      set_arbfp_priv (authority, authority_priv);
     }
 
   /* If we haven't yet found an existing program then before we resort to
    * generating a new arbfp program we see if we can find a suitable
-   * program in the arbfp_cache. */
+   * program in the pipeline_cache. */
   if (G_LIKELY (!(COGL_DEBUG_ENABLED (COGL_DEBUG_DISABLE_PROGRAM_CACHES))))
     {
-      arbfp_program_state = g_hash_table_lookup (ctx->arbfp_cache, authority);
-      if (arbfp_program_state)
-        {
-          priv->arbfp_program_state =
-            arbfp_program_state_ref (arbfp_program_state);
+      template_pipeline =
+        _cogl_pipeline_cache_get_fragment_template (ctx->pipeline_cache,
+                                                    authority);
 
-          /* Since we have already resolved the arbfp-authority at this point
-           * we might as well also associate any program we find from the cache
-           * with the authority too... */
-          if (authority_priv != priv)
-            authority_priv->arbfp_program_state =
-              arbfp_program_state_ref (arbfp_program_state);
-          return TRUE;
+      shader_state = get_shader_state (template_pipeline);
+
+      if (shader_state)
+        shader_state->ref_count++;
+    }
+
+  /* If we still haven't got a shader state then we'll have to create
+     a new one */
+  if (shader_state == NULL)
+    {
+      shader_state = shader_state_new (n_layers);
+
+      shader_state->user_program = user_program;
+      if (user_program == COGL_INVALID_HANDLE)
+        {
+          int i;
+
+          /* We reuse a single grow-only GString for code-gen */
+          g_string_set_size (ctx->codegen_source_buffer, 0);
+          shader_state->source = ctx->codegen_source_buffer;
+          g_string_append (shader_state->source,
+                           "!!ARBfp1.0\n"
+                           "TEMP output;\n"
+                           "TEMP tmp0, tmp1, tmp2, tmp3, tmp4;\n"
+                           "PARAM half = {.5, .5, .5, .5};\n"
+                           "PARAM one = {1, 1, 1, 1};\n"
+                           "PARAM two = {2, 2, 2, 2};\n"
+                           "PARAM minus_one = {-1, -1, -1, -1};\n");
+
+          for (i = 0; i < n_layers; i++)
+            {
+              shader_state->unit_state[i].sampled = FALSE;
+              shader_state->unit_state[i].dirty_combine_constant = FALSE;
+            }
+          shader_state->next_constant_id = 0;
         }
     }
 
-  /* If we still haven't found an existing program then start
-   * generating code for a new program...
-   */
+  set_shader_state (pipeline, shader_state);
 
-  arbfp_program_state = arbfp_program_state_new (n_layers);
-
-  priv->arbfp_program_state = arbfp_program_state_ref (arbfp_program_state);
-
-  /* Since we have already resolved the arbfp-authority at this point we might
-   * as well also associate any program we generate with the authority too...
-   */
-  if (authority_priv != priv)
-    authority_priv->arbfp_program_state =
-      arbfp_program_state_ref (arbfp_program_state);
-
-  arbfp_program_state->user_program = user_program;
-  if (user_program == COGL_INVALID_HANDLE)
+  /* Since we have already resolved the arbfp-authority at this point
+   * we might as well also associate any program we find from the cache
+   * with the authority too... */
+  if (authority != pipeline)
     {
-      int i;
+      shader_state->ref_count++;
+      set_shader_state (authority, shader_state);
+    }
 
-      /* We reuse a single grow-only GString for code-gen */
-      g_string_set_size (ctx->codegen_source_buffer, 0);
-      arbfp_program_state->source = ctx->codegen_source_buffer;
-      g_string_append (arbfp_program_state->source,
-                       "!!ARBfp1.0\n"
-                       "TEMP output;\n"
-                       "TEMP tmp0, tmp1, tmp2, tmp3, tmp4;\n"
-                       "PARAM half = {.5, .5, .5, .5};\n"
-                       "PARAM one = {1, 1, 1, 1};\n"
-                       "PARAM two = {2, 2, 2, 2};\n"
-                       "PARAM minus_one = {-1, -1, -1, -1};\n");
-
-      /* At the end of code-gen we'll add the program to a cache and
-       * we'll use the authority pipeline as the basis for key into
-       * that cache... */
-      arbfp_program_state->arbfp_authority = authority;
-
-      for (i = 0; i < n_layers; i++)
-        {
-          arbfp_program_state->unit_state[i].sampled = FALSE;
-          arbfp_program_state->unit_state[i].dirty_combine_constant = FALSE;
-        }
-      arbfp_program_state->next_constant_id = 0;
+  /* If we found a template then we'll attach it to that too so that
+     next time a similar pipeline is used it can use the same state */
+  if (template_pipeline)
+    {
+      shader_state->ref_count++;
+      set_shader_state (template_pipeline, shader_state);
     }
 
   return TRUE;
-}
-
-unsigned int
-_cogl_pipeline_fragend_arbfp_hash (const void *data)
-{
-  unsigned int fragment_state;
-  unsigned int layer_fragment_state;
-
-  _COGL_GET_CONTEXT (ctx, 0);
-
-  fragment_state =
-    _cogl_pipeline_get_state_for_fragment_codegen (ctx);
-  layer_fragment_state =
-    _cogl_pipeline_get_layer_state_for_fragment_codegen (ctx);
-
-  return _cogl_pipeline_hash ((CoglPipeline *)data,
-
-                              fragment_state, layer_fragment_state,
-                              0);
-}
-
-gboolean
-_cogl_pipeline_fragend_arbfp_equal (const void *a, const void *b)
-{
-  unsigned int fragment_state;
-  unsigned int layer_fragment_state;
-
-  _COGL_GET_CONTEXT (ctx, 0);
-
-  fragment_state =
-    _cogl_pipeline_get_state_for_fragment_codegen (ctx);
-  layer_fragment_state =
-    _cogl_pipeline_get_layer_state_for_fragment_codegen (ctx);
-
-  return _cogl_pipeline_equal ((CoglPipeline *)a, (CoglPipeline *)b,
-                               fragment_state, layer_fragment_state,
-                               0);
 }
 
 static const char *
@@ -370,20 +301,20 @@ gl_target_to_arbfp_string (GLenum gl_target)
 }
 
 static void
-setup_texture_source (ArbfpProgramState *arbfp_program_state,
+setup_texture_source (CoglPipelineShaderState *shader_state,
                       int unit_index,
                       GLenum gl_target)
 {
-  if (!arbfp_program_state->unit_state[unit_index].sampled)
+  if (!shader_state->unit_state[unit_index].sampled)
     {
       if (G_UNLIKELY (COGL_DEBUG_ENABLED (COGL_DEBUG_DISABLE_TEXTURING)))
-        g_string_append_printf (arbfp_program_state->source,
+        g_string_append_printf (shader_state->source,
                                 "TEMP texel%d;\n"
                                 "MOV texel%d, one;\n",
                                 unit_index,
                                 unit_index);
       else
-        g_string_append_printf (arbfp_program_state->source,
+        g_string_append_printf (shader_state->source,
                                 "TEMP texel%d;\n"
                                 "TEX texel%d,fragment.texcoord[%d],"
                                 "texture[%d],%s;\n",
@@ -392,7 +323,7 @@ setup_texture_source (ArbfpProgramState *arbfp_program_state,
                                 unit_index,
                                 unit_index,
                                 gl_target_to_arbfp_string (gl_target));
-      arbfp_program_state->unit_state[unit_index].sampled = TRUE;
+      shader_state->unit_state[unit_index].sampled = TRUE;
     }
 }
 
@@ -452,7 +383,7 @@ setup_arg (CoglPipeline *pipeline,
            GLint op,
            CoglPipelineFragendARBfpArg *arg)
 {
-  ArbfpProgramState *arbfp_program_state = get_arbfp_program_state (pipeline);
+  CoglPipelineShaderState *shader_state = get_shader_state (pipeline);
   static const char *tmp_name[3] = { "tmp0", "tmp1", "tmp2" };
   GLenum gl_target;
   CoglHandle texture;
@@ -465,14 +396,14 @@ setup_arg (CoglPipeline *pipeline,
       arg->texture_unit = _cogl_pipeline_layer_get_unit_index (layer);
       texture = _cogl_pipeline_layer_get_texture (layer);
       cogl_texture_get_gl_texture (texture, NULL, &gl_target);
-      setup_texture_source (arbfp_program_state, arg->texture_unit, gl_target);
+      setup_texture_source (shader_state, arg->texture_unit, gl_target);
       break;
     case COGL_PIPELINE_COMBINE_SOURCE_CONSTANT:
       {
         int unit_index = _cogl_pipeline_layer_get_unit_index (layer);
-        UnitState *unit_state = &arbfp_program_state->unit_state[unit_index];
+        UnitState *unit_state = &shader_state->unit_state[unit_index];
 
-        unit_state->constant_id = arbfp_program_state->next_constant_id++;
+        unit_state->constant_id = shader_state->next_constant_id++;
         unit_state->dirty_combine_constant = TRUE;
 
         arg->type = COGL_PIPELINE_FRAGEND_ARBFP_ARG_TYPE_CONSTANT;
@@ -497,7 +428,7 @@ setup_arg (CoglPipeline *pipeline,
       arg->texture_unit = src - GL_TEXTURE0;
       texture = _cogl_pipeline_layer_get_texture (layer);
       cogl_texture_get_gl_texture (texture, NULL, &gl_target);
-      setup_texture_source (arbfp_program_state, arg->texture_unit, gl_target);
+      setup_texture_source (shader_state, arg->texture_unit, gl_target);
     }
 
   arg->swizzle = "";
@@ -507,11 +438,11 @@ setup_arg (CoglPipeline *pipeline,
     case COGL_PIPELINE_COMBINE_OP_SRC_COLOR:
       break;
     case COGL_PIPELINE_COMBINE_OP_ONE_MINUS_SRC_COLOR:
-      g_string_append_printf (arbfp_program_state->source,
+      g_string_append_printf (shader_state->source,
                               "SUB tmp%d, one, ",
                               arg_index);
-      append_arg (arbfp_program_state->source, arg);
-      g_string_append_printf (arbfp_program_state->source, ";\n");
+      append_arg (shader_state->source, arg);
+      g_string_append_printf (shader_state->source, ";\n");
       arg->type = COGL_PIPELINE_FRAGEND_ARBFP_ARG_TYPE_SIMPLE;
       arg->name = tmp_name[arg_index];
       arg->swizzle = "";
@@ -523,16 +454,16 @@ setup_arg (CoglPipeline *pipeline,
         arg->swizzle = ".a";
       break;
     case COGL_PIPELINE_COMBINE_OP_ONE_MINUS_SRC_ALPHA:
-      g_string_append_printf (arbfp_program_state->source,
+      g_string_append_printf (shader_state->source,
                               "SUB tmp%d, one, ",
                               arg_index);
-      append_arg (arbfp_program_state->source, arg);
+      append_arg (shader_state->source, arg);
       /* avoid a swizzle if we know RGB are going to be masked
        * in the end anyway */
       if (mask != COGL_BLEND_STRING_CHANNEL_MASK_ALPHA)
-        g_string_append_printf (arbfp_program_state->source, ".a;\n");
+        g_string_append_printf (shader_state->source, ".a;\n");
       else
-        g_string_append_printf (arbfp_program_state->source, ";\n");
+        g_string_append_printf (shader_state->source, ";\n");
       arg->type = COGL_PIPELINE_FRAGEND_ARBFP_ARG_TYPE_SIMPLE;
       arg->name = tmp_name[arg_index];
       break;
@@ -577,7 +508,7 @@ append_function (CoglPipeline *pipeline,
                  CoglPipelineFragendARBfpArg *args,
                  int n_args)
 {
-  ArbfpProgramState *arbfp_program_state = get_arbfp_program_state (pipeline);
+  CoglPipelineShaderState *shader_state = get_shader_state (pipeline);
   const char *mask_name;
 
   switch (mask)
@@ -599,35 +530,35 @@ append_function (CoglPipeline *pipeline,
   switch (function)
     {
     case COGL_PIPELINE_COMBINE_FUNC_ADD:
-      g_string_append_printf (arbfp_program_state->source,
+      g_string_append_printf (shader_state->source,
                               "ADD_SAT output%s, ",
                               mask_name);
       break;
     case COGL_PIPELINE_COMBINE_FUNC_MODULATE:
       /* Note: no need to saturate since we can assume operands
        * have values in the range [0,1] */
-      g_string_append_printf (arbfp_program_state->source, "MUL output%s, ",
+      g_string_append_printf (shader_state->source, "MUL output%s, ",
                               mask_name);
       break;
     case COGL_PIPELINE_COMBINE_FUNC_REPLACE:
       /* Note: no need to saturate since we can assume operand
        * has a value in the range [0,1] */
-      g_string_append_printf (arbfp_program_state->source, "MOV output%s, ",
+      g_string_append_printf (shader_state->source, "MOV output%s, ",
                               mask_name);
       break;
     case COGL_PIPELINE_COMBINE_FUNC_SUBTRACT:
-      g_string_append_printf (arbfp_program_state->source,
+      g_string_append_printf (shader_state->source,
                               "SUB_SAT output%s, ",
                               mask_name);
       break;
     case COGL_PIPELINE_COMBINE_FUNC_ADD_SIGNED:
-      g_string_append_printf (arbfp_program_state->source, "ADD tmp3%s, ",
+      g_string_append_printf (shader_state->source, "ADD tmp3%s, ",
                               mask_name);
-      append_arg (arbfp_program_state->source, &args[0]);
-      g_string_append (arbfp_program_state->source, ", ");
-      append_arg (arbfp_program_state->source, &args[1]);
-      g_string_append (arbfp_program_state->source, ";\n");
-      g_string_append_printf (arbfp_program_state->source,
+      append_arg (shader_state->source, &args[0]);
+      g_string_append (shader_state->source, ", ");
+      append_arg (shader_state->source, &args[1]);
+      g_string_append (shader_state->source, ";\n");
+      g_string_append_printf (shader_state->source,
                               "SUB_SAT output%s, tmp3, half",
                               mask_name);
       n_args = 0;
@@ -656,20 +587,20 @@ append_function (CoglPipeline *pipeline,
          * output = 4 * DP3 (src0 - 0.5, src1 - 0.5)
          */
 
-        g_string_append (arbfp_program_state->source, "MAD tmp3, two, ");
-        append_arg (arbfp_program_state->source, &args[0]);
-        g_string_append (arbfp_program_state->source, ", minus_one;\n");
+        g_string_append (shader_state->source, "MAD tmp3, two, ");
+        append_arg (shader_state->source, &args[0]);
+        g_string_append (shader_state->source, ", minus_one;\n");
 
         if (!fragend_arbfp_args_equal (&args[0], &args[1]))
           {
-            g_string_append (arbfp_program_state->source, "MAD tmp4, two, ");
-            append_arg (arbfp_program_state->source, &args[1]);
-            g_string_append (arbfp_program_state->source, ", minus_one;\n");
+            g_string_append (shader_state->source, "MAD tmp4, two, ");
+            append_arg (shader_state->source, &args[1]);
+            g_string_append (shader_state->source, ", minus_one;\n");
           }
         else
           tmp4 = "tmp3";
 
-        g_string_append_printf (arbfp_program_state->source,
+        g_string_append_printf (shader_state->source,
                                 "DP3_SAT output%s, tmp3, %s",
                                 mask_name, tmp4);
         n_args = 0;
@@ -681,31 +612,31 @@ append_function (CoglPipeline *pipeline,
 
       /* NB: GL_INTERPOLATE = arg0*arg2 + arg1*(1-arg2)
        * but LRP dst, a, b, c = b*a + c*(1-a) */
-      g_string_append_printf (arbfp_program_state->source, "LRP output%s, ",
+      g_string_append_printf (shader_state->source, "LRP output%s, ",
                               mask_name);
-      append_arg (arbfp_program_state->source, &args[2]);
-      g_string_append (arbfp_program_state->source, ", ");
-      append_arg (arbfp_program_state->source, &args[0]);
-      g_string_append (arbfp_program_state->source, ", ");
-      append_arg (arbfp_program_state->source, &args[1]);
+      append_arg (shader_state->source, &args[2]);
+      g_string_append (shader_state->source, ", ");
+      append_arg (shader_state->source, &args[0]);
+      g_string_append (shader_state->source, ", ");
+      append_arg (shader_state->source, &args[1]);
       n_args = 0;
       break;
     default:
       g_error ("Unknown texture combine function %d", function);
-      g_string_append_printf (arbfp_program_state->source, "MUL_SAT output%s, ",
+      g_string_append_printf (shader_state->source, "MUL_SAT output%s, ",
                               mask_name);
       n_args = 2;
       break;
     }
 
   if (n_args > 0)
-    append_arg (arbfp_program_state->source, &args[0]);
+    append_arg (shader_state->source, &args[0]);
   if (n_args > 1)
     {
-      g_string_append (arbfp_program_state->source, ", ");
-      append_arg (arbfp_program_state->source, &args[1]);
+      g_string_append (shader_state->source, ", ");
+      append_arg (shader_state->source, &args[1]);
     }
-  g_string_append (arbfp_program_state->source, ";\n");
+  g_string_append (shader_state->source, ";\n");
 }
 
 static void
@@ -745,7 +676,7 @@ _cogl_pipeline_fragend_arbfp_add_layer (CoglPipeline *pipeline,
                                         CoglPipelineLayer *layer,
                                         unsigned long layers_difference)
 {
-  ArbfpProgramState *arbfp_program_state = get_arbfp_program_state (pipeline);
+  CoglPipelineShaderState *shader_state = get_shader_state (pipeline);
   CoglPipelineLayer *combine_authority =
     _cogl_pipeline_layer_get_authority (layer,
                                         COGL_PIPELINE_LAYER_STATE_COMBINE);
@@ -780,7 +711,7 @@ _cogl_pipeline_fragend_arbfp_add_layer (CoglPipeline *pipeline,
    * We are careful to only saturate when writing to output.
    */
 
-  if (!arbfp_program_state->source)
+  if (!shader_state->source)
     return TRUE;
 
   if (!_cogl_pipeline_need_texture_combine_separate (combine_authority))
@@ -827,12 +758,12 @@ _cogl_pipeline_fragend_arbfp_add_layer (CoglPipeline *pipeline,
 gboolean
 _cogl_pipeline_fragend_arbfp_passthrough (CoglPipeline *pipeline)
 {
-  ArbfpProgramState *arbfp_program_state = get_arbfp_program_state (pipeline);
+  CoglPipelineShaderState *shader_state = get_shader_state (pipeline);
 
-  if (!arbfp_program_state->source)
+  if (!shader_state->source)
     return TRUE;
 
-  g_string_append (arbfp_program_state->source,
+  g_string_append (shader_state->source,
                    "MOV output, fragment.color.primary;\n");
   return TRUE;
 }
@@ -841,7 +772,7 @@ typedef struct _UpdateConstantsState
 {
   int unit;
   gboolean update_all;
-  ArbfpProgramState *arbfp_program_state;
+  CoglPipelineShaderState *shader_state;
 } UpdateConstantsState;
 
 static gboolean
@@ -850,8 +781,8 @@ update_constants_cb (CoglPipeline *pipeline,
                      void *user_data)
 {
   UpdateConstantsState *state = user_data;
-  ArbfpProgramState *arbfp_program_state = state->arbfp_program_state;
-  UnitState *unit_state = &arbfp_program_state->unit_state[state->unit++];
+  CoglPipelineShaderState *shader_state = state->shader_state;
+  UnitState *unit_state = &shader_state->unit_state[state->unit++];
 
   _COGL_GET_CONTEXT (ctx, FALSE);
 
@@ -873,12 +804,12 @@ static gboolean
 _cogl_pipeline_fragend_arbfp_end (CoglPipeline *pipeline,
                                   unsigned long pipelines_difference)
 {
-  ArbfpProgramState *arbfp_program_state = get_arbfp_program_state (pipeline);
+  CoglPipelineShaderState *shader_state = get_shader_state (pipeline);
   GLuint gl_program;
 
   _COGL_GET_CONTEXT (ctx, FALSE);
 
-  if (arbfp_program_state->source)
+  if (shader_state->source)
     {
       GLenum gl_error;
       COGL_STATIC_COUNTER (fragend_arbfp_compile_counter,
@@ -889,145 +820,82 @@ _cogl_pipeline_fragend_arbfp_end (CoglPipeline *pipeline,
 
       COGL_COUNTER_INC (_cogl_uprof_context, fragend_arbfp_compile_counter);
 
-      g_string_append (arbfp_program_state->source,
+      g_string_append (shader_state->source,
                        "MOV result.color,output;\n");
-      g_string_append (arbfp_program_state->source, "END\n");
+      g_string_append (shader_state->source, "END\n");
 
       if (G_UNLIKELY (COGL_DEBUG_ENABLED (COGL_DEBUG_SHOW_SOURCE)))
-        g_message ("pipeline program:\n%s", arbfp_program_state->source->str);
+        g_message ("pipeline program:\n%s", shader_state->source->str);
 
-      GE (ctx, glGenPrograms (1, &arbfp_program_state->gl_program));
+      GE (ctx, glGenPrograms (1, &shader_state->gl_program));
 
       GE (ctx, glBindProgram (GL_FRAGMENT_PROGRAM_ARB,
-                         arbfp_program_state->gl_program));
+                              shader_state->gl_program));
 
       while ((gl_error = ctx->glGetError ()) != GL_NO_ERROR)
         ;
       ctx->glProgramString (GL_FRAGMENT_PROGRAM_ARB,
                             GL_PROGRAM_FORMAT_ASCII_ARB,
-                            arbfp_program_state->source->len,
-                            arbfp_program_state->source->str);
+                            shader_state->source->len,
+                            shader_state->source->str);
       if (ctx->glGetError () != GL_NO_ERROR)
         {
           g_warning ("\n%s\n%s",
-                     arbfp_program_state->source->str,
+                     shader_state->source->str,
                      ctx->glGetString (GL_PROGRAM_ERROR_STRING_ARB));
         }
 
-      arbfp_program_state->source = NULL;
-
-      if (G_LIKELY (!(COGL_DEBUG_ENABLED (COGL_DEBUG_DISABLE_PROGRAM_CACHES))))
-        {
-          CoglPipeline *key;
-
-          /* XXX: I wish there was a way to insert into a GHashTable
-           * with a pre-calculated hash value since there is a cost to
-           * calculating the hash of a CoglPipeline and in this case
-           * we know we have already called _cogl_pipeline_hash during
-           * _cogl_pipeline_fragend_arbfp_backend_start so we could pass the
-           * value through to here to avoid hashing it again.
-           */
-
-          /* XXX: Any keys referenced by the hash table need to remain
-           * valid all the while that there are corresponding values,
-           * so for now we simply make a copy of the current authority
-           * pipeline.
-           *
-           * FIXME: A problem with this is that our key into the cache
-           * may hold references to some arbitrary user textures which
-           * will now be kept alive indefinitly which is a shame. A
-           * better solution will be to derive a special "key
-           * pipeline" from the authority which derives from the base
-           * Cogl pipeline (to avoid affecting the lifetime of any
-           * other pipelines) and only takes a copy of the state that
-           * relates to the arbfp program and references small dummy
-           * textures instead of potentially large user textures. */
-          key = cogl_pipeline_copy (arbfp_program_state->arbfp_authority);
-          arbfp_program_state_ref (arbfp_program_state);
-          g_hash_table_insert (ctx->arbfp_cache, key, arbfp_program_state);
-          if (G_UNLIKELY (g_hash_table_size (ctx->arbfp_cache) > 50))
-            {
-              static gboolean seen = FALSE;
-              if (!seen)
-                g_warning ("Over 50 separate ARBfp programs have been "
-                           "generated which is very unusual, so something "
-                           "is probably wrong!\n");
-              seen = TRUE;
-            }
-        }
-
-      /* The authority is only valid during codegen since the program
-       * state may have a longer lifetime than the original authority
-       * it is created for. */
-      arbfp_program_state->arbfp_authority = NULL;
+      shader_state->source = NULL;
     }
 
-  if (arbfp_program_state->user_program != COGL_INVALID_HANDLE)
+  if (shader_state->user_program != COGL_INVALID_HANDLE)
     {
       /* An arbfp program should contain exactly one shader which we
          can use directly */
-      CoglProgram *program = arbfp_program_state->user_program;
+      CoglProgram *program = shader_state->user_program;
       CoglShader *shader = program->attached_shaders->data;
 
       gl_program = shader->gl_handle;
     }
   else
-    gl_program = arbfp_program_state->gl_program;
+    gl_program = shader_state->gl_program;
 
   GE (ctx, glBindProgram (GL_FRAGMENT_PROGRAM_ARB, gl_program));
   _cogl_use_fragment_program (0, COGL_PIPELINE_PROGRAM_TYPE_ARBFP);
 
-  if (arbfp_program_state->user_program == COGL_INVALID_HANDLE)
+  if (shader_state->user_program == COGL_INVALID_HANDLE)
     {
       UpdateConstantsState state;
       state.unit = 0;
-      state.arbfp_program_state = arbfp_program_state;
+      state.shader_state = shader_state;
       /* If this arbfp program was last used with a different pipeline
        * then we need to ensure we update all program.local params */
       state.update_all =
-        pipeline != arbfp_program_state->last_used_for_pipeline;
+        pipeline != shader_state->last_used_for_pipeline;
       cogl_pipeline_foreach_layer (pipeline,
                                    update_constants_cb,
                                    &state);
     }
   else
     {
-      CoglProgram *program = arbfp_program_state->user_program;
+      CoglProgram *program = shader_state->user_program;
       gboolean program_changed;
 
       /* If the shader has changed since it was last flushed then we
          need to update all uniforms */
-      program_changed = program->age != arbfp_program_state->user_program_age;
+      program_changed = program->age != shader_state->user_program_age;
 
       _cogl_program_flush_uniforms (program, gl_program, program_changed);
 
-      arbfp_program_state->user_program_age = program->age;
+      shader_state->user_program_age = program->age;
     }
 
   /* We need to track what pipeline used this arbfp program last since
    * we will need to update program.local params when switching
    * between different pipelines. */
-  arbfp_program_state->last_used_for_pipeline = pipeline;
+  shader_state->last_used_for_pipeline = pipeline;
 
   return TRUE;
-}
-
-static void
-dirty_arbfp_program_state (CoglPipeline *pipeline)
-{
-  CoglPipelineFragendARBfpPrivate *priv;
-
-  _COGL_GET_CONTEXT (ctx, NO_RETVAL);
-
-  priv = get_arbfp_priv (pipeline);
-  if (!priv)
-    return;
-
-  if (priv->arbfp_program_state)
-    {
-      arbfp_program_state_unref (priv->arbfp_program_state);
-      priv->arbfp_program_state = NULL;
-    }
 }
 
 static void
@@ -1039,7 +907,7 @@ _cogl_pipeline_fragend_arbfp_pipeline_pre_change_notify (
   _COGL_GET_CONTEXT (ctx, NO_RETVAL);
 
   if ((change & _cogl_pipeline_get_state_for_fragment_codegen (ctx)))
-    dirty_arbfp_program_state (pipeline);
+    dirty_shader_state (pipeline);
 }
 
 /* NB: layers are considered immutable once they have any dependants
@@ -1056,48 +924,29 @@ _cogl_pipeline_fragend_arbfp_layer_pre_change_notify (
                                                 CoglPipelineLayer *layer,
                                                 CoglPipelineLayerState change)
 {
-  CoglPipelineFragendARBfpPrivate *priv = get_arbfp_priv (owner);
+  CoglPipelineShaderState *shader_state = get_shader_state (owner);
 
   _COGL_GET_CONTEXT (ctx, NO_RETVAL);
 
-  if (!priv)
+  if (!shader_state)
     return;
 
   if ((change & _cogl_pipeline_get_layer_state_for_fragment_codegen (ctx)))
     {
-      dirty_arbfp_program_state (owner);
+      dirty_shader_state (owner);
       return;
     }
 
   if (change & COGL_PIPELINE_LAYER_STATE_COMBINE_CONSTANT)
     {
-      ArbfpProgramState *arbfp_program_state = get_arbfp_program_state (owner);
-
-      if (arbfp_program_state)
-        {
-          int unit_index = _cogl_pipeline_layer_get_unit_index (layer);
-          arbfp_program_state->unit_state[unit_index].dirty_combine_constant =
-            TRUE;
-        }
+      int unit_index = _cogl_pipeline_layer_get_unit_index (layer);
+      shader_state->unit_state[unit_index].dirty_combine_constant = TRUE;
     }
 
   /* TODO: we could be saving snippets of texture combine code along
    * with each layer and then when a layer changes we would just free
    * the snippet. */
   return;
-}
-
-static void
-_cogl_pipeline_fragend_arbfp_free_priv (CoglPipeline *pipeline)
-{
-  CoglPipelineFragendARBfpPrivate *priv = get_arbfp_priv (pipeline);
-  if (priv)
-    {
-      if (priv->arbfp_program_state)
-        arbfp_program_state_unref (priv->arbfp_program_state);
-      g_slice_free (CoglPipelineFragendARBfpPrivate, priv);
-      set_arbfp_priv (pipeline, NULL);
-    }
 }
 
 const CoglPipelineFragend _cogl_pipeline_arbfp_fragend =
@@ -1108,8 +957,7 @@ const CoglPipelineFragend _cogl_pipeline_arbfp_fragend =
   _cogl_pipeline_fragend_arbfp_end,
   _cogl_pipeline_fragend_arbfp_pipeline_pre_change_notify,
   NULL,
-  _cogl_pipeline_fragend_arbfp_layer_pre_change_notify,
-  _cogl_pipeline_fragend_arbfp_free_priv
+  _cogl_pipeline_fragend_arbfp_layer_pre_change_notify
 };
 
 #endif /* COGL_PIPELINE_FRAGEND_ARBFP */
