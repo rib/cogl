@@ -65,7 +65,7 @@ static void
 _cogl_texture_2d_wrap_coords (float t_1, float t_2,
                               float *out_t_1, float *out_t_2)
 {
-  double int_part;
+  float int_part;
 
   /* Wrap t_1 and t_2 to the range [0,1] */
 
