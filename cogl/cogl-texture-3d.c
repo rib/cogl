@@ -70,7 +70,7 @@ _cogl_texture_3d_wrap_coords (float t_1, float t_2,
 
   /* Wrap t_1 and t_2 to the range [0,1] */
 
-  modff (t_1 < t_2 ? t_1 : t_2, &int_part);
+  cogl_modff (t_1 < t_2 ? t_1 : t_2, &int_part);
   t_1 -= int_part;
   t_2 -= int_part;
   if (cogl_util_float_signbit (int_part))
