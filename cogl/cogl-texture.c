@@ -309,7 +309,7 @@ _cogl_texture_iter_update (CoglTextureIter *iter)
   float t_2;
   float frac_part;
 
-  frac_part = modff (iter->pos, &iter->next_pos);
+  frac_part = cogl_modff (iter->pos, &iter->next_pos);
 
   /* modff rounds the int part towards zero so we need to add one if
      we're meant to be heading away from zero */

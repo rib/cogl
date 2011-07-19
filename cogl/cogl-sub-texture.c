@@ -54,8 +54,8 @@ _cogl_sub_texture_map_range (float *t1, float *t2,
 {
   float t1_frac, t1_int, t2_frac, t2_int;
 
-  t1_frac = modff (*t1, &t1_int);
-  t2_frac = modff (*t2, &t2_int);
+  t1_frac = cogl_modff (*t1, &t1_int);
+  t2_frac = cogl_modff (*t2, &t2_int);
 
   if (t1_frac < 0.0f)
     {
@@ -122,7 +122,7 @@ _cogl_sub_texture_unmap_coord (float t,
   float frac_part, int_part;
 
   /* Convert the fractional part leaving the integer part in tact */
-  frac_part = modff (t, &int_part);
+  frac_part = cogl_modff (t, &int_part);
 
   if (cogl_util_float_signbit (frac_part))
     frac_part = ((1.0f + frac_part) * full_size -

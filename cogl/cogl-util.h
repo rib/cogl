@@ -103,4 +103,24 @@ int
 _cogl_util_ffs (int num);
 #endif
 
+/* MSVC appears to have a bug in its implementation of modff so we
+ * instead use the double version there. There is a comment about this
+ * bug here (this only applies for 32-bit x86 compilation, not x64):
+ *
+ * http://connect.microsoft.com/VisualStudio/feedback/details/ \
+ *       432366/modff-corrupts-stack
+ */
+#if (defined(_MSC_VER) && defined(_M_IX86))
+static inline float
+cogl_modff (float value, float *int_part)
+{
+  double frac_part_double, int_part_double;
+  frac_part_double = modf (value, &int_part_double);
+  *int_part = int_part_double;
+  return frac_part_double;
+}
+#else /* _MSC_VER && _M_IX86 */
+#define cogl_modff modff
+#endif /* _MSC_VER && _M_IX86 */
+
 #endif /* __COGL_UTIL_H */
