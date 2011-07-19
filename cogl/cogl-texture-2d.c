@@ -48,27 +48,6 @@
 #include <wayland-server.h>
 #endif
 
-#ifdef COGL_HAS_WIN32_SUPPORT
-#ifdef _MSC_VER
-#ifdef _M_IX86
-/* Add a workaround for modff on Visual C++
-   under 32-bit compilation as the default modff
-   has a bug that will corrupt the second parameter
-   passed into it at times, which is evident in
-   _cogl_texture_2d_wrap_coords
-   */
-#ifdef modff
-#undef modff
-#endif
-inline float modff(float x, float * y)
-{
-  *y=((int)x);
-  return (x-*y);
-}
-#endif /* ifdef _M_IX86 */
-#endif /* ifdef _MSC_VER */
-#endif /* ifdef COGL_HAS_WIN32_SUPPORT */
-
 static void _cogl_texture_2d_free (CoglTexture2D *tex_2d);
 
 COGL_TEXTURE_DEFINE (Texture2D, texture_2d);
