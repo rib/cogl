@@ -387,7 +387,7 @@ AS_IF([test "x$enable_gles1" = "xyes"],
 
         PKG_CHECK_EXISTS([glesv1_cm],
           [COGL_PKG_REQUIRES_GL="$COGL_PKG_REQUIRES_GL glesv1_cm"
-           COGL_GLES1_LIBNAME="GLESv1_CM"
+           COGL_GLES1_LIBNAME="libGLESv1_CM.so"
            NEED_EGL=yes
           ],
           [
@@ -430,10 +430,10 @@ AS_IF([test "x$enable_gles1" = "xyes"],
             # bundles the GLES and EGL API together and -lGLESv1_CM
             # would be used for a standalone GLES API.
             AC_CHECK_LIB(GLES_CM, [eglInitialize],
-              [COGL_GLES1_LIBNAME="GLES_CM"],
+              [COGL_GLES1_LIBNAME="libGLES_CM.so"],
               [
                 AC_CHECK_LIB(GLESv1_CM, [glFlush],
-                  [COGL_GLES1_LIBNAME="GLESv1_CM"
+                  [COGL_GLES1_LIBNAME="libGLESv1_CM.so"
                    NEED_SEPARATE_EGL=yes
                   ],
                   [AC_MSG_ERROR([Unable to locate required GLES 1.x Common Profile library])])
@@ -463,7 +463,7 @@ AS_IF([test "x$enable_gles2" = "xyes"],
 
         PKG_CHECK_EXISTS([glesv2],
           [COGL_PKG_REQUIRES_GL="$COGL_PKG_REQUIRES_GL glesv2"
-           COGL_GLES2_LIBNAME="GLESv2"
+           COGL_GLES2_LIBNAME="libGLESv2.so"
           ],
           [
             # We have to check the two headers independently as GLES2/gl2ext.h
@@ -477,7 +477,7 @@ AS_IF([test "x$enable_gles2" = "xyes"],
                             [AC_MSG_ERROR([Unable to locate GLES2/gl2ext.h])],
                             [#include <GLES2/gl2.h>])
 
-            COGL_GLES2_LIBNAME="GLESv2"
+            COGL_GLES2_LIBNAME="libGLESv2.so"
           ])
 
         NEED_EGL=yes
@@ -527,7 +527,7 @@ AS_IF([test "x$enable_gl" = "xyes"],
 				,
 				[AC_MSG_ERROR([Unable to locate required GL library])])
 		  ])
-                COGL_GL_LIBNAME="GL"
+                COGL_GL_LIBNAME="libGL.so.1"
 	      ])
 
         AC_DEFINE([HAVE_COGL_GL], [1], [Have GL for rendering])
@@ -539,6 +539,20 @@ AS_IF([test "x$enable_gl" = "xyes"],
 AM_CONDITIONAL([COGL_DRIVER_GL_SUPPORTED], [test "x$enable_gl" = "xyes"])
 AM_CONDITIONAL([COGL_DRIVER_GLES_SUPPORTED],
                [test "x$enable_gles1" = "xyes" || test "x$enable_gles2" = "xyes"])
+
+dnl Allow the GL library names to be overridden with configure options
+AC_ARG_WITH([gl-libname],
+            [AS_HELP_STRING([--with-gl-libname],
+                            override the name of the GL library to dlopen)],
+            [COGL_GL_LIBNAME="$withval"])
+AC_ARG_WITH([gles1-libname],
+            [AS_HELP_STRING([--with-gles1-libname],
+                            override the name of the GLESv1 library to dlopen)],
+            [COGL_GLES1_LIBNAME="$withval"])
+AC_ARG_WITH([gles2-libname],
+            [AS_HELP_STRING([--with-gles2-libname],
+                            override the name of the GLESv2 library to dlopen)],
+            [COGL_GLES2_LIBNAME="$withval"])
 
 AC_SUBST([COGL_GL_LIBNAME])
 AC_SUBST([COGL_GLES1_LIBNAME])
@@ -962,6 +976,12 @@ echo ""
 # Features
 echo " • Features:"
 echo "        Drivers: ${enabled_drivers}"
+AS_IF([test "x$GL_LIBRARY_DIRECTLY_LINKED" != xyes],
+      [for driver in $enabled_drivers; do
+         driver=`echo $driver | tr "[gles]" "[GLES]"`
+         libname=`eval echo \\$COGL_${driver}_LIBNAME`
+         echo "        Library name for $driver: $libname"
+       done])
 echo "        GL Window System APIs:${GL_WINSYS_APIS}"
 if test "x$SUPPORT_EGL" = "xyes"; then
 echo "        EGL Platforms:${EGL_PLATFORMS}"
