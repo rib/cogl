@@ -21,7 +21,7 @@ When making a new release;
 
  - Run:
 
-     $ ./autogen.sh --enable-gtk-doc --enable-profile
+     $ ./autogen.sh --enable-gtk-doc --enable-profile --enable-gles1 --enable-gles2 --enable-gl --enable-xlib-egl-platform --enable-glx
      $ make all
      $ make install
 
@@ -59,6 +59,7 @@ done
  - Read the release comments in configure.ac
     - Bump cogl_1_minor_version to the next even number
     - Don't change the 2.0 version number
+    - Update the libtool versioning
     - Update the cogl_release_status status to "release" or "snapshot"
       as appropriate.
     - commit the changes.
