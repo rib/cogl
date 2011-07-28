@@ -427,8 +427,6 @@ dist-hook: ../build/win32/vs9/cogl.vcproj ../build/win32/vs10/cogl.vcxproj ../bu
 
 EXTRA_DIST += \
 	cogl-defines.h.win32	\
-	cogl-enum-types.h		\
-	cogl-enum-types.c		\
 	cogl.symbols
 
 DISTCLEANFILES += ../build/win32/vs9/cogl.vcproj ../build/win32/vs10/cogl.vcxproj ../build/win32/vs10/cogl.vcxproj.filters
