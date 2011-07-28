@@ -46,7 +46,7 @@
 #ifdef COGL_HAS_GLX_SUPPORT
 extern const CoglWinsysVtable *_cogl_winsys_glx_get_vtable (void);
 #endif
-#ifdef COGL_HAS_WIN32_SUPPORT
+#ifdef COGL_HAS_WGL_SUPPORT
 extern const CoglWinsysVtable *_cogl_winsys_wgl_get_vtable (void);
 #endif
 
@@ -60,7 +60,7 @@ static CoglWinsysVtableGetter _cogl_winsys_vtable_getters[] =
 #ifdef COGL_HAS_EGL_SUPPORT
   _cogl_winsys_egl_get_vtable,
 #endif
-#ifdef COGL_HAS_WIN32_SUPPORT
+#ifdef COGL_HAS_WGL_SUPPORT
   _cogl_winsys_wgl_get_vtable,
 #endif
   _cogl_winsys_stub_get_vtable,
