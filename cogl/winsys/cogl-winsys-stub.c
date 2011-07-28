@@ -45,8 +45,24 @@ static int _cogl_winsys_stub_dummy_ptr;
  */
 
 static CoglFuncPtr
-_cogl_winsys_get_proc_address (const char *name)
+_cogl_winsys_renderer_get_proc_address (CoglRenderer *renderer,
+                                        const char *name)
 {
+  static GModule *module = NULL;
+
+  /* this should find the right function if the program is linked against a
+   * library providing it */
+  if (G_UNLIKELY (module == NULL))
+    module = g_module_open (NULL, 0);
+
+  if (module)
+    {
+      void *symbol;
+
+      if (g_module_symbol (module, name, &symbol))
+        return symbol;
+    }
+
   return NULL;
 }
 
@@ -130,28 +146,37 @@ _cogl_winsys_onscreen_set_visibility (CoglOnscreen *onscreen,
 {
 }
 
-static CoglWinsysVtable _cogl_winsys_vtable = 
-{
-  COGL_WINSYS_ID_STUB, /*.id*/
-  "STUB", /*.name*/
-  _cogl_winsys_get_proc_address, /*.get_proc_address =*/
-  _cogl_winsys_renderer_connect, /*.renderer_connect =*/
-  _cogl_winsys_renderer_disconnect, /*.renderer_disconnect =*/
-  _cogl_winsys_display_setup, /*.display_setup =*/
-  _cogl_winsys_display_destroy, /*.display_destroy =*/
-  _cogl_winsys_context_init, /*.context_init =*/
-  _cogl_winsys_context_deinit, /*.context_deinit =*/
-
-  _cogl_winsys_onscreen_init, /*.onscreen_init =*/
-  _cogl_winsys_onscreen_deinit, /*.onscreen_deinit =*/
-  _cogl_winsys_onscreen_bind, /*.onscreen_bind =*/
-  _cogl_winsys_onscreen_swap_buffers, /*.onscreen_swap_buffers =*/
-  _cogl_winsys_onscreen_update_swap_throttled,/*.onscreen_update_swap_throttled =*/
-  _cogl_winsys_onscreen_set_visibility, /*.onscreen_set_visibility =*/
-};
-
 const CoglWinsysVtable *
 _cogl_winsys_stub_get_vtable (void)
 {
-  return &_cogl_winsys_vtable;
+  static gboolean vtable_inited = FALSE;
+  static CoglWinsysVtable vtable;
+
+  /* It would be nice if we could use C99 struct initializers here
+     like the GLX backend does. However this code is also to be
+     compiled using Visual Studio which (still!) doesn't support them
+     so we initialize it in code instead */
+  if (!vtable_inited)
+  {
+    vtable.id = COGL_WINSYS_ID_STUB;
+    vtable.name = "STUB";
+    vtable.renderer_get_proc_address = _cogl_winsys_renderer_get_proc_address;
+    vtable.renderer_connect = _cogl_winsys_renderer_connect;
+    vtable.renderer_disconnect = _cogl_winsys_renderer_disconnect;
+    vtable.display_setup = _cogl_winsys_display_setup;
+    vtable.display_destroy = _cogl_winsys_display_destroy;
+    vtable.context_init = _cogl_winsys_context_init;
+    vtable.context_deinit = _cogl_winsys_context_deinit;
+    vtable.onscreen_init = _cogl_winsys_onscreen_init;
+    vtable.onscreen_deinit = _cogl_winsys_onscreen_deinit;
+    vtable.onscreen_bind = _cogl_winsys_onscreen_bind;
+    vtable.onscreen_swap_buffers = _cogl_winsys_onscreen_swap_buffers;
+    vtable.onscreen_update_swap_throttled =
+      _cogl_winsys_onscreen_update_swap_throttled;
+    vtable.onscreen_set_visibility = _cogl_winsys_onscreen_set_visibility;
+
+    vtable_inited = TRUE;
+  }
+
+  return &vtable;
 }
