@@ -35,8 +35,8 @@ AM_CPPFLAGS = \
 
 AM_CFLAGS = $(COGL_DEP_CFLAGS) $(COGL_EXTRA_CFLAGS) $(MAINTAINER_CFLAGS)
 
-BUILT_SOURCES += cogl-defines.h cogl-display.h
-DISTCLEANFILES += cogl-defines.h cogl-display.h
+BUILT_SOURCES += cogl-defines.h
+DISTCLEANFILES += cogl-defines.h
 EXTRA_DIST += cogl-defines.h.in cogl-display.h.in
 
 # Note: The cogl-1.0/cogl-gl-1.0 files are essentially for
@@ -96,6 +96,7 @@ cogl_experimental_h = \
 	$(srcdir)/cogl-renderer.h 		\
 	$(srcdir)/cogl-swap-chain.h 		\
 	$(srcdir)/cogl-onscreen-template.h 	\
+	$(srcdir)/cogl-display.h		\
 	$(srcdir)/cogl-context.h 		\
 	$(srcdir)/cogl2-path.h 			\
 	$(srcdir)/cogl2-clip-state.h		\
@@ -179,6 +180,7 @@ cogl_sources_c = \
 	$(srcdir)/cogl-onscreen-template.h 		\
 	$(srcdir)/cogl-onscreen-template.c 		\
 	$(srcdir)/cogl-display-private.h		\
+	$(srcdir)/cogl-display.h			\
 	$(srcdir)/cogl-display.c			\
 	$(srcdir)/cogl-internal.h			\
 	$(srcdir)/cogl.c				\
@@ -385,7 +387,7 @@ cogl_headers = \
 
 coglincludedir = $(includedir)/cogl/cogl
 coglinclude_HEADERS = $(cogl_headers) $(cogl_experimental_h)
-nodist_coglinclude_HEADERS = cogl-defines.h cogl-enum-types.h cogl-display.h
+nodist_coglinclude_HEADERS = cogl-defines.h cogl-enum-types.h
 
 dist-hook: ../build/win32/vs9/cogl.vcproj ../build/win32/vs10/cogl.vcxproj ../build/win32/vs10/cogl.vcxproj.filters
 
