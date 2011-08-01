@@ -25,6 +25,13 @@ copy ..\..\..\cogl\cogl-defines.h.win32 ..\..\..\cogl\cogl-defines.h
 :DONE_COGL_DEFINES_H
 
 
+if exist ..\..\..\cogl\cogl-display.h goto DONE_COGL_DISPLAY_H
+
+copy ..\..\..\cogl\cogl-display.h.in ..\..\..\cogl\cogl-display.h
+
+:DONE_COGL_DISPLAY_H
+
+
 if exist ..\..\..\cogl\cogl-enum-types.h goto DONE_COGL_ENUMS_H
 
 cd ..\..\..\cogl
