@@ -49,9 +49,24 @@ cogl_display_error_quark (void)
   return g_quark_from_static_string ("cogl-display-error-quark");
 }
 
+static const CoglWinsysVtable *
+_cogl_display_get_winsys (CoglDisplay *display)
+{
+  return display->renderer->winsys_vtable;
+}
+
 static void
 _cogl_display_free (CoglDisplay *display)
 {
+  const CoglWinsysVtable *winsys;
+
+  if (display->setup)
+    {
+      winsys = _cogl_display_get_winsys (display);
+      winsys->display_destroy (display);
+      display->setup = FALSE;
+    }
+
   if (display->renderer)
     {
       cogl_object_unref (display->renderer);
@@ -97,13 +112,11 @@ cogl_display_new (CoglRenderer *renderer,
 
   display->setup = FALSE;
 
-  return _cogl_display_object_new (display);
-}
+#ifdef COGL_HAS_EGL_PLATFORM_GDL_SUPPORT
+  display->gdl_plane = GDL_PLANE_ID_UPP_C;
+#endif
 
-static const CoglWinsysVtable *
-_cogl_display_get_winsys (CoglDisplay *display)
-{
-  return display->renderer->winsys_vtable;
+  return _cogl_display_object_new (display);
 }
 
 gboolean
@@ -127,7 +140,7 @@ cogl_display_setup (CoglDisplay *display,
 #ifdef COGL_HAS_EGL_PLATFORM_GDL_SUPPORT
 void
 cogl_gdl_display_set_plane (CoglDisplay *display,
-                            struct gdl_plane *plane)
+                            gdl_plane_id_t plane)
 {
   g_return_if_fail (display->setup == FALSE);
 

@@ -23,6 +23,7 @@ stamp-marshal
 *.gir
 *.typelib
 /cogl/cogl-defines.h
+/cogl/cogl-display.h
 /cogl/cogl-enum-types.c
 /cogl/cogl-enum-types.h
 config.h
@@ -57,6 +58,7 @@ depcomp
 /doc/reference/cogl-2.0-experimental/*.bak
 /examples/hello
 /examples/x11-foreign
+/examples/x11-tfp
 /examples/crate
 gtk-doc.make
 install-sh
