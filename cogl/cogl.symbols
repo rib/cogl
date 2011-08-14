@@ -234,9 +234,12 @@ cogl_flush
 #ifdef COGL_ENABLE_EXPERIMENTAL_API
 cogl_framebuffer_add_swap_buffers_callback_EXP
 cogl_framebuffer_allocate_EXP
+cogl_framebuffer_clear4f_EXP
+cogl_framebuffer_clear_EXP
 cogl_framebuffer_get_alpha_bits_EXP
 cogl_framebuffer_get_blue_bits_EXP
 cogl_framebuffer_get_color_mask_EXP
+cogl_framebuffer_get_context_EXP
 cogl_framebuffer_get_dither_enabled
 cogl_framebuffer_get_green_bits_EXP
 cogl_framebuffer_get_height_EXP
@@ -441,6 +444,7 @@ cogl_matrix_init_from_quaternion
 #endif
 
 cogl_matrix_init_identity
+cogl_matrix_look_at_EXP
 cogl_matrix_multiply
 cogl_matrix_ortho
 cogl_matrix_perspective
