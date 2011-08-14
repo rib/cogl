@@ -228,11 +228,12 @@ _cogl_framebuffer_get_winsys (CoglFramebuffer *framebuffer)
  * needed when doing operations that may be called whiling flushing
  * the journal */
 void
-_cogl_clear4f (unsigned long buffers,
-               float red,
-               float green,
-               float blue,
-               float alpha)
+_cogl_framebuffer_clear_without_flush4f (CoglFramebuffer *framebuffer,
+                                         unsigned long buffers,
+                                         float red,
+                                         float green,
+                                         float blue,
+                                         float alpha)
 {
   GLbitfield gl_buffers = 0;
 
@@ -240,15 +241,12 @@ _cogl_clear4f (unsigned long buffers,
 
   if (buffers & COGL_BUFFER_BIT_COLOR)
     {
-      CoglFramebuffer *draw_framebuffer;
-
       GE( ctx, glClearColor (red, green, blue, alpha) );
       gl_buffers |= GL_COLOR_BUFFER_BIT;
 
-      draw_framebuffer = cogl_get_draw_framebuffer ();
-      if (ctx->current_gl_color_mask != draw_framebuffer->color_mask)
+      if (ctx->current_gl_color_mask != framebuffer->color_mask)
         {
-          CoglColorMask color_mask = draw_framebuffer->color_mask;
+          CoglColorMask color_mask = framebuffer->color_mask;
           GE( ctx, glColorMask (!!(color_mask & COGL_COLOR_MASK_RED),
                                 !!(color_mask & COGL_COLOR_MASK_GREEN),
                                 !!(color_mask & COGL_COLOR_MASK_BLUE),
@@ -290,20 +288,18 @@ _cogl_framebuffer_dirty (CoglFramebuffer *framebuffer)
 }
 
 void
-_cogl_framebuffer_clear4f (CoglFramebuffer *framebuffer,
-                           unsigned long buffers,
-                           float red,
-                           float green,
-                           float blue,
-                           float alpha)
+cogl_framebuffer_clear4f (CoglFramebuffer *framebuffer,
+                          unsigned long buffers,
+                          float red,
+                          float green,
+                          float blue,
+                          float alpha)
 {
   CoglClipStack *clip_stack = _cogl_framebuffer_get_clip_stack (framebuffer);
   int scissor_x0;
   int scissor_y0;
   int scissor_x1;
   int scissor_y1;
-
-  g_return_if_fail (framebuffer->allocated);
 
   _cogl_clip_stack_get_bounds (clip_stack,
                                &scissor_x0, &scissor_y0,
@@ -396,7 +392,8 @@ _cogl_framebuffer_clear4f (CoglFramebuffer *framebuffer,
    * always be done first when preparing to draw. */
   _cogl_framebuffer_flush_state (framebuffer, framebuffer, 0);
 
-  _cogl_clear4f (buffers, red, green, blue, alpha);;
+  _cogl_framebuffer_clear_without_flush4f (framebuffer, buffers,
+                                           red, green, blue, alpha);
 
   /* This is a debugging variable used to visually display the quad
    * batches from the journal. It is reset here to increase the
@@ -443,35 +440,21 @@ cleared:
     _cogl_framebuffer_dirty (framebuffer);
 }
 
-/* XXX: We'll need to consider if this API is a good approach for the
- * planned, public, CoglFramebuffer API. A framebuffer may have
- * multiple color buffers associated with it and the user may want to
- * only clear a subset of those buffers. Flags aren't a great
- * mechanism for handling this, but I don't think it would be very
- * convenient if you had to explicitly enumerate the individual
- * ancillary buffers to clear them.
- *
- * My current expectation is that we'll keep this flag based API but
- * also add a way to enumerate the individual color buffers for
- * clearing individually.
- *
- * Note: the 'buffers' and 'color' arguments were switched around on
+/* Note: the 'buffers' and 'color' arguments were switched around on
  * purpose compared to the original cogl_clear API since it was odd
  * that you would be expected to specify a color before even
  * necessarily choosing to clear the color buffer.
  */
 void
-_cogl_framebuffer_clear (CoglFramebuffer *framebuffer,
-                         unsigned long buffers,
-                         const CoglColor *color)
+cogl_framebuffer_clear (CoglFramebuffer *framebuffer,
+                        unsigned long buffers,
+                        const CoglColor *color)
 {
-  g_return_if_fail (framebuffer->allocated);
-
-  _cogl_framebuffer_clear4f (framebuffer, buffers,
-                             cogl_color_get_red_float (color),
-                             cogl_color_get_green_float (color),
-                             cogl_color_get_blue_float (color),
-                             cogl_color_get_alpha_float (color));
+  cogl_framebuffer_clear4f (framebuffer, buffers,
+                            cogl_color_get_red_float (color),
+                            cogl_color_get_green_float (color),
+                            cogl_color_get_blue_float (color),
+                            cogl_color_get_alpha_float (color));
 }
 
 int
@@ -630,6 +613,8 @@ static inline void
 _cogl_framebuffer_init_bits (CoglFramebuffer *framebuffer)
 {
   CoglContext *ctx = framebuffer->context;
+
+  cogl_framebuffer_allocate (framebuffer, NULL);
 
   if (G_LIKELY (!framebuffer->dirty_bitmasks))
     return;
@@ -1396,6 +1381,10 @@ _cogl_framebuffer_flush_state (CoglFramebuffer *draw_buffer,
 {
   CoglContext *ctx = draw_buffer->context;
 
+  /* Lazily ensure the framebuffer has been allocated */
+  cogl_framebuffer_allocate (draw_buffer, NULL);
+  cogl_framebuffer_allocate (read_buffer, NULL);
+
   if (ctx->dirty_bound_framebuffer)
     {
       if (draw_buffer == read_buffer)
@@ -1450,12 +1439,6 @@ _cogl_framebuffer_flush_state (CoglFramebuffer *draw_buffer,
       ctx->dirty_gl_viewport = FALSE;
     }
 
-  /* since we might have changed the framebuffer, we should initialize
-   * the bits; this is a no-op if they have already been initialized
-   */
-  _cogl_framebuffer_init_bits (draw_buffer);
-  _cogl_framebuffer_init_bits (read_buffer);
-
   if (ctx->current_gl_dither_enabled != draw_buffer->dither_enabled)
     {
       if (draw_buffer->dither_enabled)
@@ -1469,7 +1452,8 @@ _cogl_framebuffer_flush_state (CoglFramebuffer *draw_buffer,
    * matrices so we must do it before flushing the matrices...
    */
   if (!(flags & COGL_FRAMEBUFFER_FLUSH_SKIP_CLIP_STATE))
-    _cogl_clip_state_flush (&draw_buffer->clip_state);
+    _cogl_clip_state_flush (&draw_buffer->clip_state,
+                            draw_buffer);
 
   if (!(flags & COGL_FRAMEBUFFER_FLUSH_SKIP_MODELVIEW))
     _cogl_matrix_stack_flush_to_gl (draw_buffer->modelview_stack,
@@ -1547,6 +1531,14 @@ cogl_framebuffer_set_dither_enabled (CoglFramebuffer *framebuffer,
 
   cogl_flush (); /* Currently dithering changes aren't tracked in the journal */
   framebuffer->dither_enabled = dither_enabled;
+}
+
+CoglContext *
+cogl_framebuffer_get_context (CoglFramebuffer *framebuffer)
+{
+  g_return_val_if_fail (framebuffer != NULL, NULL);
+
+  return framebuffer->context;
 }
 
 gboolean
@@ -1649,7 +1641,7 @@ _cogl_blit_framebuffer (unsigned int src_x,
      by the scissor and we want to hide this feature for the Cogl API
      because it's not obvious to an app how the clip state will affect
      the scissor */
-  _cogl_clip_stack_flush (NULL);
+  _cogl_clip_stack_flush (NULL, draw_buffer);
 
   ctx->glBlitFramebuffer (src_x, src_y,
                      src_x + width, src_y + height,
@@ -1674,7 +1666,7 @@ cogl_framebuffer_swap_buffers (CoglFramebuffer *framebuffer)
 
 void
 cogl_framebuffer_swap_region (CoglFramebuffer *framebuffer,
-                              int *rectangles,
+                              const int *rectangles,
                               int n_rectangles)
 {
   /* FIXME: we shouldn't need to flush *all* journals here! */

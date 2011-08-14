@@ -47,6 +47,7 @@
 #include "cogl-attribute-private.h"
 #include "cogl-framebuffer-private.h"
 #include "cogl-renderer-private.h"
+#include "cogl-config-private.h"
 
 #ifndef GL_PACK_INVERT_MESA
 #define GL_PACK_INVERT_MESA 0x8758
@@ -135,7 +136,7 @@ cogl_check_extension (const char *name, const char *ext)
 void
 cogl_clear (const CoglColor *color, unsigned long buffers)
 {
-  _cogl_framebuffer_clear (cogl_get_draw_framebuffer (), buffers, color);
+  cogl_framebuffer_clear (cogl_get_draw_framebuffer (), buffers, color);
 }
 
 static gboolean
@@ -1122,6 +1123,7 @@ _cogl_init (void)
     {
       g_type_init ();
 
+      _cogl_config_read ();
       _cogl_debug_check_environment ();
       g_once_init_leave (&init_status, 1);
     }

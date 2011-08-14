@@ -29,6 +29,7 @@ if BUILD_COGL_PANGO
 noinst_PROGRAMS += crate
 crate_SOURCES = crate.c
 crate_LDADD = $(common_ldadd) $(top_builddir)/cogl-pango/libcogl-pango.la
+crate_CFLAGS = $(AM_CFLAGS) $(COGL_PANGO_DEP_CFLAGS)
 endif
 
 if X11_TESTS
@@ -45,4 +46,14 @@ cogland_SOURCES = cogland.c
 cogland_LDADD = $(common_ldadd)
 endif
 
-EXTRA_DIST = crate.jpg
+EXTRA_DIST = \
+	crate.jpg \
+	android/hello/AndroidManifest.xml \
+	android/hello/jni/Application.mk \
+	android/hello/jni/Android.mk \
+	android/hello/jni/main.c \
+	android/hello/res/values \
+	android/hello/res/values/strings.xml \
+	android/hello/.gitignore \
+	android/hello/build.xml
+
