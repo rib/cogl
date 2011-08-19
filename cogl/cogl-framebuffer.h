@@ -326,7 +326,49 @@ cogl_framebuffer_clear4f (CoglFramebuffer *framebuffer,
                           float blue,
                           float alpha);
 
+/* XXX: Should we take an n_buffers + buffer id array instead of using
+ * the CoglBufferBits type which doesn't seem future proof? */
+#define cogl_framebuffer_discard_buffers cogl_framebuffer_discard_buffers_EXP
+/**
+ * cogl_framebuffer_discard_buffers:
+ * @framebuffer: A #CoglFramebuffer
+ *
+ * Declares that the specified buffers no longer need to be referenced
+ * by any further rendering commands. This can be an important
+ * optimization to avoid subsequent frames of rendering depending on
+ * the results of a previous frame.
+ *
+ * For example; some GPUs are able to avoid allocating and accessing
+ * system memory for the depth and stencil buffer so long as these
+ * buffers are not required as input for subsequent frames and that
+ * can save a significant amount of memory bandwidth used to save and
+ * restore their contents to system memory between frames.
+ *
+ * Since: 1.8
+ * Stability: unstable
+ */
+void
+cogl_framebuffer_discard_buffers (CoglFramebuffer *framebuffer,
+                                  unsigned long buffers);
+
+/* XXX: Actually should this be renamed too cogl_onscreen_swap_buffers()? */
 #define cogl_framebuffer_swap_buffers cogl_framebuffer_swap_buffers_EXP
+/**
+ * cogl_framebuffer_swap_buffers:
+ * @framebuffer: A #CoglFramebuffer
+ *
+ * Swaps the current back buffer being rendered too, to the front for
+ * display. This function also implicitly discards the contents of the
+ * color, depth and stencil buffers as if
+ * cogl_framebuffer_discard_buffers() were called with
+ * COGL_BUFFER_BIT_COLOR | COGL_BUFFER_BIT_DEPTH |
+ * COGL_BUFFER_BIT_STENCIL. The significance of the discard is that
+ * you should not expect to be able to start a new frame that
+ * incrementally builds on the contents of the previous frame.
+ *
+ * Since: 1.8
+ * Stability: unstable
+ */
 void
 cogl_framebuffer_swap_buffers (CoglFramebuffer *framebuffer);
 

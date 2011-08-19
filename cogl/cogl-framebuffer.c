@@ -1652,16 +1652,55 @@ _cogl_blit_framebuffer (unsigned int src_x,
 }
 
 void
+cogl_framebuffer_discard_buffers (CoglFramebuffer *framebuffer,
+                                  unsigned long buffers)
+{
+#ifdef GL_EXT_framebuffer_discard
+  CoglContext *ctx = framebuffer->context;
+  if (ctx->glDiscardFramebuffer)
+    {
+      GLenum attachments[3];
+      int i = 0;
+
+      if (framebuffer->type == COGL_FRAMEBUFFER_TYPE_ONSCREEN)
+        {
+          if (buffers & COGL_BUFFER_BIT_COLOR)
+            attachments[i++] = GL_COLOR_EXT;
+          if (buffers & COGL_BUFFER_BIT_DEPTH)
+            attachments[i++] = GL_DEPTH_EXT;
+          if (buffers & COGL_BUFFER_BIT_STENCIL)
+            attachments[i++] = GL_STENCIL_EXT;
+        }
+      else
+        {
+          if (buffers & COGL_BUFFER_BIT_COLOR)
+            attachments[i++] = GL_COLOR_ATTACHMENT0;
+          if (buffers & COGL_BUFFER_BIT_DEPTH)
+            attachments[i++] = GL_DEPTH_ATTACHMENT;
+          if (buffers & COGL_BUFFER_BIT_STENCIL)
+            attachments[i++] = GL_STENCIL_ATTACHMENT;
+        }
+
+      GE (ctx, glDiscardFramebuffer (GL_FRAMEBUFFER, i, attachments));
+    }
+#endif
+}
+
+void
 cogl_framebuffer_swap_buffers (CoglFramebuffer *framebuffer)
 {
+  const CoglWinsysVtable *winsys;
+
+  g_return_if_fail  (framebuffer->type == COGL_FRAMEBUFFER_TYPE_ONSCREEN);
+
   /* FIXME: we shouldn't need to flush *all* journals here! */
   cogl_flush ();
-  if (framebuffer->type == COGL_FRAMEBUFFER_TYPE_ONSCREEN)
-    {
-      const CoglWinsysVtable *winsys =
-        _cogl_framebuffer_get_winsys (framebuffer);
-      winsys->onscreen_swap_buffers (COGL_ONSCREEN (framebuffer));
-    }
+  winsys = _cogl_framebuffer_get_winsys (framebuffer);
+  winsys->onscreen_swap_buffers (COGL_ONSCREEN (framebuffer));
+  cogl_framebuffer_discard_buffers (framebuffer,
+                                    COGL_BUFFER_BIT_COLOR |
+                                    COGL_BUFFER_BIT_DEPTH |
+                                    COGL_BUFFER_BIT_STENCIL);
 }
 
 void
