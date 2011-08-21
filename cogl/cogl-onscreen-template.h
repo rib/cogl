@@ -43,6 +43,25 @@ typedef struct _CoglOnscreenTemplate	      CoglOnscreenTemplate;
 CoglOnscreenTemplate *
 cogl_onscreen_template_new (CoglSwapChain *swap_chain);
 
+/**
+ * cogl_onscreen_template_set_point_samples_per_pixel:
+ * @onscreen: A #CoglOnscreenTemplate template framebuffer
+ * @n: The minimum number of samples per pixel
+ *
+ * Requires that any future CoglOnscreen framebuffers derived from
+ * this template must support making @n point samples per pixel which
+ * will all contribute to the final resolved color for that pixel.
+ *
+ * By default sampling is not based on point samples but rather by
+ * considering the whole rectangular area of the current pixel, so an
+ * @n value of %1 is not equivalent to the default behaviour. A value
+ * of %0 can be used to explicitly request non point based sampling.
+ */
+void
+cogl_onscreen_template_set_point_samples_per_pixel (
+                                          CoglOnscreenTemplate *onscreen_template,
+                                          int n);
+
 G_END_DECLS
 
 #endif /* __COGL_ONSCREEN_TEMPLATE_H__ */
