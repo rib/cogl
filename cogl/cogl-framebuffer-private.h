@@ -47,11 +47,21 @@ typedef enum _CoglFramebufferType {
   COGL_FRAMEBUFFER_TYPE_OFFSCREEN
 } CoglFramebufferType;
 
+typedef struct
+{
+  CoglSwapChain *swap_chain;
+  gboolean need_stencil;
+} CoglFramebufferConfig;
+
 struct _CoglFramebuffer
 {
   CoglObject          _parent;
   CoglContext        *context;
   CoglFramebufferType  type;
+
+  /* The user configuration before allocation... */
+  CoglFramebufferConfig config;
+
   int                 width;
   int                 height;
   /* Format of the pixels in the framebuffer (including the expected
@@ -108,7 +118,14 @@ typedef struct _CoglOffscreen
   CoglFramebuffer  _parent;
   GLuint          fbo_handle;
   GSList          *renderbuffers;
-  CoglTexture     *texture;
+
+  /* For multisample rendering we sometimes have to abstract a second FBO
+   * used to perform an explicit sample resolve via the framebuffer_blit
+   * extension. If the hardware doesn't require an explicit resolve
+   * (e.g. PVR/Mali hardware then this won't be used) */
+  GLuint          resolve_fbo_handle;
+
+  CoglTexture    *texture;
 } CoglOffscreen;
 
 /* Flags to pass to _cogl_offscreen_new_to_texture_full */
