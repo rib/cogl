@@ -277,6 +277,111 @@ cogl_framebuffer_set_color_mask (CoglFramebuffer *framebuffer,
 CoglPixelFormat
 cogl_framebuffer_get_color_format (CoglFramebuffer *framebuffer);
 
+#define cogl_framebuffer_set_point_samples_per_pixel \
+  cogl_framebuffer_set_point_samples_per_pixel_EXP
+/**
+ * cogl_framebuffer_set_point_samples_per_pixel:
+ * @framebuffer: A #CoglFramebuffer framebuffer
+ * @n: The minimum number of samples per pixel
+ *
+ * Requires that when rendering to @framebuffer then @n point samples
+ * should be made per pixel which will all contribute to the final
+ * resolved color for that pixel. The idea is that the hardware aims
+ * to get quality similar to what you would get if you rendered
+ * everything twice as big (for 4 samples per pixel) and then scaled
+ * that image back down with filtering. It can effectively remove the
+ * jagged edges of polygons and should be more efficient than if you
+ * were to manually render at a higher resolution and downscale
+ * because the hardware is often able to take some shortcuts. For
+ * example the GPU may only calculate a single texture sample for all
+ * points of a single pixel, and for tile based architectures all the
+ * extra sample data (such as depth and stencil samples) may be
+ * handled on-chip and so avoid increased demand on system memory
+ * bandwidth.
+ *
+ * By default sampling is not based on point samples but rather by
+ * considering the whole rectangular area of the current pixel, so an
+ * @n value of %1 is not equivalent to the default behaviour. A value
+ * of %0 can be used to explicitly request non point based sampling.
+ *
+ * <note>It's important that you call
+ * cogl_framebuffer_resolve_samples() at the end of each frame when
+ * point sample rendering (also known as multisample rendering) has
+ * been enabled, because some GPUs do not implicitly resolve the
+ * samples into the final color buffer during rendering.</note>
+ *
+ * Since: 1.8
+ * Stability: unstable
+ */
+void
+cogl_framebuffer_set_point_samples_per_pixel (CoglFramebuffer *framebuffer,
+                                              int samples_per_pixel);
+
+#define cogl_framebuffer_resolve_samples \
+  cogl_framebuffer_resolve_samples_EXP
+/**
+ * cogl_framebuffer_resolve_samples:
+ * @framebuffer: A #CoglFramebuffer framebuffer
+ *
+ * When point sample rendering (also known as multisample rendering)
+ * has been enabled via cogl_framebuffer_set_point_samples_per_pixel()
+ * then you are required to call this function (or
+ * cogl_framebuffer_resolve_samples_region()) to guarantee that that
+ * the samples will be resolved and written out to the final color
+ * buffer.
+ *
+ * Some GPUs will implicitly resolve the point samples during
+ * rendering and so this function is effectively a nop, but with other
+ * architectures it is desirable to defer the resolve step until the
+ * end of the frame.
+ *
+ * If you are performing incremental updates to a framebuffer you
+ * should consider using cogl_framebuffer_resolve_samples_region()
+ * instead to avoid resolving redundant pixels.
+ *
+ * Since: 1.8
+ * Stability: unstable
+ */
+void
+cogl_framebuffer_resolve_samples (CoglFramebuffer *framebuffer);
+
+#define cogl_framebuffer_resolve_samples_region \
+  cogl_framebuffer_resolve_samples_region_EXP
+/**
+ * cogl_framebuffer_resolve_samples_region:
+ * @framebuffer: A #CoglFramebuffer framebuffer
+ * @x: top-left x coordinate of region to resolve
+ * @y: top-left y coordinate of region to resolve
+ * @width: width of region to resolve
+ * @height: height of region to resolve
+ *
+ * When point sample rendering (also known as multisample rendering)
+ * has been enabled via cogl_framebuffer_set_point_samples_per_pixel()
+ * then you are required to call this function (or
+ * cogl_framebuffer_resolve_samples()) to guarantee that that the
+ * samples corresponding to a given region will be resolved and
+ * written out to the final color buffer.
+ *
+ * Some GPUs will implicitly resolve the point samples during
+ * rendering and so this function is effectively a nop, but with other
+ * architectures it is desirable to defer the resolve step until the
+ * end of the frame.
+ *
+ * Because some GPUs implicitly resolve point samples this function
+ * only guarantees that at-least the region specified will be resolved
+ * and if you have rendered to a larger region then it's possible that
+ * other samples may be implicitly resolved.
+ *
+ * Since: 1.8
+ * Stability: unstable
+ */
+void
+cogl_framebuffer_resolve_samples_region (CoglFramebuffer *framebuffer,
+                                         int x,
+                                         int y,
+                                         int width,
+                                         int height);
+
 #define cogl_framebuffer_get_context cogl_framebuffer_get_context_EXP
 /**
  * @framebuffer: A #CoglFramebuffer
@@ -597,6 +702,19 @@ CoglFramebuffer *
 cogl_get_draw_framebuffer (void);
 
 #endif /* COGL_ENABLE_EXPERIMENTAL_API */
+
+/* XXX: Note these are defined outside the COGL_ENABLE_EXPERIMENTAL_API guard since
+ * otherwise the glib-mkenums stuff will get upset. */
+
+#define cogl_framebuffer_error_quark cogl_framebuffer_error_quark_EXP
+GQuark
+cogl_framebuffer_error_quark (void);
+
+#define COGL_FRAMEBUFFER_ERROR (cogl_framebuffer_error_quark ())
+
+typedef enum { /*< prefix=COGL_FRAMEBUFFER_ERROR >*/
+  COGL_FRAMEBUFFER_ERROR_ALLOCATE
+} CoglFramebufferError;
 
 G_END_DECLS
 
