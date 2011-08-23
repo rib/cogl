@@ -20,10 +20,12 @@ common_ldadd = \
 	$(COGL_DEP_LIBS) \
 	$(top_builddir)/cogl/libcogl.la
 
-noinst_PROGRAMS = hello
+noinst_PROGRAMS = hello msaa
 
 hello_SOURCES = hello.c
 hello_LDADD = $(common_ldadd)
+msaa_SOURCES = msaa.c
+msaa_LDADD = $(common_ldadd)
 
 if BUILD_COGL_PANGO
 noinst_PROGRAMS += crate
