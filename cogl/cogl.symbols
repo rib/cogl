@@ -166,6 +166,7 @@ cogl_color_unpremultiply
 cogl_egl_context_get_egl_display_EXP
 #endif
 
+cogl_context_get_display_EXP
 cogl_context_new_EXP
 #endif
 
@@ -188,6 +189,7 @@ cogl_depth_test_function_get_type
 cogl_disable_fog
 
 #ifdef COGL_ENABLE_EXPERIMENTAL_API
+cogl_display_get_rendrer_EXP
 cogl_display_new_EXP
 cogl_display_setup_EXP
 #endif
@@ -238,6 +240,7 @@ cogl_framebuffer_clear4f_EXP
 cogl_framebuffer_clear_EXP
 cogl_framebuffer_get_alpha_bits_EXP
 cogl_framebuffer_get_blue_bits_EXP
+cogl_framebuffer_get_color_format_EXP
 cogl_framebuffer_get_color_mask_EXP
 cogl_framebuffer_get_context_EXP
 cogl_framebuffer_get_dither_enabled
@@ -694,6 +697,7 @@ cogl_rectangle_with_texture_coords
 #ifdef COGL_ENABLE_EXPERIMENTAL_API
 cogl_renderer_check_onscreen_template_EXP
 cogl_renderer_connect_EXP
+cogl_renderer_get_n_fragment_texture_units_EXP
 #endif
 
 cogl_renderer_error_get_type
