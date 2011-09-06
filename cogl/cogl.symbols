@@ -189,7 +189,7 @@ cogl_depth_test_function_get_type
 cogl_disable_fog
 
 #ifdef COGL_ENABLE_EXPERIMENTAL_API
-cogl_display_get_rendrer_EXP
+cogl_display_get_renderer_EXP
 cogl_display_new_EXP
 cogl_display_setup_EXP
 #endif
