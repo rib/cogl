@@ -28,7 +28,7 @@ hello_LDADD = $(common_ldadd)
 if BUILD_COGL_PANGO
 noinst_PROGRAMS += crate
 crate_SOURCES = crate.c
-crate_LDADD = $(common_ldadd) $(top_builddir)/cogl-pango/libcogl-pango.la
+crate_LDADD = $(common_ldadd) $(COGL_PANGO_DEP_LIBS) $(top_builddir)/cogl-pango/libcogl-pango.la
 crate_CFLAGS = $(AM_CFLAGS) $(COGL_PANGO_DEP_CFLAGS)
 endif
 
@@ -52,7 +52,6 @@ EXTRA_DIST = \
 	android/hello/jni/Application.mk \
 	android/hello/jni/Android.mk \
 	android/hello/jni/main.c \
-	android/hello/res/values \
 	android/hello/res/values/strings.xml \
 	android/hello/.gitignore \
 	android/hello/build.xml

@@ -25,7 +25,7 @@ m4_define([cogl_version],
 dnl Since the core Cogl library has to also maintain support for the
 dnl Cogl 1.x API for Clutter then we track the 1.x version separately.
 m4_define([cogl_1_minor_version], [7])
-m4_define([cogl_1_micro_version], [7])
+m4_define([cogl_1_micro_version], [9])
 m4_define([cogl_1_version], [1.cogl_1_minor_version.cogl_1_micro_version])
 
 dnl ================================================================
@@ -55,9 +55,9 @@ dnl ================================================================
 #
 #  5. If any interfaces have been removed since the last public release,
 #     then set AGE to 0.
-m4_define([cogl_lt_current], 3)
+m4_define([cogl_lt_current], 4)
 m4_define([cogl_lt_revision], 0)
-m4_define([cogl_lt_age], 1)
+m4_define([cogl_lt_age], 2)
 # We do also tell libtool the pretty version:
 m4_define([cogl_lt_release], [cogl_version])
 
@@ -864,9 +864,9 @@ dnl     ============================================================
 AM_PATH_GLIB_2_0([glib_req_version],
                  [have_glib=yes], [have_glib=no],
                  [gobject gthread gmodule-no-export])
-AS_IF([test "x$have_glib" = "xno"], AC_MSG_ERROR([glib-2.0 is required]))
+AS_IF([test "x$have_glib" = "xno"], AC_MSG_ERROR([gobject-2.0 is required]))
 
-COGL_PKG_REQUIRES="$COGL_PKG_REQUIRES glib-2.0"
+COGL_PKG_REQUIRES="$COGL_PKG_REQUIRES gobject-2.0 gmodule-no-export-2.0"
 AC_SUBST(COGL_PKG_REQUIRES)
 PKG_CHECK_MODULES(COGL_DEP, [$COGL_PKG_REQUIRES])
 if test -n "$COGL_PKG_REQUIRES_GL"; then

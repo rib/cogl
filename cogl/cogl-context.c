@@ -269,7 +269,6 @@ cogl_context_new (CoglDisplay *display,
   _cogl_bitmask_init (&context->arrays_to_change);
 
   context->max_texture_units = -1;
-  context->max_texture_image_units = -1;
   context->max_activateable_texture_units = -1;
 
   context->current_program = COGL_INVALID_HANDLE;
@@ -494,6 +493,12 @@ _cogl_context_get_default (void)
     }
 
   return _context;
+}
+
+CoglDisplay *
+cogl_context_get_display (CoglContext *context)
+{
+  return context->display;
 }
 
 #ifdef COGL_HAS_EGL_SUPPORT

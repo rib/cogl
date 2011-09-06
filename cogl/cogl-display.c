@@ -109,6 +109,8 @@ cogl_display_new (CoglRenderer *renderer,
   display->onscreen_template = onscreen_template;
   if (onscreen_template)
     cogl_object_ref (onscreen_template);
+  else
+    display->onscreen_template = cogl_onscreen_template_new (NULL);
 
   display->setup = FALSE;
 
@@ -117,6 +119,12 @@ cogl_display_new (CoglRenderer *renderer,
 #endif
 
   return _cogl_display_object_new (display);
+}
+
+CoglRenderer *
+cogl_display_get_renderer (CoglDisplay *display)
+{
+  return display->renderer;
 }
 
 gboolean
