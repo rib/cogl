@@ -243,6 +243,8 @@ cogl_sources_c = \
 	$(srcdir)/cogl-depth-state-private.h		\
 	$(srcdir)/cogl-pipeline.c			\
 	$(srcdir)/cogl-pipeline-private.h		\
+	$(srcdir)/cogl-pipeline-state.c			\
+	$(srcdir)/cogl-pipeline-state-private.h		\
 	$(srcdir)/cogl-pipeline-opengl.c		\
 	$(srcdir)/cogl-pipeline-opengl-private.h	\
 	$(srcdir)/cogl-pipeline-fragend-glsl.c		\
