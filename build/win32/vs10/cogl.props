@@ -158,6 +158,8 @@ copy ..\..\..\cogl\cogl2-path.h $(CopyDir)\include\cogl-$(CoglApiVersion)\cogl
 
 copy ..\..\..\cogl\cogl2-clip-state.h $(CopyDir)\include\cogl-$(CoglApiVersion)\cogl
 
+copy ..\..\..\cogl\cogl2-experimental.h $(CopyDir)\include\cogl-$(CoglApiVersion)\cogl
+
 </CoglDoInstall>
     <GenerateCoglDef>
          echo EXPORTS &gt; ..\..\..\cogl\cogl.def
