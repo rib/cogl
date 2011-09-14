@@ -61,6 +61,7 @@ typedef struct _UnitState
 {
   int constant_id; /* The program.local[] index */
   unsigned int dirty_combine_constant:1;
+  unsigned int has_combine_constant:1;
 
   unsigned int sampled:1;
 } UnitState;
@@ -251,13 +252,6 @@ _cogl_pipeline_fragend_arbfp_start (CoglPipeline *pipeline,
                            "PARAM one = {1, 1, 1, 1};\n"
                            "PARAM two = {2, 2, 2, 2};\n"
                            "PARAM minus_one = {-1, -1, -1, -1};\n");
-
-          for (i = 0; i < n_layers; i++)
-            {
-              shader_state->unit_state[i].sampled = FALSE;
-              shader_state->unit_state[i].dirty_combine_constant = FALSE;
-            }
-          shader_state->next_constant_id = 0;
         }
     }
 
@@ -404,6 +398,7 @@ setup_arg (CoglPipeline *pipeline,
         UnitState *unit_state = &shader_state->unit_state[unit_index];
 
         unit_state->constant_id = shader_state->next_constant_id++;
+        unit_state->has_combine_constant = TRUE;
         unit_state->dirty_combine_constant = TRUE;
 
         arg->type = COGL_PIPELINE_FRAGEND_ARBFP_ARG_TYPE_CONSTANT;
@@ -786,7 +781,8 @@ update_constants_cb (CoglPipeline *pipeline,
 
   _COGL_GET_CONTEXT (ctx, FALSE);
 
-  if (state->update_all || unit_state->dirty_combine_constant)
+  if (unit_state->has_combine_constant &&
+      (state->update_all || unit_state->dirty_combine_constant))
     {
       float constant[4];
       _cogl_pipeline_get_layer_combine_constant (pipeline,
