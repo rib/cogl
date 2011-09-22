@@ -217,7 +217,7 @@ _cogl_delete_gl_texture (GLuint gl_texture)
  * if it is reused again with the same texture unit.
  */
 void
-_cogl_pipeline_texture_storage_change_notify (CoglHandle texture)
+_cogl_pipeline_texture_storage_change_notify (CoglTexture *texture)
 {
   int i;
 
@@ -605,6 +605,58 @@ _cogl_pipeline_flush_color_blend_alpha_depth_state (
       ctx->current_gl_color_mask = color_mask;
     }
 
+  if (pipelines_difference & COGL_PIPELINE_STATE_CULL_FACE)
+    {
+      CoglPipeline *authority =
+        _cogl_pipeline_get_authority (pipeline, COGL_PIPELINE_STATE_CULL_FACE);
+      CoglPipelineCullFaceState *cull_face_state
+        = &authority->big_state->cull_face_state;
+
+      if (cull_face_state->mode == COGL_PIPELINE_CULL_FACE_MODE_NONE)
+        GE( ctx, glDisable (GL_CULL_FACE) );
+      else
+        {
+          CoglFramebuffer *draw_framebuffer = cogl_get_draw_framebuffer ();
+          gboolean invert_winding;
+
+          GE( ctx, glEnable (GL_CULL_FACE) );
+
+          switch (cull_face_state->mode)
+            {
+            case COGL_PIPELINE_CULL_FACE_MODE_NONE:
+              g_assert_not_reached ();
+
+            case COGL_PIPELINE_CULL_FACE_MODE_FRONT:
+              GE( ctx, glCullFace (GL_FRONT) );
+              break;
+
+            case COGL_PIPELINE_CULL_FACE_MODE_BACK:
+              GE( ctx, glCullFace (GL_BACK) );
+              break;
+
+            case COGL_PIPELINE_CULL_FACE_MODE_BOTH:
+              GE( ctx, glCullFace (GL_FRONT_AND_BACK) );
+              break;
+            }
+
+          /* If we are painting to an offscreen framebuffer then we
+             need to invert the winding of the front face because
+             everything is painted upside down */
+          invert_winding = cogl_is_offscreen (draw_framebuffer);
+
+          switch (cull_face_state->front_winding)
+            {
+            case COGL_WINDING_CLOCKWISE:
+              GE( ctx, glFrontFace (invert_winding ? GL_CCW : GL_CW) );
+              break;
+
+            case COGL_WINDING_COUNTER_CLOCKWISE:
+              GE( ctx, glFrontFace (invert_winding ? GL_CW : GL_CCW) );
+              break;
+            }
+        }
+    }
+
   if (pipeline->real_blend_enable != ctx->gl_blend_enable_cache)
     {
       if (pipeline->real_blend_enable)
@@ -729,11 +781,11 @@ flush_layers_common_gl_state_cb (CoglPipelineLayer *layer, void *user_data)
       unsigned long state = COGL_PIPELINE_LAYER_STATE_TEXTURE_DATA;
       CoglPipelineLayer *authority =
         _cogl_pipeline_layer_get_authority (layer, state);
-      CoglHandle texture;
-      GLuint     gl_texture;
-      GLenum     gl_target;
+      CoglTexture *texture;
+      GLuint gl_texture;
+      GLenum gl_target;
 
-      texture = (authority->texture == COGL_INVALID_HANDLE ?
+      texture = (authority->texture == NULL ?
                  ctx->default_gl_texture_2d_tex :
                  authority->texture);
 
@@ -845,12 +897,12 @@ _cogl_pipeline_flush_common_gl_state (CoglPipeline  *pipeline,
  */
 static void
 _cogl_pipeline_layer_forward_wrap_modes (CoglPipelineLayer *layer,
-                                         CoglHandle texture)
+                                         CoglTexture *texture)
 {
   CoglPipelineWrapModeInternal wrap_mode_s, wrap_mode_t, wrap_mode_p;
   GLenum gl_wrap_mode_s, gl_wrap_mode_t, gl_wrap_mode_p;
 
-  if (texture == COGL_INVALID_HANDLE)
+  if (texture == NULL)
     return;
 
   _cogl_pipeline_layer_get_wrap_modes (layer,
@@ -912,9 +964,9 @@ foreach_texture_unit_update_filter_and_wrap_modes (void)
 
       if (unit->layer)
         {
-          CoglHandle texture = _cogl_pipeline_layer_get_texture (unit->layer);
+          CoglTexture *texture = _cogl_pipeline_layer_get_texture (unit->layer);
 
-          if (texture != COGL_INVALID_HANDLE)
+          if (texture != NULL)
             {
               CoglPipelineFilter min;
               CoglPipelineFilter mag;

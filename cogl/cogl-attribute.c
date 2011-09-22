@@ -43,9 +43,11 @@
 #ifdef HAVE_COGL_GLES2
 #include "cogl-pipeline-progend-glsl-private.h"
 #endif
+#include "cogl-private.h"
 
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 /* This isn't defined in the GLES headers */
 #ifndef GL_UNSIGNED_INT
@@ -162,7 +164,9 @@ validate_cogl_attribute (const char *name,
     *name_id = COGL_ATTRIBUTE_NAME_ID_TEXTURE_COORD_ARRAY;
   else if (strncmp (name, "tex_coord", strlen ("tex_coord")) == 0)
     {
-      if (sscanf (name, "tex_coord%u_in", texture_unit) != 1)
+      char *endptr;
+      *texture_unit = strtoul (name + 9, &endptr, 10);
+      if (strcmp (endptr, "_in") != 0)
 	{
 	  g_warning ("Texture coordinate attributes should either be named "
                      "\"cogl_tex_coord\" or named with a texture unit index "
@@ -204,7 +208,6 @@ cogl_attribute_new (CoglAttributeBuffer *attribute_buffer,
   gboolean status;
 
   attribute->attribute_buffer = cogl_object_ref (attribute_buffer);
-  attribute->name = g_strdup (name);
   attribute->stride = stride;
   attribute->offset = offset;
   attribute->n_components = n_components;
@@ -212,11 +215,46 @@ cogl_attribute_new (CoglAttributeBuffer *attribute_buffer,
   attribute->immutable_ref = 0;
 
   if (strncmp (name, "cogl_", 5) == 0)
-    status = validate_cogl_attribute (attribute->name,
-                                      n_components,
-                                      &attribute->name_id,
-                                      &attribute->normalized,
-                                      &attribute->texture_unit);
+    {
+      const char *common_tex_coord_names[8] = {
+          "cogl_tex_coord0_in",
+          "cogl_tex_coord1_in",
+          "cogl_tex_coord2_in",
+          "cogl_tex_coord3_in",
+          "cogl_tex_coord4_in",
+          "cogl_tex_coord5_in",
+          "cogl_tex_coord6_in",
+          "cogl_tex_coord7_in"
+      };
+      status = validate_cogl_attribute (name,
+                                        n_components,
+                                        &attribute->name_id,
+                                        &attribute->normalized,
+                                        &attribute->texture_unit);
+
+      /* Avoid even the cost of g_intern_string() for the very common case
+       * attribute names...*/
+      switch (attribute->name_id)
+        {
+        case COGL_ATTRIBUTE_NAME_ID_POSITION_ARRAY:
+          attribute->name = "cogl_position_in";
+          break;
+        case COGL_ATTRIBUTE_NAME_ID_COLOR_ARRAY:
+          attribute->name = "cogl_color_in";
+          break;
+        case COGL_ATTRIBUTE_NAME_ID_TEXTURE_COORD_ARRAY:
+          if (attribute->texture_unit < 8)
+            attribute->name = common_tex_coord_names[attribute->texture_unit];
+          else
+            attribute->name = g_intern_string (name);
+          break;
+        case COGL_ATTRIBUTE_NAME_ID_NORMAL_ARRAY:
+          attribute->name = "cogl_normal_in";
+          break;
+        default:
+          g_warn_if_reached ();
+        }
+    }
 #if 0
   else if (strncmp (name, "gl_", 3) == 0)
     status = validate_gl_attribute (attribute->name,
@@ -227,6 +265,7 @@ cogl_attribute_new (CoglAttributeBuffer *attribute_buffer,
 #endif
   else
     {
+      attribute->name = g_intern_string (name);
       attribute->name_id = COGL_ATTRIBUTE_NAME_ID_CUSTOM_ARRAY;
       attribute->normalized = FALSE;
       attribute->texture_unit = 0;
@@ -320,7 +359,6 @@ _cogl_attribute_immutable_unref (CoglAttribute *attribute)
 static void
 _cogl_attribute_free (CoglAttribute *attribute)
 {
-  g_free (attribute->name);
   cogl_object_unref (attribute->attribute_buffer);
 
   g_slice_free (CoglAttribute, attribute);
@@ -338,14 +376,14 @@ validate_layer_cb (CoglPipeline *pipeline,
                    int layer_index,
                    void *user_data)
 {
-  CoglHandle texture =
+  CoglTexture *texture =
     _cogl_pipeline_get_layer_texture (pipeline, layer_index);
   ValidateLayerState *state = user_data;
   gboolean status = TRUE;
 
   /* invalid textures will be handled correctly in
    * _cogl_pipeline_flush_layers_gl_state */
-  if (texture == COGL_INVALID_HANDLE)
+  if (texture == NULL)
     goto validated;
 
   _cogl_texture_flush_journal_rendering (texture);
@@ -535,7 +573,7 @@ enable_gl_state (CoglDrawFlags flags,
     }
 
   if (G_UNLIKELY (ctx->legacy_state_set) &&
-      (flags & COGL_DRAW_SKIP_LEGACY_STATE) == 0)
+      _cogl_get_enable_legacy_state ())
     {
       /* If we haven't already created a derived pipeline... */
       if (!copy)
@@ -547,9 +585,6 @@ enable_gl_state (CoglDrawFlags flags,
     }
 
   _cogl_pipeline_flush_gl_state (source, skip_gl_color, n_tex_coord_attribs);
-
-  if (ctx->enable_backface_culling)
-    enable_flags |= COGL_ENABLE_BACKFACE_CULLING;
 
   _cogl_bitmask_clear_all (&ctx->temp_bitmask);
 
@@ -725,7 +760,6 @@ enable_gl_state (CoglDrawFlags flags,
   set_enabled_arrays (&ctx->arrays_enabled, &ctx->temp_bitmask);
 
   _cogl_enable (enable_flags);
-  _cogl_flush_face_winding ();
 
   return source;
 }
@@ -1015,7 +1049,7 @@ draw_wireframe (CoglVerticesMode mode,
                                   0x00, 0xff, 0x00, 0xff);
     }
 
-  cogl_push_source (wire_pipeline);
+  _cogl_push_source (wire_pipeline, FALSE);
 
   /* temporarily disable the wireframe to avoid recursion! */
   COGL_DEBUG_CLEAR_FLAG (COGL_DEBUG_WIREFRAME);
@@ -1026,8 +1060,7 @@ draw_wireframe (CoglVerticesMode mode,
                          1,
                          COGL_DRAW_SKIP_JOURNAL_FLUSH |
                          COGL_DRAW_SKIP_PIPELINE_VALIDATION |
-                         COGL_DRAW_SKIP_FRAMEBUFFER_FLUSH |
-                         COGL_DRAW_SKIP_LEGACY_STATE);
+                         COGL_DRAW_SKIP_FRAMEBUFFER_FLUSH);
 
   COGL_DEBUG_SET_FLAG (COGL_DEBUG_WIREFRAME);
 

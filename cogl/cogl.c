@@ -30,6 +30,7 @@
 #include <string.h>
 #include <math.h>
 #include <stdlib.h>
+#include <glib/gi18n-lib.h>
 
 #include "cogl-debug.h"
 #include "cogl-internal.h"
@@ -48,6 +49,7 @@
 #include "cogl-framebuffer-private.h"
 #include "cogl-renderer-private.h"
 #include "cogl-config-private.h"
+#include "cogl-private.h"
 
 #ifndef GL_PACK_INVERT_MESA
 #define GL_PACK_INVERT_MESA 0x8758
@@ -139,33 +141,6 @@ cogl_clear (const CoglColor *color, unsigned long buffers)
   cogl_framebuffer_clear (cogl_get_draw_framebuffer (), buffers, color);
 }
 
-static gboolean
-toggle_flag (CoglContext *ctx,
-	     unsigned long new_flags,
-	     unsigned long flag,
-	     GLenum gl_flag)
-{
-  /* Toggles and caches a single enable flag on or off
-   * by comparing to current state
-   */
-  if (new_flags & flag)
-    {
-      if (!(ctx->enable_flags & flag))
-	{
-	  GE( ctx, glEnable (gl_flag) );
-	  ctx->enable_flags |= flag;
-	  return TRUE;
-	}
-    }
-  else if (ctx->enable_flags & flag)
-    {
-      GE( ctx, glDisable (gl_flag) );
-      ctx->enable_flags &= ~flag;
-    }
-
-  return FALSE;
-}
-
 #if defined (HAVE_COGL_GL) || defined (HAVE_COGL_GLES)
 
 static gboolean
@@ -206,10 +181,6 @@ _cogl_enable (unsigned long flags)
    * hope of lessening number GL traffic.
   */
   _COGL_GET_CONTEXT (ctx, NO_RETVAL);
-
-  toggle_flag (ctx, flags,
-               COGL_ENABLE_BACKFACE_CULLING,
-               GL_CULL_FACE);
 
 #if defined (HAVE_COGL_GL) || defined (HAVE_COGL_GLES)
   if (ctx->driver != COGL_DRIVER_GLES2)
@@ -262,13 +233,15 @@ cogl_set_backface_culling_enabled (gboolean setting)
 {
   _COGL_GET_CONTEXT (ctx, NO_RETVAL);
 
-  if (ctx->enable_backface_culling == setting)
+  if (ctx->legacy_backface_culling_enabled == setting)
     return;
 
-  /* Currently the journal can't track changes to backface culling state... */
-  _cogl_framebuffer_flush_journal (cogl_get_draw_framebuffer ());
+  ctx->legacy_backface_culling_enabled = setting;
 
-  ctx->enable_backface_culling = setting;
+  if (ctx->legacy_backface_culling_enabled)
+    ctx->legacy_state_set++;
+  else
+    ctx->legacy_state_set--;
 }
 
 gboolean
@@ -276,39 +249,7 @@ cogl_get_backface_culling_enabled (void)
 {
   _COGL_GET_CONTEXT (ctx, FALSE);
 
-  return ctx->enable_backface_culling;
-}
-
-void
-_cogl_flush_face_winding (void)
-{
-  CoglFrontWinding winding;
-
-  _COGL_GET_CONTEXT (ctx, NO_RETVAL);
-
-  /* The front face winding doesn't matter if we aren't performing any
-   * backface culling... */
-  if (!ctx->enable_backface_culling)
-    return;
-
-  /* NB: We use a clockwise face winding order when drawing offscreen because
-   * all offscreen rendering is done upside down resulting in reversed winding
-   * for all triangles.
-   */
-  if (cogl_is_offscreen (cogl_get_draw_framebuffer ()))
-    winding = COGL_FRONT_WINDING_CLOCKWISE;
-  else
-    winding = COGL_FRONT_WINDING_COUNTER_CLOCKWISE;
-
-  if (winding != ctx->flushed_front_winding)
-    {
-
-      if (winding == COGL_FRONT_WINDING_CLOCKWISE)
-        GE (ctx, glFrontFace (GL_CW));
-      else
-        GE (ctx, glFrontFace (GL_CCW));
-      ctx->flushed_front_winding = winding;
-    }
+  return ctx->legacy_backface_culling_enabled;
 }
 
 void
@@ -724,11 +665,7 @@ cogl_begin_gl (void)
                                  FALSE,
                                  cogl_pipeline_get_n_layers (pipeline));
 
-  if (ctx->enable_backface_culling)
-    enable_flags |= COGL_ENABLE_BACKFACE_CULLING;
-
   _cogl_enable (enable_flags);
-  _cogl_flush_face_winding ();
 
   /* Disable any cached vertex arrays */
   _cogl_attribute_disable_cached_arrays ();
@@ -926,15 +863,22 @@ typedef struct _CoglSourceState
 {
   CoglPipeline *pipeline;
   int push_count;
+  /* If this is TRUE then the pipeline will be copied and the legacy
+     state will be applied whenever the pipeline is used. This is
+     necessary because some internal Cogl code expects to be able to
+     push a temporary pipeline to put GL into a known state. For that
+     to work it also needs to prevent applying the legacy state */
+  gboolean enable_legacy;
 } CoglSourceState;
 
 static void
-_push_source_real (CoglPipeline *pipeline)
+_push_source_real (CoglPipeline *pipeline, gboolean enable_legacy)
 {
   CoglSourceState *top = g_slice_new (CoglSourceState);
   _COGL_GET_CONTEXT (ctx, NO_RETVAL);
 
   top->pipeline = cogl_object_ref (pipeline);
+  top->enable_legacy = enable_legacy;
   top->push_count = 1;
 
   ctx->source_stack = g_list_prepend (ctx->source_stack, top);
@@ -946,8 +890,20 @@ _push_source_real (CoglPipeline *pipeline)
 void
 cogl_push_source (void *material_or_pipeline)
 {
-  CoglSourceState *top;
   CoglPipeline *pipeline = COGL_PIPELINE (material_or_pipeline);
+
+  g_return_if_fail (cogl_is_pipeline (pipeline));
+
+  _cogl_push_source (pipeline, TRUE);
+}
+
+/* This internal version of cogl_push_source is the same except it
+   never applies the legacy state. Some parts of Cogl use this
+   internally to set a temporary pipeline with a known state */
+void
+_cogl_push_source (CoglPipeline *pipeline, gboolean enable_legacy)
+{
+  CoglSourceState *top;
 
   _COGL_GET_CONTEXT (ctx, NO_RETVAL);
 
@@ -956,16 +912,16 @@ cogl_push_source (void *material_or_pipeline)
   if (ctx->source_stack)
     {
       top = ctx->source_stack->data;
-      if (top->pipeline == pipeline)
+      if (top->pipeline == pipeline && top->enable_legacy == enable_legacy)
         {
           top->push_count++;
           return;
         }
       else
-        _push_source_real (pipeline);
+        _push_source_real (pipeline, enable_legacy);
     }
   else
-    _push_source_real (pipeline);
+    _push_source_real (pipeline, enable_legacy);
 }
 
 /* FIXME: This needs to take a context pointer for Cogl 2.0 */
@@ -1003,6 +959,19 @@ cogl_get_source (void)
   return top->pipeline;
 }
 
+gboolean
+_cogl_get_enable_legacy_state (void)
+{
+  CoglSourceState *top;
+
+  _COGL_GET_CONTEXT (ctx, FALSE);
+
+  g_return_val_if_fail (ctx->source_stack, FALSE);
+
+  top = ctx->source_stack->data;
+  return top->enable_legacy;
+}
+
 void
 cogl_set_source (void *material_or_pipeline)
 {
@@ -1015,7 +984,7 @@ cogl_set_source (void *material_or_pipeline)
   g_return_if_fail (ctx->source_stack);
 
   top = ctx->source_stack->data;
-  if (top->pipeline == pipeline)
+  if (top->pipeline == pipeline && top->enable_legacy)
     return;
 
   if (top->push_count == 1)
@@ -1025,6 +994,7 @@ cogl_set_source (void *material_or_pipeline)
       cogl_object_ref (pipeline);
       cogl_object_unref (top->pipeline);
       top->pipeline = pipeline;
+      top->enable_legacy = TRUE;
     }
   else
     {
@@ -1034,13 +1004,13 @@ cogl_set_source (void *material_or_pipeline)
 }
 
 void
-cogl_set_source_texture (CoglHandle texture_handle)
+cogl_set_source_texture (CoglTexture *texture)
 {
   _COGL_GET_CONTEXT (ctx, NO_RETVAL);
 
-  g_return_if_fail (texture_handle != NULL);
+  g_return_if_fail (texture != NULL);
 
-  cogl_pipeline_set_layer_texture (ctx->texture_pipeline, 0, texture_handle);
+  cogl_pipeline_set_layer_texture (ctx->texture_pipeline, 0, texture);
   cogl_set_source (ctx->texture_pipeline);
 }
 
@@ -1121,6 +1091,9 @@ _cogl_init (void)
 
   if (g_once_init_enter (&init_status))
     {
+      bindtextdomain (GETTEXT_PACKAGE, COGL_LOCALEDIR);
+      bind_textdomain_codeset (GETTEXT_PACKAGE, "UTF-8");
+
       g_type_init ();
 
       _cogl_config_read ();

@@ -31,6 +31,7 @@ AM_CPPFLAGS = \
 	-DCOGL_GL_LIBNAME=\"$(COGL_GL_LIBNAME)\" \
 	-DCOGL_GLES1_LIBNAME=\"$(COGL_GLES1_LIBNAME)\" \
 	-DCOGL_GLES2_LIBNAME=\"$(COGL_GLES2_LIBNAME)\" \
+	-DCOGL_LOCALEDIR=\""$(localedir)"\" \
 	$(NULL)
 
 AM_CFLAGS = $(COGL_DEP_CFLAGS) $(COGL_EXTRA_CFLAGS) $(MAINTAINER_CFLAGS)
@@ -66,7 +67,6 @@ cogl_public_h = \
 	$(srcdir)/cogl-fixed.h 			\
 	$(srcdir)/cogl-depth-state.h 		\
 	$(srcdir)/cogl-material-compat.h 	\
-	$(srcdir)/cogl-pipeline.h 		\
 	$(srcdir)/cogl-vector.h 		\
 	$(srcdir)/cogl-euler.h 			\
 	$(srcdir)/cogl-quaternion.h 		\
@@ -98,6 +98,9 @@ cogl_experimental_h = \
 	$(srcdir)/cogl-onscreen-template.h 	\
 	$(srcdir)/cogl-display.h		\
 	$(srcdir)/cogl-context.h 		\
+	$(srcdir)/cogl-pipeline.h 		\
+	$(srcdir)/cogl-pipeline-state.h 	\
+	$(srcdir)/cogl-pipeline-layer-state.h 	\
 	$(srcdir)/cogl2-path.h 			\
 	$(srcdir)/cogl2-clip-state.h		\
 	$(srcdir)/cogl2-experimental.h		\
@@ -241,8 +244,18 @@ cogl_sources_c = \
 	$(srcdir)/cogl-matrix-stack.h			\
 	$(srcdir)/cogl-depth-state.c			\
 	$(srcdir)/cogl-depth-state-private.h		\
+	$(srcdir)/cogl-node.c				\
+	$(srcdir)/cogl-node-private.h			\
 	$(srcdir)/cogl-pipeline.c			\
 	$(srcdir)/cogl-pipeline-private.h		\
+	$(srcdir)/cogl-pipeline-layer.c			\
+	$(srcdir)/cogl-pipeline-layer-private.h		\
+	$(srcdir)/cogl-pipeline-state.c			\
+	$(srcdir)/cogl-pipeline-layer-state-private.h	\
+	$(srcdir)/cogl-pipeline-layer-state.c		\
+	$(srcdir)/cogl-pipeline-state-private.h		\
+	$(srcdir)/cogl-pipeline-debug.c			\
+	$(srcdir)/cogl-pipeline-debug-private.h		\
 	$(srcdir)/cogl-pipeline-opengl.c		\
 	$(srcdir)/cogl-pipeline-opengl-private.h	\
 	$(srcdir)/cogl-pipeline-fragend-glsl.c		\

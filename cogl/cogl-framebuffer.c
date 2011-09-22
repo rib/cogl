@@ -39,6 +39,7 @@
 #include "cogl-clip-stack.h"
 #include "cogl-journal-private.h"
 #include "cogl-winsys-private.h"
+#include "cogl-pipeline-state-private.h"
 
 #ifndef GL_FRAMEBUFFER
 #define GL_FRAMEBUFFER		0x8D40
@@ -681,7 +682,7 @@ _cogl_framebuffer_init_bits (CoglFramebuffer *framebuffer)
 
 typedef struct
 {
-  CoglHandle texture;
+  CoglTexture *texture;
   unsigned int level;
   unsigned int level_width;
   unsigned int level_height;
@@ -807,7 +808,7 @@ try_creating_fbo (CoglOffscreen *offscreen,
 }
 
 CoglHandle
-_cogl_offscreen_new_to_texture_full (CoglHandle texhandle,
+_cogl_offscreen_new_to_texture_full (CoglTexture *texture,
                                      CoglOffscreenFlags create_flags,
                                      unsigned int level)
 {
@@ -823,21 +824,21 @@ _cogl_offscreen_new_to_texture_full (CoglHandle texhandle,
   if (!cogl_features_available (COGL_FEATURE_OFFSCREEN))
     return COGL_INVALID_HANDLE;
 
-  /* Make texhandle is a valid texture object */
-  if (!cogl_is_texture (texhandle))
+  /* Make texture is a valid texture object */
+  if (!cogl_is_texture (texture))
     return COGL_INVALID_HANDLE;
 
   /* The texture must not be sliced */
-  if (cogl_texture_is_sliced (texhandle))
+  if (cogl_texture_is_sliced (texture))
     return COGL_INVALID_HANDLE;
 
-  data.texture = texhandle;
+  data.texture = texture;
   data.level = level;
 
   /* Calculate the size of the texture at this mipmap level to ensure
      that it's a valid level */
-  data.level_width = cogl_texture_get_width (texhandle);
-  data.level_height = cogl_texture_get_height (texhandle);
+  data.level_width = cogl_texture_get_width (texture);
+  data.level_height = cogl_texture_get_height (texture);
 
   for (i = 0; i < level; i++)
     {
@@ -862,10 +863,10 @@ _cogl_offscreen_new_to_texture_full (CoglHandle texhandle,
    * the texture is actually used for rendering according to the filters set on
    * the corresponding CoglPipeline.
    */
-  _cogl_texture_set_filters (texhandle, GL_NEAREST, GL_NEAREST);
+  _cogl_texture_set_filters (texture, GL_NEAREST, GL_NEAREST);
 
   offscreen = g_new0 (CoglOffscreen, 1);
-  offscreen->texture = texhandle;
+  offscreen->texture = texture;
 
   if ((create_flags & COGL_OFFSCREEN_DISABLE_DEPTH_AND_STENCIL))
     fbo_created = try_creating_fbo (offscreen, 0, &data);
@@ -902,15 +903,14 @@ _cogl_offscreen_new_to_texture_full (CoglHandle texhandle,
       _cogl_framebuffer_init (fb,
                               ctx,
                               COGL_FRAMEBUFFER_TYPE_OFFSCREEN,
-                              cogl_texture_get_format (texhandle),
+                              cogl_texture_get_format (texture),
                               data.level_width,
                               data.level_height);
 
-      /* take a reference on the texture */
-      cogl_handle_ref (offscreen->texture);
+      cogl_object_ref (offscreen->texture);
 
       ret = _cogl_offscreen_object_new (offscreen);
-      _cogl_texture_associate_framebuffer (texhandle, COGL_FRAMEBUFFER (ret));
+      _cogl_texture_associate_framebuffer (texture, COGL_FRAMEBUFFER (ret));
 
       fb->allocated = TRUE;
 
@@ -927,9 +927,9 @@ _cogl_offscreen_new_to_texture_full (CoglHandle texhandle,
 }
 
 CoglHandle
-cogl_offscreen_new_to_texture (CoglHandle texhandle)
+cogl_offscreen_new_to_texture (CoglTexture *texture)
 {
-  return _cogl_offscreen_new_to_texture_full (texhandle, 0, 0);
+  return _cogl_offscreen_new_to_texture_full (texture, 0, 0);
 }
 
 static void
@@ -952,7 +952,7 @@ _cogl_offscreen_free (CoglOffscreen *offscreen)
   GE (ctx, glDeleteFramebuffers (1, &offscreen->fbo_handle));
 
   if (offscreen->texture != COGL_INVALID_HANDLE)
-    cogl_handle_unref (offscreen->texture);
+    cogl_object_unref (offscreen->texture);
 
   g_free (offscreen);
 }
@@ -1120,6 +1120,71 @@ _cogl_free_framebuffer_stack (GSList *stack)
   g_slist_free (stack);
 }
 
+static void
+notify_buffers_changed (CoglFramebuffer *old_draw_buffer,
+                        CoglFramebuffer *new_draw_buffer,
+                        CoglFramebuffer *old_read_buffer,
+                        CoglFramebuffer *new_read_buffer)
+{
+  _COGL_GET_CONTEXT (ctx, NO_RETVAL);
+
+  ctx->dirty_bound_framebuffer = 1;
+  ctx->dirty_gl_viewport = 1;
+
+  /* We've effectively just switched the current modelview and
+   * projection matrix stacks and clip state so we need to dirty
+   * them to ensure they get flushed for the next batch of geometry
+   * we flush */
+  if (new_draw_buffer)
+    {
+      _cogl_matrix_stack_dirty (new_draw_buffer->modelview_stack);
+      _cogl_matrix_stack_dirty (new_draw_buffer->projection_stack);
+    }
+
+  _cogl_clip_stack_dirty ();
+
+  if (old_draw_buffer && new_draw_buffer)
+    {
+      /* If the two draw framebuffers have a different color mask then
+         we need to ensure the logic ops are reflushed the next time
+         something is drawn */
+      if (cogl_framebuffer_get_color_mask (old_draw_buffer) !=
+          cogl_framebuffer_get_color_mask (new_draw_buffer))
+        {
+          ctx->current_pipeline_changes_since_flush |=
+            COGL_PIPELINE_STATE_LOGIC_OPS;
+          ctx->current_pipeline_age--;
+        }
+
+      /* If we're switching from onscreen to offscreen and the last
+         flush pipeline is using backface culling then we also need to
+         reflush the cull face state because the winding order of the
+         front face is flipped for offscreen buffers */
+      if (old_draw_buffer->type != new_draw_buffer->type &&
+          ctx->current_pipeline &&
+          _cogl_pipeline_get_cull_face_mode (ctx->current_pipeline) !=
+          COGL_PIPELINE_CULL_FACE_MODE_NONE)
+        {
+          ctx->current_pipeline_changes_since_flush |=
+            COGL_PIPELINE_STATE_CULL_FACE;
+          ctx->current_pipeline_age--;
+        }
+    }
+
+  /* XXX:
+   * To support the deprecated cogl_set_draw_buffer API we keep track
+   * of the last onscreen framebuffer that was set so that it can
+   * be restored if the COGL_WINDOW_BUFFER enum is used. */
+  if (new_draw_buffer &&
+      new_draw_buffer->type == COGL_FRAMEBUFFER_TYPE_ONSCREEN)
+    {
+      cogl_object_ref (new_draw_buffer);
+      if (ctx->window_buffer)
+        cogl_object_unref (ctx->window_buffer);
+      ctx->window_buffer = new_draw_buffer;
+    }
+}
+
 /* Set the current framebuffer without checking if it's already the
  * current framebuffer. This is used by cogl_pop_framebuffer while
  * the top of the stack is currently not up to date. */
@@ -1128,7 +1193,6 @@ _cogl_set_framebuffers_real (CoglFramebuffer *draw_buffer,
                              CoglFramebuffer *read_buffer)
 {
   CoglFramebufferStackEntry *entry;
-  GSList *l;
 
   _COGL_GET_CONTEXT (ctx, NO_RETVAL);
 
@@ -1138,8 +1202,10 @@ _cogl_set_framebuffers_real (CoglFramebuffer *draw_buffer,
 
   entry = ctx->framebuffer_stack->data;
 
-  ctx->dirty_bound_framebuffer = 1;
-  ctx->dirty_gl_viewport = 1;
+  notify_buffers_changed (entry->draw_buffer,
+                          draw_buffer,
+                          entry->read_buffer,
+                          read_buffer);
 
   if (draw_buffer)
     cogl_object_ref (draw_buffer);
@@ -1153,31 +1219,6 @@ _cogl_set_framebuffers_real (CoglFramebuffer *draw_buffer,
 
   entry->draw_buffer = draw_buffer;
   entry->read_buffer = read_buffer;
-
-  /* We've effectively just switched the current modelview and
-   * projection matrix stacks and clip state so we need to dirty
-   * them to ensure they get flushed for the next batch of geometry
-   * we flush */
-  if (draw_buffer)
-    {
-      _cogl_matrix_stack_dirty (draw_buffer->modelview_stack);
-      _cogl_matrix_stack_dirty (draw_buffer->projection_stack);
-    }
-
-  _cogl_clip_stack_dirty ();
-
-  /* XXX:
-   * To support the deprecated cogl_set_draw_buffer API we keep track
-   * of the last onscreen framebuffer that was pushed so that it can
-   * be restored if the COGL_WINDOW_BUFFER enum is used. */
-  ctx->window_buffer = NULL;
-  for (l = ctx->framebuffer_stack; l; l = l->next)
-    {
-      entry = l->data;
-      if (entry->draw_buffer &&
-          entry->draw_buffer->type == COGL_FRAMEBUFFER_TYPE_ONSCREEN)
-        ctx->window_buffer = entry->draw_buffer;
-    }
 }
 
 static void
@@ -1309,7 +1350,6 @@ cogl_pop_framebuffer (void)
 {
   CoglFramebufferStackEntry *to_pop;
   CoglFramebufferStackEntry *to_restore;
-  gboolean changed = FALSE;
 
   _COGL_GET_CONTEXT (ctx, NO_RETVAL);
 
@@ -1329,7 +1369,10 @@ cogl_pop_framebuffer (void)
       _cogl_framebuffer_flush_journal (to_pop->draw_buffer);
       _cogl_framebuffer_flush_journal (to_pop->read_buffer);
 
-      changed = TRUE;
+      notify_buffers_changed (to_pop->draw_buffer,
+                              to_restore->draw_buffer,
+                              to_pop->read_buffer,
+                              to_restore->read_buffer);
     }
 
   cogl_object_unref (to_pop->draw_buffer);
@@ -1339,13 +1382,6 @@ cogl_pop_framebuffer (void)
   ctx->framebuffer_stack =
     g_slist_delete_link (ctx->framebuffer_stack,
                          ctx->framebuffer_stack);
-
-  /* If the framebuffer has changed as a result of popping the top
-   * then re-assert the current buffer so as to dirty state as
-   * necessary. */
-  if (changed)
-    _cogl_set_framebuffers_real (to_restore->draw_buffer,
-                                 to_restore->read_buffer);
 }
 
 /* XXX: deprecated API */

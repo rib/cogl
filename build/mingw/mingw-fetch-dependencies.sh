@@ -24,22 +24,28 @@ TOR_DEPS=( \
 
 GL_HEADER_URLS=( \
     http://cgit.freedesktop.org/mesa/mesa/plain/include/GL/gl.h \
-    http://cgit.freedesktop.org/mesa/mesa/plain/include/GL/mesa_wgl.h \
     http://www.opengl.org/registry/api/glext.h );
 
-GL_HEADERS=( gl.h mesa_wgl.h glext.h );
+GL_HEADERS=( gl.h glext.h );
+
+CONFIG_GUESS_URL="http://git.savannah.gnu.org/gitweb/?p=automake.git;a=blob_plain;f=lib/config.guess"
 
 function download_file ()
 {
     local url="$1"; shift;
     local filename="$1"; shift;
 
+    if test -f "$DOWNLOAD_DIR/$filename"; then
+        echo "Skipping download of $filename because the file already exists";
+        return 0;
+    fi;
+
     case "$DOWNLOAD_PROG" in
 	curl)
-	    curl -C - -o "$DOWNLOAD_DIR/$filename" "$url";
+	    curl -o "$DOWNLOAD_DIR/$filename" "$url";
 	    ;;
 	*)
-	    $DOWNLOAD_PROG -O "$DOWNLOAD_DIR/$filename" -c "$url";
+	    $DOWNLOAD_PROG -O "$DOWNLOAD_DIR/$filename" "$url";
 	    ;;
     esac;
 
@@ -252,6 +258,8 @@ for dep in "${GL_HEADER_URLS[@]}"; do
     download_file "$dep" "$bn";
 done;
 
+download_file "$CONFIG_GUESS_URL" "config.guess";
+
 ##
 # Extract files
 ##
@@ -321,15 +329,17 @@ chmod a+x "$RUN_PKG_CONFIG";
 
 find_compiler;
 
+build_config=`bash $DOWNLOAD_DIR/config.guess`;
+
 echo
 echo "Done!"
 echo
 echo "You should now have everything you need to cross compile Cogl"
 echo
 echo "To get started, you should be able to configure and build from"
-echo "the top of your clutter source directory as follows:"
+echo "the top of your cogl source directory as follows:"
 echo
-echo "./configure --host=\"$TARGET\" --target=\"$TARGET\" --build=\"\`./config.guess\`\" --enable-stub-winsys CFLAGS=\"-mms-bitfields\" PKG_CONFIG=\"$RUN_PKG_CONFIG\"" PKG_CONFIG_PATH=
+echo "./configure --host=\"$TARGET\" --target=\"$TARGET\" --build=\"$build_config\" --enable-wgl CFLAGS=\"-mms-bitfields -I$ROOT_DIR/include\" PKG_CONFIG=\"$RUN_PKG_CONFIG\"" PKG_CONFIG_PATH=
 echo "make"
 echo
 echo "Note: the explicit --build option is often necessary to ensure autoconf"

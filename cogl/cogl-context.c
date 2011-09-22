@@ -216,8 +216,7 @@ cogl_context_new (CoglDisplay *display,
   context->current_clip_stack_valid = FALSE;
   context->current_clip_stack = NULL;
 
-  context->enable_backface_culling = FALSE;
-  context->flushed_front_winding = COGL_FRONT_WINDING_COUNTER_CLOCKWISE;
+  context->legacy_backface_culling_enabled = FALSE;
 
   cogl_matrix_init_identity (&context->identity_matrix);
   cogl_matrix_init_identity (&context->y_flip_matrix);
@@ -244,8 +243,8 @@ cogl_context_new (CoglDisplay *display,
 
   context->legacy_state_set = 0;
 
-  context->default_gl_texture_2d_tex = COGL_INVALID_HANDLE;
-  context->default_gl_texture_rect_tex = COGL_INVALID_HANDLE;
+  context->default_gl_texture_2d_tex = NULL;
+  context->default_gl_texture_rect_tex = NULL;
 
   context->framebuffers = NULL;
 
@@ -258,11 +257,6 @@ cogl_context_new (CoglDisplay *display,
   context->current_pipeline = NULL;
   context->current_pipeline_changes_since_flush = 0;
   context->current_pipeline_skip_gl_color = FALSE;
-
-  context->pipeline0_nodes =
-    g_array_sized_new (FALSE, FALSE, sizeof (CoglHandle), 20);
-  context->pipeline1_nodes =
-    g_array_sized_new (FALSE, FALSE, sizeof (CoglHandle), 20);
 
   _cogl_bitmask_init (&context->arrays_enabled);
   _cogl_bitmask_init (&context->temp_bitmask);
@@ -297,6 +291,7 @@ cogl_context_new (CoglDisplay *display,
   for (i = 0; i < COGL_BUFFER_BIND_TARGET_COUNT; i++)
     context->current_buffer[i] = NULL;
 
+  context->window_buffer = NULL;
   context->framebuffer_stack = _cogl_create_framebuffer_stack ();
 
   /* XXX: In this case the Clutter backend is still responsible for
@@ -368,7 +363,6 @@ cogl_context_new (CoglDisplay *display,
   cogl_push_source (context->opaque_color_pipeline);
   _cogl_pipeline_flush_gl_state (context->opaque_color_pipeline, FALSE, 0);
   _cogl_enable (enable_flags);
-  _cogl_flush_face_winding ();
 
   context->atlases = NULL;
   g_hook_list_init (&context->atlas_reorganize_callbacks, sizeof (GHook));
@@ -399,15 +393,21 @@ _cogl_context_free (CoglContext *context)
 
   _cogl_destroy_texture_units ();
 
+  if (context->window_buffer)
+    {
+      cogl_object_unref (context->window_buffer);
+      context->window_buffer = NULL;
+    }
+
   _cogl_free_framebuffer_stack (context->framebuffer_stack);
 
   if (context->current_path)
     cogl_handle_unref (context->current_path);
 
   if (context->default_gl_texture_2d_tex)
-    cogl_handle_unref (context->default_gl_texture_2d_tex);
+    cogl_object_unref (context->default_gl_texture_2d_tex);
   if (context->default_gl_texture_rect_tex)
-    cogl_handle_unref (context->default_gl_texture_rect_tex);
+    cogl_object_unref (context->default_gl_texture_rect_tex);
 
   if (context->opaque_color_pipeline)
     cogl_handle_unref (context->opaque_color_pipeline);

@@ -74,8 +74,7 @@ struct _CoglContext
   /* Enable cache */
   unsigned long     enable_flags;
 
-  gboolean          enable_backface_culling;
-  CoglFrontWinding  flushed_front_winding;
+  gboolean          legacy_backface_culling_enabled;
 
   /* A few handy matrix constants */
   CoglMatrix        identity_matrix;
@@ -128,9 +127,6 @@ struct _CoglContext
   unsigned long     current_pipeline_changes_since_flush;
   gboolean          current_pipeline_skip_gl_color;
   unsigned long     current_pipeline_age;
-
-  GArray           *pipeline0_nodes;
-  GArray           *pipeline1_nodes;
 
   /* Bitmask of attributes enabled. On GLES2 these are the vertex
      attribute numbers and on regular GL these are only used for the

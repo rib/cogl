@@ -33,6 +33,7 @@
 #include <string.h>
 
 #include "cogl-pipeline-private.h"
+#include "cogl-pipeline-layer-private.h"
 #include "cogl-shader-private.h"
 #include "cogl-blend-string.h"
 
@@ -366,7 +367,7 @@ ensure_texture_lookup_generated (CoglPipelineShaderState *shader_state,
 
   texture = _cogl_pipeline_layer_get_texture (layer);
 
-  if (texture == COGL_INVALID_HANDLE)
+  if (texture == NULL)
     {
       target_string = "2D";
       tex_coord_swizzle = "st";
@@ -730,7 +731,7 @@ ensure_layer_generated (CoglPipeline *pipeline,
                           "  vec4 layer%i;\n",
                           layer_index);
 
-  if (!_cogl_pipeline_need_texture_combine_separate (combine_authority) ||
+  if (!_cogl_pipeline_layer_needs_combine_separate (combine_authority) ||
       /* GL_DOT3_RGBA Is a bit weird as a GL_COMBINE_RGB function
        * since if you use it, it overrides your ALPHA function...
        */

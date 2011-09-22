@@ -31,6 +31,7 @@
 
 #include "cogl-debug.h"
 #include "cogl-pipeline-private.h"
+#include "cogl-pipeline-layer-private.h"
 
 #ifdef COGL_PIPELINE_FRAGEND_ARBFP
 
@@ -165,7 +166,7 @@ _cogl_pipeline_fragend_arbfp_start (CoglPipeline *pipeline,
     return FALSE;
 
   /* TODO: support fog */
-  if (ctx->legacy_fog_state.enabled)
+  if (_cogl_pipeline_get_fog_enabled (pipeline))
     return FALSE;
 
   user_program = cogl_pipeline_get_user_program (pipeline);
@@ -709,7 +710,7 @@ _cogl_pipeline_fragend_arbfp_add_layer (CoglPipeline *pipeline,
   if (!shader_state->source)
     return TRUE;
 
-  if (!_cogl_pipeline_need_texture_combine_separate (combine_authority))
+  if (!_cogl_pipeline_layer_needs_combine_separate (combine_authority))
     {
       append_masked_combine (pipeline,
                              layer,

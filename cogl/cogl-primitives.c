@@ -36,6 +36,7 @@
 #include "cogl-vertex-buffer-private.h"
 #include "cogl-framebuffer-private.h"
 #include "cogl-attribute-private.h"
+#include "cogl-private.h"
 
 #include <string.h>
 #include <math.h>
@@ -45,7 +46,7 @@
 typedef struct _TextureSlicedQuadState
 {
   CoglPipeline *pipeline;
-  CoglHandle main_texture;
+  CoglTexture *main_texture;
   float tex_virtual_origin_x;
   float tex_virtual_origin_y;
   float quad_origin_x;
@@ -67,14 +68,14 @@ typedef struct _TextureSlicedPolygonState
 } TextureSlicedPolygonState;
 
 static void
-log_quad_sub_textures_cb (CoglHandle texture_handle,
+log_quad_sub_textures_cb (CoglTexture *texture,
                           const float *subtexture_coords,
                           const float *virtual_coords,
                           void *user_data)
 {
   TextureSlicedQuadState *state = user_data;
   CoglFramebuffer *framebuffer = cogl_get_draw_framebuffer ();
-  CoglHandle texture_override;
+  CoglTexture *texture_override;
   float quad_coords[4];
 
 #define TEX_VIRTUAL_TO_QUAD(V, Q, AXIS) \
@@ -111,10 +112,10 @@ log_quad_sub_textures_cb (CoglHandle texture_handle,
 
   /* We only need to override the texture if it's different from the
      main texture */
-  if (texture_handle == state->main_texture)
-    texture_override = COGL_INVALID_HANDLE;
+  if (texture == state->main_texture)
+    texture_override = NULL;
   else
-    texture_override = texture_handle;
+    texture_override = texture;
 
   _cogl_journal_log_quad (framebuffer->journal,
                           quad_coords,
@@ -179,7 +180,7 @@ validate_first_layer_cb (CoglPipeline *pipeline,
  */
 /* TODO: support multitexturing */
 static void
-_cogl_texture_quad_multiple_primitives (CoglHandle    tex_handle,
+_cogl_texture_quad_multiple_primitives (CoglTexture  *texture,
                                         CoglPipeline *pipeline,
                                         gboolean      clamp_s,
                                         gboolean      clamp_t,
@@ -219,7 +220,7 @@ _cogl_texture_quad_multiple_primitives (CoglHandle    tex_handle,
                (position[2] - position[0]) *
                (tx_1 - old_tx_1) / (old_tx_2 - old_tx_1)),
               position[3] };
-          _cogl_texture_quad_multiple_primitives (tex_handle, pipeline,
+          _cogl_texture_quad_multiple_primitives (texture, pipeline,
                                                   FALSE, clamp_t,
                                                   tmp_position,
                                                   tx_1, ty_1, tx_1, ty_2);
@@ -234,7 +235,7 @@ _cogl_texture_quad_multiple_primitives (CoglHandle    tex_handle,
                (position[2] - position[0]) *
                (tx_2 - old_tx_1) / (old_tx_2 - old_tx_1)),
               position[1], position[2], position[3] };
-          _cogl_texture_quad_multiple_primitives (tex_handle, pipeline,
+          _cogl_texture_quad_multiple_primitives (texture, pipeline,
                                                   FALSE, clamp_t,
                                                   tmp_position,
                                                   tx_2, ty_1, tx_2, ty_2);
@@ -266,7 +267,7 @@ _cogl_texture_quad_multiple_primitives (CoglHandle    tex_handle,
               (position[1] +
                (position[3] - position[1]) *
                (ty_1 - old_ty_1) / (old_ty_2 - old_ty_1)) };
-          _cogl_texture_quad_multiple_primitives (tex_handle, pipeline,
+          _cogl_texture_quad_multiple_primitives (texture, pipeline,
                                                   clamp_s, FALSE,
                                                   tmp_position,
                                                   tx_1, ty_1, tx_2, ty_1);
@@ -282,7 +283,7 @@ _cogl_texture_quad_multiple_primitives (CoglHandle    tex_handle,
                (position[3] - position[1]) *
                (ty_2 - old_ty_1) / (old_ty_2 - old_ty_1)),
               position[2], position[3] };
-          _cogl_texture_quad_multiple_primitives (tex_handle, pipeline,
+          _cogl_texture_quad_multiple_primitives (texture, pipeline,
                                                   clamp_s, FALSE,
                                                   tmp_position,
                                                   tx_1, ty_2, tx_2, ty_2);
@@ -301,7 +302,7 @@ _cogl_texture_quad_multiple_primitives (CoglHandle    tex_handle,
                                validate_first_layer_cb,
                                &validate_first_layer_state);
 
-  state.main_texture = tex_handle;
+  state.main_texture = texture;
 
   if (validate_first_layer_state.override_pipeline)
     state.pipeline = validate_first_layer_state.override_pipeline;
@@ -349,7 +350,7 @@ _cogl_texture_quad_multiple_primitives (CoglHandle    tex_handle,
   state.v_to_q_scale_x = fabs (state.quad_len_x / (tx_2 - tx_1));
   state.v_to_q_scale_y = fabs (state.quad_len_y / (ty_2 - ty_1));
 
-  _cogl_texture_foreach_sub_texture_in_region (tex_handle,
+  _cogl_texture_foreach_sub_texture_in_region (texture,
                                                tx_1, ty_1, tx_2, ty_2,
                                                log_quad_sub_textures_cb,
                                                &state);
@@ -378,7 +379,7 @@ validate_tex_coords_cb (CoglPipeline *pipeline,
                         void *user_data)
 {
   ValidateTexCoordsState *state = user_data;
-  CoglHandle texture;
+  CoglTexture *texture;
   const float *in_tex_coords;
   float *out_tex_coords;
   float default_tex_coords[4] = {0.0, 0.0, 1.0, 1.0};
@@ -456,7 +457,7 @@ validate_tex_coords_cb (CoglPipeline *pipeline,
                        "supported with multi-texturing.", state->i);
           warning_seen = TRUE;
 
-          cogl_pipeline_set_layer_texture (texture, layer_index, NULL);
+          cogl_pipeline_set_layer_texture (pipeline, layer_index, NULL);
         }
     }
 
@@ -542,7 +543,7 @@ _cogl_multitexture_quad_single_primitive (const float  *position,
                           position,
                           pipeline,
                           n_layers,
-                          COGL_INVALID_HANDLE, /* no texture override */
+                          NULL, /* no texture override */
                           final_tex_coords,
                           n_layers * 4);
 
@@ -566,7 +567,7 @@ _cogl_rectangles_validate_layer_cb (CoglPipeline *pipeline,
                                     void *user_data)
 {
   ValidateLayerState *state = user_data;
-  CoglHandle texture;
+  CoglTexture *texture;
 
   state->i++;
 
@@ -614,9 +615,9 @@ _cogl_rectangles_validate_layer_cb (CoglPipeline *pipeline,
 
   texture = _cogl_pipeline_get_layer_texture (pipeline, layer_index);
 
-  /* COGL_INVALID_HANDLE textures are handled by
+  /* NULL textures are handled by
    * _cogl_pipeline_flush_gl_state */
-  if (texture == COGL_INVALID_HANDLE)
+  if (texture == NULL)
     return TRUE;
 
   if (state->i == 0)
@@ -635,20 +636,24 @@ _cogl_rectangles_validate_layer_cb (CoglPipeline *pipeline,
     {
       if (state->i == 0)
         {
-          static gboolean warning_seen = FALSE;
+          if (cogl_pipeline_get_n_layers (pipeline) > 1)
+            {
+              static gboolean warning_seen = FALSE;
 
-          if (!state->override_source)
-            state->override_source = cogl_pipeline_copy (pipeline);
-          _cogl_pipeline_prune_to_n_layers (state->override_source, 1);
+              if (!state->override_source)
+                state->override_source = cogl_pipeline_copy (pipeline);
+              _cogl_pipeline_prune_to_n_layers (state->override_source, 1);
+
+              if (!warning_seen)
+                g_warning ("Skipping layers 1..n of your pipeline since "
+                           "the first layer is sliced. We don't currently "
+                           "support any multi-texturing with sliced "
+                           "textures but assume layer 0 is the most "
+                           "important to keep");
+              warning_seen = TRUE;
+            }
+
           state->all_use_sliced_quad_fallback = TRUE;
-
-          if (!warning_seen)
-            g_warning ("Skipping layers 1..n of your pipeline since "
-                       "the first layer is sliced. We don't currently "
-                       "support any multi-texturing with sliced "
-                       "textures but assume layer 0 is the most "
-                       "important to keep");
-          warning_seen = TRUE;
 
           return FALSE;
         }
@@ -711,13 +716,13 @@ _cogl_rectangles_with_multitexture_coords (
                                         struct _CoglMutiTexturedRect *rects,
                                         int                           n_rects)
 {
-  CoglPipeline *pipeline;
+  CoglPipeline *original_pipeline, *pipeline;
   ValidateLayerState state;
   int i;
 
   _COGL_GET_CONTEXT (ctx, NO_RETVAL);
 
-  pipeline = cogl_get_source ();
+  pipeline = original_pipeline = cogl_get_source ();
 
   /*
    * Validate all the layers of the current source pipeline...
@@ -733,13 +738,22 @@ _cogl_rectangles_with_multitexture_coords (
   if (state.override_source)
     pipeline = state.override_source;
 
+  if (G_UNLIKELY (ctx->legacy_state_set) &&
+      _cogl_get_enable_legacy_state ())
+    {
+      /* If we haven't already made a pipeline copy */
+      if (pipeline == original_pipeline)
+        pipeline = cogl_pipeline_copy (pipeline);
+      _cogl_pipeline_apply_legacy_state (pipeline);
+    }
+
   /*
    * Emit geometry for each of the rectangles...
    */
 
   for (i = 0; i < n_rects; i++)
     {
-      CoglHandle texture;
+      CoglTexture *texture;
       const float default_tex_coords[4] = {0.0, 0.0, 1.0, 1.0};
       const float *tex_coords;
       gboolean clamp_s, clamp_t;
@@ -789,7 +803,7 @@ _cogl_rectangles_with_multitexture_coords (
                                               tex_coords[3]);
     }
 
-  if (state.override_source)
+  if (pipeline != original_pipeline)
     cogl_object_unref (pipeline);
 }
 
@@ -967,19 +981,19 @@ append_tex_coord_attributes_cb (CoglPipeline *pipeline,
                                 void *user_data)
 {
   AppendTexCoordsState *state = user_data;
-  CoglHandle tex_handle;
+  CoglTexture *texture;
   float tx, ty;
   float *t;
 
   tx = state->vertices_in[state->vertex].tx;
   ty = state->vertices_in[state->vertex].ty;
 
-  /* COGL_INVALID_HANDLE textures will be handled in
+  /* NULL textures will be handled in
    * _cogl_pipeline_flush_layers_gl_state but there is no need to worry
    * about scaling texture coordinates in this case */
-  tex_handle = _cogl_pipeline_get_layer_texture (pipeline, layer_index);
-  if (tex_handle != COGL_INVALID_HANDLE)
-    _cogl_texture_transform_coords_to_gl (tex_handle, &tx, &ty);
+  texture = _cogl_pipeline_get_layer_texture (pipeline, layer_index);
+  if (texture != NULL)
+    _cogl_texture_transform_coords_to_gl (texture, &tx, &ty);
 
   /* NB: [X,Y,Z,TX,TY...,R,G,B,A,...] */
   t = state->vertices_out + 3 + 2 * state->layer;

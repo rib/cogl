@@ -210,21 +210,11 @@ _cogl_path_stroke_nodes (CoglPath *path)
 
   _COGL_GET_CONTEXT (ctx, NO_RETVAL);
 
-  if (G_UNLIKELY (ctx->legacy_state_set))
-    {
-      CoglPipeline *users_source = cogl_get_source ();
-      copy = cogl_pipeline_copy (users_source);
-      _cogl_pipeline_apply_legacy_state (copy);
-      source = copy;
-    }
-  else
-    source = cogl_get_source ();
+  source = cogl_get_source ();
 
   if (cogl_pipeline_get_n_layers (source) != 0)
     {
-      /* If we haven't already created a derivative pipeline... */
-      if (!copy)
-        copy = cogl_pipeline_copy (source);
+      copy = cogl_pipeline_copy (source);
       _cogl_pipeline_prune_to_n_layers (copy, 0);
       source = copy;
     }
@@ -317,9 +307,9 @@ _cogl_path_fill_nodes (CoglPath *path)
   for (l = _cogl_pipeline_get_layers (cogl_get_source ()); l; l = l->next)
     {
       CoglHandle layer = l->data;
-      CoglHandle texture = _cogl_pipeline_layer_get_texture (layer);
+      CoglTexture *texture = _cogl_pipeline_layer_get_texture (layer);
 
-      if (texture != COGL_INVALID_HANDLE &&
+      if (texture != NULL &&
           (cogl_texture_is_sliced (texture) ||
            !_cogl_texture_can_hardware_repeat (texture)))
         {
@@ -378,7 +368,7 @@ _cogl_add_path_to_stencil_buffer (CoglPath *path,
                                   COGL_MATRIX_PROJECTION);
 
   /* Just setup a simple pipeline that doesn't use texturing... */
-  cogl_push_source (ctx->stencil_pipeline);
+  _cogl_push_source (ctx->stencil_pipeline, FALSE);
 
   _cogl_pipeline_flush_gl_state (ctx->stencil_pipeline, FALSE, 0);
 

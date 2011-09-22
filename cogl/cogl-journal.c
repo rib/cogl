@@ -38,6 +38,7 @@
 #include "cogl-profile.h"
 #include "cogl-attribute-private.h"
 #include "cogl-point-in-poly-private.h"
+#include "cogl-private.h"
 
 #include <string.h>
 #include <gmodule.h>
@@ -272,8 +273,7 @@ _cogl_journal_flush_modelview_and_entries (CoglJournalEntry *batch_start,
   CoglAttribute **attributes;
   CoglDrawFlags draw_flags = (COGL_DRAW_SKIP_JOURNAL_FLUSH |
                               COGL_DRAW_SKIP_PIPELINE_VALIDATION |
-                              COGL_DRAW_SKIP_FRAMEBUFFER_FLUSH |
-                              COGL_DRAW_SKIP_LEGACY_STATE);
+                              COGL_DRAW_SKIP_FRAMEBUFFER_FLUSH);
 
   COGL_STATIC_TIMER (time_flush_modelview_and_entries,
                      "flush: pipeline+entries", /* parent */
@@ -297,7 +297,7 @@ _cogl_journal_flush_modelview_and_entries (CoglJournalEntry *batch_start,
     }
 
   attributes = (CoglAttribute **)state->attributes->data;
-  cogl_push_source (state->source);
+  _cogl_push_source (state->source, FALSE);
 
   if (!_cogl_pipeline_get_real_blend_enabled (state->source))
     draw_flags |= COGL_DRAW_COLOR_ATTRIBUTE_IS_OPAQUE;
@@ -1449,7 +1449,7 @@ static gboolean
 add_framebuffer_deps_cb (CoglPipelineLayer *layer, void *user_data)
 {
   CoglFramebuffer *framebuffer = user_data;
-  CoglHandle texture = _cogl_pipeline_layer_get_texture_real (layer);
+  CoglTexture *texture = _cogl_pipeline_layer_get_texture_real (layer);
   const GList *l;
 
   if (!texture)
@@ -1466,7 +1466,7 @@ _cogl_journal_log_quad (CoglJournal  *journal,
                         const float  *position,
                         CoglPipeline *pipeline,
                         int           n_layers,
-                        CoglHandle    layer0_override_texture,
+                        CoglTexture  *layer0_override_texture,
                         const float  *tex_coords,
                         unsigned int  tex_coords_len)
 {
@@ -1545,12 +1545,6 @@ _cogl_journal_log_quad (CoglJournal  *journal,
 
   source = pipeline;
 
-  if (G_UNLIKELY (ctx->legacy_state_set))
-    {
-      source = cogl_pipeline_copy (pipeline);
-      _cogl_pipeline_apply_legacy_state (source);
-    }
-
   flush_options.flags = 0;
   if (G_UNLIKELY (cogl_pipeline_get_n_layers (pipeline) != n_layers))
     {
@@ -1567,9 +1561,7 @@ _cogl_journal_log_quad (CoglJournal  *journal,
 
   if (G_UNLIKELY (flush_options.flags))
     {
-      /* If we haven't already created a derived pipeline... */
-      if (source == pipeline)
-        source = cogl_pipeline_copy (pipeline);
+      source = cogl_pipeline_copy (pipeline);
       _cogl_pipeline_apply_overrides (source, &flush_options);
     }
 
