@@ -109,6 +109,8 @@ copy ..\..\..\cogl\cogl-matrix.h $(OutDir)\include\cogl-$(CoglApiVersion)\cogl&#
 copy ..\..\..\cogl\cogl-offscreen.h $(OutDir)\include\cogl-$(CoglApiVersion)\cogl&#x0D;&#x0A;
 copy ..\..\..\cogl\cogl-primitives.h $(OutDir)\include\cogl-$(CoglApiVersion)\cogl&#x0D;&#x0A;
 copy ..\..\..\cogl\cogl-path.h $(OutDir)\include\cogl-$(CoglApiVersion)\cogl&#x0D;&#x0A;
+copy ..\..\..\cogl\cogl-pipeline-layer-state.h $(OutDir)\include\cogl-$(CoglApiVersion)\cogl&#x0D;&#x0A;
+copy ..\..\..\cogl\cogl-pipeline-state.h $(OutDir)\include\cogl-$(CoglApiVersion)\cogl&#x0D;&#x0A;
 copy ..\..\..\cogl\cogl-pixel-buffer.h $(OutDir)\include\cogl-$(CoglApiVersion)\cogl&#x0D;&#x0A;
 copy ..\..\..\cogl\cogl-shader.h $(OutDir)\include\cogl-$(CoglApiVersion)\cogl&#x0D;&#x0A;
 copy ..\..\..\cogl\cogl-texture.h $(OutDir)\include\cogl-$(CoglApiVersion)\cogl&#x0D;&#x0A;
