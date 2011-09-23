@@ -2,7 +2,7 @@
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Label="UserMacros">
     <GlibEtcInstallRoot>..\..\..\..\vs10\$(Platform)</GlibEtcInstallRoot>
-    <CoglApiVersion>2.0</CoglApiVersion>
+    <CoglApiVersion>1.0</CoglApiVersion>
     <BaseBuildDefines>_WIN32_WINNT=0x0500;COGL_ENABLE_DEBUG</BaseBuildDefines>
     <LibBuildDefines>HAVE_CONFIG_H;CLUTTER_COMPILATION;$(BaseBuildDefines)</LibBuildDefines>
     <ReleaseLibBuildDefines>$(LibBuildDefines);G_DISABLE_CHECKS;G_DISABLE_CAST_CHECKS</ReleaseLibBuildDefines>
