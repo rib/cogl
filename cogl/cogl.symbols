@@ -527,16 +527,12 @@ cogl_path_stroke
 cogl_path_stroke_preserve	;this is COGL 1.0 API
 cogl_perspective
 
-cogl_pipeline_alpha_func_get_type
-
 cogl_pipeline_cache_free
 cogl_pipeline_cache_new
 
 #ifdef COGL_ENABLE_EXPERIMENTAL_API
 cogl_pipeline_copy_EXP
 #endif
-
-cogl_pipeline_filter_get_type
 
 #ifdef COGL_ENABLE_EXPERIMENTAL_API
 cogl_pipeline_foreach_layer_EXP
@@ -586,8 +582,6 @@ cogl_pipeline_set_shininess_EXP
 cogl_pipeline_set_specular_EXP
 cogl_pipeline_set_user_program_EXP
 #endif
-
-cogl_pipeline_wrap_mode_get_type
 
 #ifdef COGL_ENABLE_EXPERIMENTAL_API
 #if 0
