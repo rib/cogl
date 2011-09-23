@@ -27,16 +27,24 @@
 #include "cogl.h"
 #include "cogl-handle.h"
 #include "cogl-clip-stack.h"
+#include "cogl-queue.h"
 
 #define COGL_JOURNAL_VBO_POOL_SIZE 8
+
+typedef struct _CoglJournalEntry CoglJournalEntry;
+
+COGL_TAILQ_HEAD (CoglJournalEntryList, CoglJournalEntry);
 
 typedef struct _CoglJournal
 {
   CoglObject _parent;
 
-  GArray *entries;
-  GArray *vertices;
   size_t needed_vbo_len;
+  size_t journal_len;
+
+  /* An array of batches of journal entries that have an equal
+     pipeline. Each entry is a CoglJournalBatch */
+  GArray *batches;
 
   /* A pool of attribute buffers is used so that we can avoid repeatedly
      reallocating buffers. Only one of these buffers at a time will be
@@ -52,21 +60,51 @@ typedef struct _CoglJournal
 
 } CoglJournal;
 
+typedef struct _CoglJournalBatch
+{
+  /* The pipeline used for these entries */
+  CoglPipeline *pipeline;
+  /* List of entries */
+  CoglJournalEntryList entries;
+  /* The bounding box of this batch in screen space */
+  float bounds_x1, bounds_y1;
+  float bounds_x2, bounds_y2;
+} CoglJournalBatch;
+
 /* To improve batching of geometry when submitting vertices to OpenGL we
  * log the texture rectangles we want to draw to a journal, so when we
  * later flush the journal we aim to batch data, and gl draw calls. */
-typedef struct _CoglJournalEntry
+struct _CoglJournalEntry
 {
-  CoglPipeline            *pipeline;
-  int                      n_layers;
-  CoglMatrix               model_view;
-  CoglClipStack           *clip_stack;
-  /* Offset into ctx->logged_vertices */
-  size_t                   array_offset;
+  /* Each entry stored as a singly-linked list of entries within the
+     same batch */
+  COGL_TAILQ_ENTRY (CoglJournalEntry) batch;
+
+  CoglClipStack *clip_stack;
+
+  CoglMatrix model_view;
+
+  int n_layers;
+
+  guint8 color[4];
+  float position[4];
+
+  /* Transformed vertex positions. These are needed to calculate the
+     bounding box of the primitive and also to upload the vertices
+     seeing as we do software transformation. By storing them we avoid
+     calculating the them twice but take a hit in memory
+     consumption. */
+  float transformed_verts[4 * 3];
+
+  /* Texture coordinates. The structure is over allocated to include a
+     variable number of these. This must be the last entry in the
+     struct */
+  float tex_coords[1 /* (4 * n_layers) */];
+
   /* XXX: These entries are pretty big now considering the padding in
    * CoglPipelineFlushOptions and CoglMatrix, so we might need to optimize this
    * later. */
-} CoglJournalEntry;
+};
 
 CoglJournal *
 _cogl_journal_new (void);
