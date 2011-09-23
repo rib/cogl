@@ -168,7 +168,7 @@ copy ..\..\..\cogl\cogl2-experimental.h $(OutDir)\include\cogl-$(CoglApiVersion)
 	/>
 	<UserMacro
 		Name="CoglSeparateVS9DllSuffix"
-		Value="-2-vs9"
+		Value="-1-vs9"
 	/>
 	<!-- Change these two to GlibLibtoolCompatibleDllPrefix and
 	GlibLibtoolCompatibleDllSuffix if that is what you want -->
