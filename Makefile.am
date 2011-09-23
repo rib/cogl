@@ -4,13 +4,16 @@ if BUILD_COGL_PANGO
 SUBDIRS += cogl-pango
 endif
 
-SUBDIRS += examples doc po
+SUBDIRS += examples doc po build
 
 ACLOCAL_AMFLAGS = -I build/autotools ${ACLOCAL_FLAGS}
 
 EXTRA_DIST = \
 	README.in \
-	config-custom.h
+	README \
+	config-custom.h \
+	config.h.win32.in \
+	config.h.win32
 
 # .changelog expects these to be initializes
 CLEANFILES=
@@ -27,3 +30,4 @@ DISTCHECK_CONFIGURE_FLAGS = \
 	--enable-glx
 
 include $(top_srcdir)/build/autotools/Makefile.am.release
+
