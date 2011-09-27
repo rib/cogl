@@ -28,6 +28,7 @@
 #include "cogl-handle.h"
 #include "cogl-clip-stack.h"
 #include "cogl-queue.h"
+#include "cogl-loose-region.h"
 
 #define COGL_JOURNAL_VBO_POOL_SIZE 8
 
@@ -66,9 +67,8 @@ typedef struct _CoglJournalBatch
   CoglPipeline *pipeline;
   /* List of entries */
   CoglJournalEntryList entries;
-  /* The bounding box of this batch in screen space */
-  float bounds_x1, bounds_y1;
-  float bounds_x2, bounds_y2;
+  /* The region covered by this batch in screen space */
+  CoglLooseRegion region;
 } CoglJournalBatch;
 
 /* To improve batching of geometry when submitting vertices to OpenGL we

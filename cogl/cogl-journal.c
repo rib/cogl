@@ -1578,7 +1578,7 @@ _cogl_journal_add_entry_to_batch (CoglJournal *journal,
                                   CoglPipeline *pipeline,
                                   CoglJournalEntry *entry)
 {
-  float bounds_x1, bounds_y1, bounds_x2, bounds_y2;
+  CoglLooseRegionRectangle bounds;
   int batch_index;
   CoglJournalBatch *batch;
   float poly[16];
@@ -1587,21 +1587,21 @@ _cogl_journal_add_entry_to_batch (CoglJournal *journal,
   /* Calculate the screen-space bounding box of this entry */
   entry_to_screen_polygon (entry, poly);
 
-  bounds_x2 = bounds_x1 = poly[0];
-  bounds_y2 = bounds_y1 = poly[1];
+  bounds.x_2 = bounds.x_1 = poly[0];
+  bounds.y_2 = bounds.y_1 = poly[1];
 
   for (i = 1; i < 4; i++)
     {
       float x = poly[i * 4 + 0], y = poly[i * 4 + 1];
 
-      if (x < bounds_x1)
-        bounds_x1 = x;
-      if (y < bounds_y1)
-        bounds_y1 = y;
-      if (x > bounds_x2)
-        bounds_x2 = x;
-      if (y > bounds_y2)
-        bounds_y2 = y;
+      if (x < bounds.x_1)
+        bounds.x_1 = x;
+      if (y < bounds.y_1)
+        bounds.y_1 = y;
+      if (x > bounds.x_2)
+        bounds.x_2 = x;
+      if (y > bounds.y_2)
+        bounds.y_2 = y;
     }
 
   /* Search backwards through the list of lists for a matching
@@ -1620,27 +1620,13 @@ _cogl_journal_add_entry_to_batch (CoglJournal *journal,
                                  ~COGL_PIPELINE_STATE_COLOR),
                                 COGL_PIPELINE_LAYER_STATE_ALL,
                                 0))
-        {
-          /* We have a matching list so we can just append this entry */
-          if (bounds_x1 < batch->bounds_x1)
-            batch->bounds_x1 = bounds_x1;
-          if (bounds_x2 > batch->bounds_x2)
-            batch->bounds_x2 = bounds_x2;
-          if (bounds_y1 < batch->bounds_y1)
-            batch->bounds_y1 = bounds_y1;
-          if (bounds_y2 > batch->bounds_y2)
-            batch->bounds_y2 = bounds_y2;
-
-          goto found_list;
-        }
+        /* We have a matching list so we can just append this entry */
+        goto found_list;
 
       /* Any further lists will be painted behind this one. Therefore
          we can only continue searching if the new entry does not
          intersect the current list */
-      if (bounds_x2 > batch->bounds_x1 &&
-          bounds_x1 < batch->bounds_x2 &&
-          bounds_y2 > batch->bounds_y1 &&
-          bounds_y1 < batch->bounds_y2)
+      if (_cogl_loose_region_intersects (&batch->region, &bounds))
         /* The new entry intersects the list so we can't paint behind
            this one and we'll have to start a new list */
         break;
@@ -1653,13 +1639,12 @@ _cogl_journal_add_entry_to_batch (CoglJournal *journal,
                           CoglJournalBatch, batch_index);
 
   batch->pipeline = _cogl_pipeline_journal_ref (pipeline);
-  batch->bounds_x1 = bounds_x1;
-  batch->bounds_y1 = bounds_y1;
-  batch->bounds_x2 = bounds_x2;
-  batch->bounds_y2 = bounds_y2;
+  _cogl_loose_region_init (&batch->region);
   COGL_TAILQ_INIT (&batch->entries);
 
 found_list:
+
+  _cogl_loose_region_add_rectangle (&batch->region, &bounds);
 
   COGL_TAILQ_INSERT_TAIL (&batch->entries, entry, batch);
 }

@@ -313,6 +313,8 @@ cogl_sources_c = \
 	$(srcdir)/cogl-gtype-private.h                  \
 	$(srcdir)/cogl-point-in-poly-private.h       	\
 	$(srcdir)/cogl-point-in-poly.c       		\
+	$(srcdir)/cogl-loose-region.h			\
+	$(srcdir)/cogl-loose-region.c			\
 	$(srcdir)/cogl-clutter.c       			\
 	$(srcdir)/winsys/cogl-winsys-stub-private.h	\
 	$(srcdir)/cogl-queue.h				\
