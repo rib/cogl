@@ -60,6 +60,9 @@ copy $(SolutionDir)$(Configuration)\$(Platform)\bin\*.dll $(CopyDir)\bin
 copy $(SolutionDir)$(Configuration)\$(Platform)\bin\*.exe $(CopyDir)\bin
 
 
+copy ..\*.bat $(CopyDir)\bin
+
+
 copy ..\..\..\examples\*.jpg $(CopyDir)\bin
 
 
