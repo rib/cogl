@@ -133,7 +133,7 @@ main (int argc, char **argv)
   UNPORTED_TEST ("/cogl", test_cogl_object);
   UNPORTED_TEST ("/cogl", test_cogl_fixed);
   UNPORTED_TEST ("/cogl", test_cogl_materials);
-  UNPORTED_TEST ("/cogl", test_cogl_pipeline_user_matrix);
+  ADD_TEST ("/cogl", test_cogl_pipeline_user_matrix);
   UNPORTED_TEST ("/cogl", test_cogl_blend_strings);
   UNPORTED_TEST ("/cogl", test_cogl_premult);
   UNPORTED_TEST ("/cogl", test_cogl_readpixels);
@@ -160,7 +160,7 @@ main (int argc, char **argv)
 
   UNPORTED_TEST ("/cogl/vertex-array", test_cogl_primitive);
 
-  UNPORTED_TEST ("/cogl/shaders", test_cogl_just_vertex_shader);
+  ADD_TEST ("/cogl/shaders", test_cogl_just_vertex_shader);
 
   /* left to the end because they aren't currently very orthogonal and tend to
    * break subsequent tests! */
