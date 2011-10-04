@@ -8,7 +8,7 @@
 	>
 	<Tool
 		Name="VCCLCompilerTool"
-		AdditionalIncludeDirectories="..\..\..;..\..\..\cogl;..\..\..\cogl\winsys;$(GlibEtcInstallRoot)\include;$(GlibEtcInstallRoot)\include\glib-2.0;$(GlibEtcInstallRoot)\include\cairo;$(GlibEtcInstallRoot)\include\atk-2.0;$(GlibEtcInstallRoot)\include\pango-1.0;$(GlibEtcInstallRoot)\include\gdk-pixbuf-2.0;$(GlibEtcInstallRoot)\lib\glib-2.0\include"
+		AdditionalIncludeDirectories="..\..\..;..\..\..\cogl;..\..\..\cogl\winsys;$(GlibEtcInstallRoot)\include;$(GlibEtcInstallRoot)\include\glib-2.0;$(GlibEtcInstallRoot)\include\cairo;$(GlibEtcInstallRoot)\include\pango-1.0;$(GlibEtcInstallRoot)\include\gdk-pixbuf-2.0;$(GlibEtcInstallRoot)\lib\glib-2.0\include"
 		PreprocessorDefinitions="G_DISABLE_SINGLE_INCLUDES;G_DISABLE_DEPRECATED"
 		ForcedIncludeFiles="msvc_recommended_pragmas.h"
 		DisableSpecificWarnings="4819"
@@ -51,6 +51,10 @@
 		Value="G_LOG_DOMAIN=\&quot;Cogl-Pango\&quot;"
 	/>
 	<UserMacro
+		Name="TestProgDef"
+		Value="TESTS_DATADIR=\&quot;../share/cogl-$(CoglApiVersion)/tests\&quot;"
+	/>
+	<UserMacro
 		Name="PreBuildCmd"
 		Value="
 if exist ..\..\..\config.h goto DONE_CONFIG_H&#x0D;&#x0A;
@@ -83,6 +87,8 @@ mkdir $(OutDir)\bin&#x0D;&#x0A;
 copy $(SolutionDir)$(ConfigurationName)\$(PlatformName)\bin\*.dll $(OutDir)\bin&#x0D;&#x0A;
 
 copy $(SolutionDir)$(ConfigurationName)\$(PlatformName)\bin\*.exe $(OutDir)\bin&#x0D;&#x0A;
+
+copy ..\*.bat $(OutDir)\bin&#x0D;&#x0A;
 
 copy ..\..\..\examples\crate.jpg $(OutDir)\bin&#x0D;&#x0A;
 
@@ -138,6 +144,9 @@ copy ..\..\..\cogl\cogl-win32-renderer.h $(OutDir)\include\cogl-$(CoglApiVersion
 copy ..\..\..\cogl\cogl2-path.h $(OutDir)\include\cogl-$(CoglApiVersion)\cogl&#x0D;&#x0A;
 copy ..\..\..\cogl\cogl2-clip-state.h $(OutDir)\include\cogl-$(CoglApiVersion)\cogl&#x0D;&#x0A;
 copy ..\..\..\cogl\cogl2-experimental.h $(OutDir)\include\cogl-$(CoglApiVersion)\cogl&#x0D;&#x0A;
+
+mkdir $(OutDir)\share\cogl-$(CoglApiVersion)\tests&#x0D;&#x0A;
+copy ..\..\..\tests\data\valgrind.suppressions $(OutDir)\share\cogl-$(CoglApiVersion)\tests&#x0D;&#x0A;
 "
 	/>
 	<UserMacro

@@ -9,7 +9,8 @@
     <DebugLibBuildDefines>_DEBUG;$(LibBuildDefines);COGL_GL_DEBUG;COGL_OBJECT_DEBUG;COGL_HANDLE_DEBUG</DebugLibBuildDefines>
     <CoglBuildDefines>G_LOG_DOMAIN="Cogl";COGL_HAS_WIN32_SUPPORT;COGL_BUILD_EXP;COGL_GL_LIBNAME="";COGL_LOCALEDIR="/some/random/dir"</CoglBuildDefines>
     <CoglPangoBuildDefines>G_LOG_DOMAIN="Cogl-Pango"</CoglPangoBuildDefines>
-	<CopyDir>$(GlibEtcInstallRoot)</CopyDir>
+    <TestProgDef>TESTS_DATADIR="../share/cogl-$(CoglApiVersion)/tests"</TestProgDef>
+    <CopyDir>$(GlibEtcInstallRoot)</CopyDir>
     <PreBuildCmd>
 if exist ..\..\..\config.h goto DONE_CONFIG_H
 
@@ -29,7 +30,7 @@ if exist ..\..\..\cogl\cogl-enum-types.h goto DONE_COGL_ENUMS_H
 
 cd ..\..\..\cogl
 
-perl $(GlibEtcInstallRoot)\bin\glib-mkenums --template cogl-enum-types.h.in ./cogl-object.h ./cogl-bitmap.h ./cogl-buffer.h ./cogl-color.h ./cogl-fixed.h ./cogl-depth-state.h ./cogl-material-compat.h ./cogl-pipeline.h ./cogl-vector.h ./cogl-euler.h ./cogl-quaternion.h ./cogl-matrix.h ./cogl-offscreen.h ./cogl-primitives.h ./cogl-path.h ./cogl-pixel-buffer.h ./cogl-shader.h ./cogl-texture.h ./cogl-texture-2d.h ./cogl-texture-3d.h ./cogl-types.h ./cogl-vertex-buffer.h ./cogl-index-buffer.h ./cogl-attribute-buffer.h ./cogl-indices.h ./cogl-attribute.h ./cogl-primitive.h ./cogl-clip-state.h ./cogl-framebuffer.h ./cogl-clutter.h ./cogl.h ./cogl-win32-renderer.h &gt; cogl-enum-types.h
+perl $(GlibEtcInstallRoot)\bin\glib-mkenums --template cogl-enum-types.h.in ./cogl-object.h ./cogl-bitmap.h ./cogl-buffer.h ./cogl-color.h ./cogl-fixed.h ./cogl-depth-state.h ./cogl-material-compat.h ./cogl-vector.h ./cogl-euler.h ./cogl-quaternion.h ./cogl-matrix.h ./cogl-offscreen.h ./cogl-primitives.h ./cogl-path.h ./cogl-pixel-buffer.h ./cogl-shader.h ./cogl-texture.h ./cogl-texture-2d.h ./cogl-texture-3d.h ./cogl-types.h ./cogl-vertex-buffer.h ./cogl-index-buffer.h ./cogl-attribute-buffer.h ./cogl-indices.h ./cogl-attribute.h ./cogl-primitive.h ./cogl-clip-state.h ./cogl-framebuffer.h ./cogl-clutter.h ./cogl.h ./cogl-win32-renderer.h &gt; cogl-enum-types.h
 
 cd ..\build\win32\vs10
 
@@ -40,7 +41,7 @@ if exist ..\..\..\cogl\cogl-enum-types.c goto DONE_COGL_ENUMS_C
 
 cd ..\..\..\cogl
 
-perl $(GlibEtcInstallRoot)\bin\glib-mkenums --template cogl-enum-types.c.in ./cogl-object.h ./cogl-bitmap.h ./cogl-buffer.h ./cogl-color.h ./cogl-fixed.h ./cogl-depth-state.h ./cogl-material-compat.h ./cogl-pipeline.h ./cogl-vector.h ./cogl-euler.h ./cogl-quaternion.h ./cogl-matrix.h ./cogl-offscreen.h ./cogl-primitives.h ./cogl-path.h ./cogl-pixel-buffer.h ./cogl-shader.h ./cogl-texture.h ./cogl-texture-2d.h ./cogl-texture-3d.h ./cogl-types.h ./cogl-vertex-buffer.h ./cogl-index-buffer.h ./cogl-attribute-buffer.h ./cogl-indices.h ./cogl-attribute.h ./cogl-primitive.h ./cogl-clip-state.h ./cogl-framebuffer.h ./cogl-clutter.h ./cogl.h ./cogl-win32-renderer.h &gt; cogl-enum-types.c
+perl $(GlibEtcInstallRoot)\bin\glib-mkenums --template cogl-enum-types.c.in ./cogl-object.h ./cogl-bitmap.h ./cogl-buffer.h ./cogl-color.h ./cogl-fixed.h ./cogl-depth-state.h ./cogl-material-compat.h ./cogl-vector.h ./cogl-euler.h ./cogl-quaternion.h ./cogl-matrix.h ./cogl-offscreen.h ./cogl-primitives.h ./cogl-path.h ./cogl-pixel-buffer.h ./cogl-shader.h ./cogl-texture.h ./cogl-texture-2d.h ./cogl-texture-3d.h ./cogl-types.h ./cogl-vertex-buffer.h ./cogl-index-buffer.h ./cogl-attribute-buffer.h ./cogl-indices.h ./cogl-attribute.h ./cogl-primitive.h ./cogl-clip-state.h ./cogl-framebuffer.h ./cogl-clutter.h ./cogl.h ./cogl-win32-renderer.h &gt; cogl-enum-types.c
 
 cd ..\build\win32\vs10
 
@@ -57,6 +58,9 @@ copy $(SolutionDir)$(Configuration)\$(Platform)\bin\*.dll $(CopyDir)\bin
 
 
 copy $(SolutionDir)$(Configuration)\$(Platform)\bin\*.exe $(CopyDir)\bin
+
+
+copy ..\*.bat $(CopyDir)\bin
 
 
 copy ..\..\..\examples\*.jpg $(CopyDir)\bin
@@ -164,6 +168,12 @@ copy ..\..\..\cogl\cogl2-clip-state.h $(CopyDir)\include\cogl-$(CoglApiVersion)\
 
 copy ..\..\..\cogl\cogl2-experimental.h $(CopyDir)\include\cogl-$(CoglApiVersion)\cogl
 
+
+mkdir $(CopyDir)\share\cogl-$(CoglApiVersion)\tests
+
+
+copy ..\..\..\tests\data\valgrind.suppressions $(CopyDir)\share\cogl-$(CoglApiVersion)\tests
+
 </CoglDoInstall>
     <GenerateCoglDef>
          echo EXPORTS &gt; ..\..\..\cogl\cogl.def
@@ -191,7 +201,7 @@ copy ..\..\..\cogl\cogl2-experimental.h $(CopyDir)\include\cogl-$(CoglApiVersion
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>..\..\..;..\..\..\cogl;..\..\..\cogl\winsys;$(GlibEtcInstallRoot)\include;$(GlibEtcInstallRoot)\include\glib-2.0;$(GlibEtcInstallRoot)\include\cairo;$(GlibEtcInstallRoot)\include\atk-2.0;$(GlibEtcInstallRoot)\include\pango-1.0;$(GlibEtcInstallRoot)\include\gdk-pixbuf-2.0;$(GlibEtcInstallRoot)\lib\glib-2.0\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\..;..\..\..\cogl;..\..\..\cogl\winsys;$(GlibEtcInstallRoot)\include;$(GlibEtcInstallRoot)\include\glib-2.0;$(GlibEtcInstallRoot)\include\cairo;$(GlibEtcInstallRoot)\include\pango-1.0;$(GlibEtcInstallRoot)\include\gdk-pixbuf-2.0;$(GlibEtcInstallRoot)\lib\glib-2.0\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>G_DISABLE_SINGLE_INCLUDES;G_DISABLE_DEPRECATED;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ForcedIncludeFiles>msvc_recommended_pragmas.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
       <DisableSpecificWarnings>4819;%(DisableSpecificWarnings)</DisableSpecificWarnings>
@@ -225,6 +235,9 @@ copy ..\..\..\cogl\cogl2-experimental.h $(CopyDir)\include\cogl-$(CoglApiVersion
     </BuildMacro>
     <BuildMacro Include="CoglPangoBuildDefines">
       <Value>$(CoglPangoBuildDefines)</Value>
+    </BuildMacro>
+    <BuildMacro Include="TestProgDef">
+      <Value>$(TestProgDef)</Value>
     </BuildMacro>
     <BuildMacro Include="PreBuildCmd">
       <Value>$(PreBuildCmd)</Value>
