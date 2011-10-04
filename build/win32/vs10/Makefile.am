@@ -13,5 +13,9 @@ EXTRA_DIST = \
 	hello.vcxproj.filters	\
 	crate.vcxproj	\
 	crate.vcxproj.filters	\
+	test-conformance.vcxproj	\
+	test-conformance.vcxprojin	\
+	test-conformance.vcxproj.filters	\
+	test-conformance.vcxproj.filtersin	\
 	install.vcxproj	\
 	README.txt

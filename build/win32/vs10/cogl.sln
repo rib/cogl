@@ -11,6 +11,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "install", "install.vcxproj"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "crate", "crate.vcxproj", "{DE1A2710-04BB-4C3D-90C1-B070E326B1CF}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-conformance", "test-conformance.vcxproj", "{0F08F253-DE1A-40CB-A890-93AE3CA23ADE}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -51,7 +53,14 @@ Global
 		{DE1A2710-04BB-4C3D-90C1-B070E326B1CF}.Release|Win32.Build.0 = Release|Win32
 		{DE1A2710-04BB-4C3D-90C1-B070E326B1CF}.Release|x64.ActiveCfg = Release|x64
 		{DE1A2710-04BB-4C3D-90C1-B070E326B1CF}.Release|x64.Build.0 = Release|x64
-		
+		{0F08F253-DE1A-40CB-A890-93AE3CA23ADE}.Debug|Win32.ActiveCfg = Debug|Win32
+		{0F08F253-DE1A-40CB-A890-93AE3CA23ADE}.Debug|Win32.Build.0 = Debug|Win32
+		{0F08F253-DE1A-40CB-A890-93AE3CA23ADE}.Debug|x64.ActiveCfg = Debug|x64
+		{0F08F253-DE1A-40CB-A890-93AE3CA23ADE}.Debug|x64.Build.0 = Debug|x64
+		{0F08F253-DE1A-40CB-A890-93AE3CA23ADE}.Release|Win32.ActiveCfg = Release|Win32
+		{0F08F253-DE1A-40CB-A890-93AE3CA23ADE}.Release|Win32.Build.0 = Release|Win32
+		{0F08F253-DE1A-40CB-A890-93AE3CA23ADE}.Release|x64.ActiveCfg = Release|x64
+		{0F08F253-DE1A-40CB-A890-93AE3CA23ADE}.Release|x64.Build.0 = Release|x64
 		{35B2A4AC-7235-4FC7-995D-469D59195041}.Debug|Win32.ActiveCfg = Debug|Win32
 		{35B2A4AC-7235-4FC7-995D-469D59195041}.Debug|Win32.Build.0 = Debug|Win32
 		{35B2A4AC-7235-4FC7-995D-469D59195041}.Debug|x64.ActiveCfg = Debug|x64
