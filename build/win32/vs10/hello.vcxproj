@@ -196,7 +196,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\examples\hello.c" />
+    <ClCompile Include="..\..\..\examples\cogl-hello.c" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="cogl.vcxproj">
