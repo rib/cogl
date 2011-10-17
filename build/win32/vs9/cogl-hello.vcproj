@@ -2,9 +2,9 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="9.00"
-	Name="crate"
-	ProjectGUID="{DE1A2710-04BB-4C3D-90C1-B070E326B1CF}"
-	RootNamespace="crate"
+	Name="cogl-hello"
+	ProjectGUID="{F5A43C12-7032-428E-A56A-D294075FA493}"
+	RootNamespace="coglhello"
 	Keyword="Win32Proj"
 	TargetFrameworkVersion="196613"
 	>
@@ -31,7 +31,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				PreprocessorDefinitions="_DEBUG;COGL_ENABLE_EXPERIMENTAL_2_0_API;COGL_EXAMPLES_DATA=\&quot;../share/cogl-$(CoglApiVersion)/examples-data/\&quot;;$(BaseBuildDefines)"
+				PreprocessorDefinitions="_DEBUG;COGL_ENABLE_EXPERIMENTAL_2_0_API;$(BaseBuildDefines)"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
@@ -41,7 +41,6 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="pangocairo-1.0.lib pango-1.0.lib cairo.lib"
 				LinkIncremental="2"
 				GenerateDebugInformation="true"
 				SubSystem="1"
@@ -60,7 +59,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				PreprocessorDefinitions="_DEBUG;COGL_ENABLE_EXPERIMENTAL_2_0_API;COGL_EXAMPLES_DATA=\&quot;../share/cogl-$(CoglApiVersion)/examples-data/\&quot;;$(BaseBuildDefines)"
+				PreprocessorDefinitions="_DEBUG;COGL_ENABLE_EXPERIMENTAL_2_0_API;$(BaseBuildDefines)"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
@@ -71,7 +70,6 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="pangocairo-1.0.lib pango-1.0.lib cairo.lib"
 				LinkIncremental="2"
 				GenerateDebugInformation="true"
 				SubSystem="1"
@@ -94,7 +92,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
-				PreprocessorDefinitions="COGL_ENABLE_EXPERIMENTAL_2_0_API;COGL_EXAMPLES_DATA=\&quot;../share/cogl-$(CoglApiVersion)/examples-data/\&quot;;$(BaseBuildDefines)"
+				PreprocessorDefinitions="COGL_ENABLE_EXPERIMENTAL_2_0_API;$(BaseBuildDefines)"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
 				UsePrecompiledHeader="0"
@@ -103,7 +101,6 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="pangocairo-1.0.lib pango-1.0.lib cairo.lib"
 				LinkIncremental="1"
 				GenerateDebugInformation="true"
 				SubSystem="1"
@@ -124,7 +121,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				PreprocessorDefinitions="COGL_ENABLE_EXPERIMENTAL_2_0_API;COGL_EXAMPLES_DATA=\&quot;../share/cogl-$(CoglApiVersion)/examples-data/\&quot;;$(BaseBuildDefines)"
+				PreprocessorDefinitions="COGL_ENABLE_EXPERIMENTAL_2_0_API;$(BaseBuildDefines)"
 				RuntimeLibrary="2"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
@@ -133,7 +130,6 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="pangocairo-1.0.lib pango-1.0.lib cairo.lib"
 				LinkIncremental="1"
 				GenerateDebugInformation="true"
 				SubSystem="1"
@@ -153,7 +149,7 @@
 			Filter="cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx"
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
-			<File RelativePath="..\..\..\examples\cogl-crate.c" />
+			<File RelativePath="..\..\..\examples\cogl-hello.c" />
 		</Filter>
 	</Files>
 	<Globals>

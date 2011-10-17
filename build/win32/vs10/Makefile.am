@@ -9,10 +9,10 @@ EXTRA_DIST = \
 	cogl-pango.vcxprojin	\
 	cogl-pango.vcxproj.filters	\
 	cogl-pango.vcxproj.filtersin	\
-	hello.vcxproj	\
-	hello.vcxproj.filters	\
-	crate.vcxproj	\
-	crate.vcxproj.filters	\
+	cogl-hello.vcxproj	\
+	cogl-hello.vcxproj.filters	\
+	cogl-crate.vcxproj	\
+	cogl-crate.vcxproj.filters	\
 	test-conformance.vcxproj	\
 	test-conformance.vcxprojin	\
 	test-conformance.vcxproj.filters	\

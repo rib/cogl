@@ -7,7 +7,7 @@ EXTRA_DIST = \
 	cogl-pango.vcprojin	\
 	test-conformance.vcproj	\
 	test-conformance.vcprojin	\
-	hello.vcproj	\
-	crate.vcproj	\
+	cogl-hello.vcproj	\
+	cogl-crate.vcproj	\
 	install.vcproj	\
 	README.txt
