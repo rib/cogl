@@ -1,4 +1,32 @@
+Cogl 1.8.2                                                         2011-10-17
+===============================================================================
+
+  • List of changes since Cogl 1.8.0
+
+  » Fix a crash while generating ARBfp code with layers containing a
+    NULL texture.
+  » Improvements to the mingw-fetch-dependencies script to work
+    without first needing to find a copy of config.guess.
+  » Translation updates.  
+
+  • List of bugs fixed since Cogl 1.8.0
+
+    https://bugzilla.gnome.org:
+
+    #660184 - Running an X client causes a segfault when using software
+              rendering
+    #660387 - test-color-mask fails due to uninitialized texture data
+    #660986 - memory leak in CoglPipeline::layers_cache
+
+Many thanks to:
+    Robert Bragg
+    Ivaylo Valkov
+    Gabor Kelemen
+    Luca Bruno
+    Seong-ho, Cho
+
 Cogl 1.8.0                                                         2011-09-19
+===============================================================================
 
   • List of changes since Cogl 1.7.8
 
@@ -25,7 +53,7 @@ Cogl 1.8.0                                                         2011-09-19
     #659029 - Clipping problem
     #659360 - Optimization in _cogl_winsys_onscreen_swap_region causes tearing
 
-Many thanks too:
+Many thanks to:
     Neil Roberts
     Matej Urbančič
     Abdalrahim G. Fakhouri
@@ -53,6 +81,7 @@ Many thanks too:
     Мирослав Николић
 
 Cogl 1.7.8                                                         2011-09-05
+===============================================================================
 
   • List of changes since Cogl 1.7.6
 
