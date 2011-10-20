@@ -82,8 +82,8 @@ stamp-test-conformance: Makefile $(srcdir)/test-conform-main.c
 		echo "  GEN    $$unit"; \
 		( echo "#!/bin/sh" ; echo "$(abs_builddir)/test-launcher.sh '$$i' \"\$$@\"" ) > $$unit$(SHEXT) ; \
 		( echo "#!/bin/sh" ; echo "exec $(abs_builddir)/test-conformance$(EXEEXT) -p $$i \"\$$@\"" ) > wrappers/$$unit$(SHEXT) ; \
-		( echo "test-conformance$(EXEEXT) -p $$i" ) > $$unit.bat ; \
-		( echo "test-conformance$(EXEEXT) -p $$i" ) >> test-conformance-cogl.bat ; \
+		( echo "test-conformance-cogl$(EXEEXT) -p $$i" ) > $$unit.bat ; \
+		( echo "test-conformance-cogl$(EXEEXT) -p $$i" ) >> test-conformance-cogl.bat ; \
 		chmod +x $$unit$(SHEXT); \
 		chmod +x wrappers/$$unit$(SHEXT); \
 		echo "/$$unit$(SHEXT)" >> .gitignore; \
