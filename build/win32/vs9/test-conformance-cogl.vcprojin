@@ -2,9 +2,9 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="9.00"
-	Name="test-conformance"
+	Name="test-conformance-cogl"
 	ProjectGUID="{0F08F253-DE1A-40CB-A890-93AE3CA23ADE}"
-	RootNamespace="testconformance"
+	RootNamespace="testconformancecogl"
 	Keyword="Win32Proj"
 	TargetFrameworkVersion="196613"
 	>

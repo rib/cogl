@@ -90,7 +90,7 @@
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ProjectReference Include="test-conformance.vcxproj">
+    <ProjectReference Include="test-conformance-cogl.vcxproj">
       <Project>{0f08f253-de1a-40cb-a890-93ae3ca23ade}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>

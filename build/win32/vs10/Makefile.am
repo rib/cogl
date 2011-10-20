@@ -13,9 +13,9 @@ EXTRA_DIST = \
 	cogl-hello.vcxproj.filters	\
 	cogl-crate.vcxproj	\
 	cogl-crate.vcxproj.filters	\
-	test-conformance.vcxproj	\
-	test-conformance.vcxprojin	\
-	test-conformance.vcxproj.filters	\
-	test-conformance.vcxproj.filtersin	\
+	test-conformance-cogl.vcxproj	\
+	test-conformance-cogl.vcxprojin	\
+	test-conformance-cogl.vcxproj.filters	\
+	test-conformance-cogl.vcxproj.filtersin	\
 	install.vcxproj	\
 	README.txt
