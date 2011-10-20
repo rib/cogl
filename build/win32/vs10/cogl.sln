@@ -11,7 +11,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "install", "install.vcxproj"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "crate", "crate.vcxproj", "{DE1A2710-04BB-4C3D-90C1-B070E326B1CF}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-conformance", "test-conformance.vcxproj", "{0F08F253-DE1A-40CB-A890-93AE3CA23ADE}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-conformance-cogl", "test-conformance-cogl.vcxproj", "{0F08F253-DE1A-40CB-A890-93AE3CA23ADE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
