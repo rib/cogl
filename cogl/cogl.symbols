@@ -108,6 +108,10 @@ cogl_clip_push_rectangle
 
 cogl_clip_push_window_rect
 
+#ifdef COGL_ENABLE_EXPERIMENTAL_API
+cogl_clip_push_primitive_EXP
+#endif
+
 #ifndef COGL_DISABLE_DEPRECATED
 cogl_clip_push_window_rectangle
 cogl_clip_stack_restore
@@ -231,6 +235,11 @@ cogl_fixed_sin
 cogl_fixed_sqrt
 cogl_fixed_tan
 cogl_fog_mode_get_type
+
+#ifdef COGL_ENABLE_EXPERIMENTAL_API
+cogl_foreach_feature_EXP
+#endif
+
 cogl_flush
 
 #ifdef COGL_ENABLE_EXPERIMENTAL_API
@@ -238,6 +247,9 @@ cogl_framebuffer_add_swap_buffers_callback_EXP
 cogl_framebuffer_allocate_EXP
 cogl_framebuffer_clear4f_EXP
 cogl_framebuffer_clear_EXP
+cogl_framebuffer_discard_buffers_EXP
+cogl_framebuffer_error_quark_EXP
+cogl_framebuffer_finish
 cogl_framebuffer_get_alpha_bits_EXP
 cogl_framebuffer_get_blue_bits_EXP
 cogl_framebuffer_get_color_format_EXP
@@ -247,6 +259,7 @@ cogl_framebuffer_get_dither_enabled
 cogl_framebuffer_get_green_bits_EXP
 cogl_framebuffer_get_height_EXP
 cogl_framebuffer_get_red_bits_EXP
+cogl_framebuffer_get_samples_per_pixel_EXP
 cogl_framebuffer_get_viewport4fv_EXP
 cogl_framebuffer_get_viewport_height_EXP
 cogl_framebuffer_get_viewport_width_EXP
@@ -254,8 +267,11 @@ cogl_framebuffer_get_viewport_x_EXP
 cogl_framebuffer_get_viewport_y_EXP
 cogl_framebuffer_get_width_EXP
 cogl_framebuffer_remove_swap_buffers_callback_EXP
+cogl_framebuffer_resolve_samples_EXP
+cogl_framebuffer_resolve_samples_region_EXP
 cogl_framebuffer_set_color_mask_EXP
 cogl_framebuffer_set_dither_enabled
+cogl_framebuffer_set_samples_per_pixel_EXP
 cogl_framebuffer_set_viewport_EXP
 cogl_framebuffer_swap_buffers_EXP
 cogl_framebuffer_swap_region_EXP
@@ -303,6 +319,8 @@ cogl_handle_ref
 cogl_handle_unref
 
 #ifdef COGL_ENABLE_EXPERIMENTAL_API
+cogl_has_feature_EXP
+cogl_has_features_EXP
 cogl_index_buffer_new
 cogl_indices_get_buffer
 cogl_indices_get_offset
@@ -347,9 +365,16 @@ cogl_is_renderer_EXP
 #endif
 
 cogl_is_shader
+
+#ifdef COGL_ENABLE_EXPERIMENTAL_API
+cogl_is_sub_texture_EXP
+#endif
+
 cogl_is_texture
 
 #ifdef COGL_ENABLE_EXPERIMENTAL_API
+cogl_is_texture_rectangle_EXP
+
 cogl_is_texture_2d_EXP
 cogl_is_texture_3d_EXP
 #endif
@@ -469,6 +494,8 @@ cogl_matrix_translate
 #ifdef COGL_ENABLE_EXPERIMENTAL_API
 cogl_matrix_view_2d_in_frustum_EXP
 cogl_matrix_view_2d_in_perspective_EXP
+
+cogl_meta_texture_foreach_in_region
 #endif
 
 cogl_object_get_user_data
@@ -491,6 +518,7 @@ cogl_onscreen_new_EXP
 cogl_onscreen_set_swap_throttled_EXP
 cogl_onscreen_show_EXP
 cogl_onscreen_template_new_EXP
+cogl_onscreen_template_set_samples_per_pixel
 #ifdef COGL_HAS_WIN32_SUPPORT
 cogl_win32_onscreen_get_window_EXP
 cogl_win32_onscreen_set_foreign_window_EXP
@@ -743,6 +771,8 @@ cogl_shader_type_get_type
 cogl_sqrti
 
 #ifdef COGL_ENABLE_EXPERIMENTAL_API
+cogl_sub_texture_new_EXP
+
 cogl_swap_chain_new_EXP
 cogl_swap_chain_set_has_alpha_EXP
 cogl_swap_chain_set_length_EXP
@@ -770,6 +800,10 @@ cogl_texture_new_from_foreign
 cogl_texture_new_from_sub_texture
 cogl_texture_new_with_size
 
+#ifdef COGL_ENABLE_EXPERIMENTAL_API
+cogl_texture_rectangle_new_with_size_EXP
+#endif
+
 #ifndef COGL_DISABLE_DEPRECATED
 cogl_texture_ref
 #endif
@@ -788,6 +822,7 @@ cogl_texture_unref
 cogl_texture_2d_new_from_data_EXP
 cogl_texture_2d_new_from_foreign_EXP
 cogl_texture_2d_new_with_size_EXP
+cogl_texture_2d_sliced_new_with_size_EXP
 
 cogl_texture_3d_new_from_data_EXP
 cogl_texture_3d_new_with_size_EXP
