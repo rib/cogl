@@ -31,6 +31,7 @@
 #include <string.h>
 
 #include "cogl.h"
+#include "cogl-util.h"
 #include "cogl-blit.h"
 #include "cogl-context-private.h"
 #include "cogl-framebuffer-private.h"
@@ -147,7 +148,7 @@ _cogl_blit_framebuffer_begin (CoglBlitData *data)
      format and the blit framebuffer extension is supported */
   if ((cogl_texture_get_format (data->src_tex) & ~COGL_A_BIT) !=
       (cogl_texture_get_format (data->dst_tex) & ~COGL_A_BIT) ||
-      !cogl_features_available (COGL_FEATURE_OFFSCREEN_BLIT))
+      !(ctx->private_feature_flags & COGL_PRIVATE_FEATURE_OFFSCREEN_BLIT))
     return FALSE;
 
   dst_fbo = _cogl_offscreen_new_to_texture_full
@@ -369,7 +370,7 @@ _cogl_blit_begin (CoglBlitData *data,
                      _cogl_blit_modes[i].name);
 
       /* The last blit mode can't fail so this should never happen */
-      g_return_if_fail (i < G_N_ELEMENTS (_cogl_blit_modes));
+      _COGL_RETURN_IF_FAIL (i < G_N_ELEMENTS (_cogl_blit_modes));
     }
 
   data->blit_mode = _cogl_blit_default_mode;

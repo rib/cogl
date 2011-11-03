@@ -333,18 +333,6 @@ COGL_EXT_FUNCTION (void, glBlitFramebuffer,
                     GLenum                filter))
 COGL_EXT_END ()
 
-COGL_EXT_BEGIN (offscreen_multisample, 255, 255,
-                0, /* not in either GLES */
-                "EXT\0",
-                "framebuffer_multisample\0")
-COGL_EXT_FUNCTION (void, glRenderbufferStorageMultisample,
-                   (GLenum                target,
-                    GLsizei               samples,
-                    GLenum                internalformat,
-                    GLsizei               width,
-                    GLsizei               height))
-COGL_EXT_END ()
-
 /* ARB_fragment_program */
 COGL_EXT_BEGIN (arbfp, 255, 255,
                 0, /* not in either GLES */
@@ -648,4 +636,33 @@ COGL_EXT_FUNCTION (void, glEGLImageTargetTexture2D,
 COGL_EXT_FUNCTION (void, glEGLImageTargetRenderbufferStorage,
                    (GLenum           target,
                     GLeglImageOES    image))
+COGL_EXT_END ()
+
+COGL_EXT_BEGIN (framebuffer_discard, 255, 255,
+                0, /* not in either GLES */
+                "EXT\0",
+                "framebuffer_discard\0")
+COGL_EXT_FUNCTION (void, glDiscardFramebuffer,
+                   (GLenum           target,
+                    GLsizei          numAttachments,
+                    const GLenum    *attachments))
+COGL_EXT_END ()
+
+COGL_EXT_BEGIN (IMG_multisampled_render_to_texture, 255, 255,
+                0, /* not in either GLES */
+                "\0",
+                "IMG_multisampled_render_to_texture\0")
+COGL_EXT_FUNCTION (void, glRenderbufferStorageMultisampleIMG,
+                   (GLenum           target,
+                    GLsizei          samples,
+                    GLenum           internal_format,
+                    GLsizei          width,
+                    GLsizei          height))
+COGL_EXT_FUNCTION (void, glFramebufferTexture2DMultisampleIMG,
+                   (GLenum           target,
+                    GLenum           attachment,
+                    GLenum           textarget,
+                    GLuint           texture,
+                    GLint            level,
+                    GLsizei          samples))
 COGL_EXT_END ()

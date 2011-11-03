@@ -28,6 +28,8 @@
 #ifndef __COGL_FRAMEBUFFER_H
 #define __COGL_FRAMEBUFFER_H
 
+#include <cogl/cogl.h>
+
 #include <glib.h>
 
 #ifdef COGL_HAS_WIN32_SUPPORT
@@ -277,6 +279,158 @@ cogl_framebuffer_set_color_mask (CoglFramebuffer *framebuffer,
 CoglPixelFormat
 cogl_framebuffer_get_color_format (CoglFramebuffer *framebuffer);
 
+#define cogl_framebuffer_set_samples_per_pixel \
+  cogl_framebuffer_set_samples_per_pixel_EXP
+/**
+ * cogl_framebuffer_set_samples_per_pixel:
+ * @framebuffer: A #CoglFramebuffer framebuffer
+ * @n: The minimum number of samples per pixel
+ *
+ * Requires that when rendering to @framebuffer then @n point samples
+ * should be made per pixel which will all contribute to the final
+ * resolved color for that pixel. The idea is that the hardware aims
+ * to get quality similar to what you would get if you rendered
+ * everything twice as big (for 4 samples per pixel) and then scaled
+ * that image back down with filtering. It can effectively remove the
+ * jagged edges of polygons and should be more efficient than if you
+ * were to manually render at a higher resolution and downscale
+ * because the hardware is often able to take some shortcuts. For
+ * example the GPU may only calculate a single texture sample for all
+ * points of a single pixel, and for tile based architectures all the
+ * extra sample data (such as depth and stencil samples) may be
+ * handled on-chip and so avoid increased demand on system memory
+ * bandwidth.
+ *
+ * By default this value is usually set to 0 and that is referred to
+ * as "single-sample" rendering. A value of 1 or greater is referred
+ * to as "multisample" rendering.
+ *
+ * <note>There are some semantic differences between single-sample
+ * rendering and multisampling with just 1 point sample such as it
+ * being redundant to use the cogl_framebuffer_resolve_samples() and
+ * cogl_framebuffer_resolve_samples_region() apis with single-sample
+ * rendering.</note>
+ *
+ * <note>It's recommended that
+ * cogl_framebuffer_resolve_samples_region() be explicitly used at the
+ * end of rendering to a point sample buffer to minimize the number of
+ * samples that get resolved. By default Cogl will implicitly resolve
+ * all framebuffer samples but if only a small region of a
+ * framebuffer has changed this can lead to redundant work being
+ * done.</note>
+ *
+ * Since: 1.8
+ * Stability: unstable
+ */
+void
+cogl_framebuffer_set_samples_per_pixel (CoglFramebuffer *framebuffer,
+                                        int samples_per_pixel);
+
+#define cogl_framebuffer_get_samples_per_pixel \
+  cogl_framebuffer_get_samples_per_pixel_EXP
+/**
+ * cogl_framebuffer_get_samples_per_pixel:
+ * @framebuffer: A #CoglFramebuffer framebuffer
+ *
+ * Gets the number of points that are sampled per-pixel when
+ * rasterizing geometry. Usually by default this will return 0 which
+ * means that single-sample not multisample rendering has been chosen.
+ * When using a GPU supporting multisample rendering it's possible to
+ * increase the number of samples per pixel using
+ * cogl_framebuffer_set_samples_per_pixel().
+ *
+ * Calling cogl_framebuffer_get_samples_per_pixel() before the
+ * framebuffer has been allocated will simply return the value set
+ * using cogl_framebuffer_set_samples_per_pixel(). After the
+ * framebuffer has been allocated the value will reflect the actual
+ * number of samples that will be made by the GPU.
+ *
+ * Returns: The number of point samples made per pixel when
+ *          rasterizing geometry or 0 if single-sample rendering
+ *          has been chosen.
+ *
+ * Since: 1.10
+ * Stability: unstable
+ */
+int
+cogl_framebuffer_get_samples_per_pixel (CoglFramebuffer *framebuffer);
+
+
+#define cogl_framebuffer_resolve_samples \
+  cogl_framebuffer_resolve_samples_EXP
+/**
+ * cogl_framebuffer_resolve_samples:
+ * @framebuffer: A #CoglFramebuffer framebuffer
+ *
+ * When point sample rendering (also known as multisample rendering)
+ * has been enabled via cogl_framebuffer_set_samples_per_pixel()
+ * then you can optionally call this function (or
+ * cogl_framebuffer_resolve_samples_region()) to explicitly resolve
+ * the point samples into values for the final color buffer.
+ *
+ * Some GPUs will implicitly resolve the point samples during
+ * rendering and so this function is effectively a nop, but with other
+ * architectures it is desirable to defer the resolve step until the
+ * end of the frame.
+ *
+ * Since Cogl will automatically ensure samples are resolved if the
+ * target color buffer is used as a source this API only needs to be
+ * used if explicit control is desired - perhaps because you want to
+ * ensure that the resolve is completed in advance to avoid later
+ * having to wait for the resolve to complete.
+ *
+ * If you are performing incremental updates to a framebuffer you
+ * should consider using cogl_framebuffer_resolve_samples_region()
+ * instead to avoid resolving redundant pixels.
+ *
+ * Since: 1.8
+ * Stability: unstable
+ */
+void
+cogl_framebuffer_resolve_samples (CoglFramebuffer *framebuffer);
+
+#define cogl_framebuffer_resolve_samples_region \
+  cogl_framebuffer_resolve_samples_region_EXP
+/**
+ * cogl_framebuffer_resolve_samples_region:
+ * @framebuffer: A #CoglFramebuffer framebuffer
+ * @x: top-left x coordinate of region to resolve
+ * @y: top-left y coordinate of region to resolve
+ * @width: width of region to resolve
+ * @height: height of region to resolve
+ *
+ * When point sample rendering (also known as multisample rendering)
+ * has been enabled via cogl_framebuffer_set_samples_per_pixel()
+ * then you can optionally call this function (or
+ * cogl_framebuffer_resolve_samples()) to explicitly resolve the point
+ * samples into values for the final color buffer.
+ *
+ * Some GPUs will implicitly resolve the point samples during
+ * rendering and so this function is effectively a nop, but with other
+ * architectures it is desirable to defer the resolve step until the
+ * end of the frame.
+ *
+ * Use of this API is recommended if incremental, small updates to
+ * a framebuffer are being made because by default Cogl will
+ * implicitly resolve all the point samples of the framebuffer which
+ * can result in redundant work if only a small number of samples have
+ * changed.
+ *
+ * Because some GPUs implicitly resolve point samples this function
+ * only guarantees that at-least the region specified will be resolved
+ * and if you have rendered to a larger region then it's possible that
+ * other samples may be implicitly resolved.
+ *
+ * Since: 1.8
+ * Stability: unstable
+ */
+void
+cogl_framebuffer_resolve_samples_region (CoglFramebuffer *framebuffer,
+                                         int x,
+                                         int y,
+                                         int width,
+                                         int height);
+
 #define cogl_framebuffer_get_context cogl_framebuffer_get_context_EXP
 /**
  * @framebuffer: A #CoglFramebuffer
@@ -342,191 +496,78 @@ cogl_framebuffer_clear4f (CoglFramebuffer *framebuffer,
                           float blue,
                           float alpha);
 
-#define cogl_framebuffer_swap_buffers cogl_framebuffer_swap_buffers_EXP
+/* XXX: Should we take an n_buffers + buffer id array instead of using
+ * the CoglBufferBits type which doesn't seem future proof? */
+#define cogl_framebuffer_discard_buffers cogl_framebuffer_discard_buffers_EXP
+/**
+ * cogl_framebuffer_discard_buffers:
+ * @framebuffer: A #CoglFramebuffer
+ * @buffers: A #CoglBufferBit mask of which ancillary buffers you want
+ *           to discard.
+ *
+ * Declares that the specified @buffers no longer need to be referenced
+ * by any further rendering commands. This can be an important
+ * optimization to avoid subsequent frames of rendering depending on
+ * the results of a previous frame.
+ *
+ * For example; some tile-based rendering GPUs are able to avoid allocating and
+ * accessing system memory for the depth and stencil buffer so long as these
+ * buffers are not required as input for subsequent frames and that can save a
+ * significant amount of memory bandwidth used to save and restore their
+ * contents to system memory between frames.
+ *
+ * It is currently considered an error to try and explicitly discard the color
+ * buffer by passing %COGL_BUFFER_BIT_COLOR. This is because the color buffer is
+ * already implicitly discard when you finish rendering to a #CoglOnscreen
+ * framebuffer, and it's not meaningful to try and discard the color buffer of
+ * a #CoglOffscreen framebuffer since they are single-buffered.
+ *
+ *
+ * Since: 1.8
+ * Stability: unstable
+ */
 void
-cogl_framebuffer_swap_buffers (CoglFramebuffer *framebuffer);
-
-#define cogl_framebuffer_swap_region cogl_framebuffer_swap_region_EXP
-void
-cogl_framebuffer_swap_region (CoglFramebuffer *framebuffer,
-                              const int *rectangles,
-                              int n_rectangles);
-
-
-typedef void (*CoglSwapBuffersNotify) (CoglFramebuffer *framebuffer,
-                                       void *user_data);
-
-#define cogl_framebuffer_add_swap_buffers_callback \
-  cogl_framebuffer_add_swap_buffers_callback_EXP
-unsigned int
-cogl_framebuffer_add_swap_buffers_callback (CoglFramebuffer *framebuffer,
-                                            CoglSwapBuffersNotify callback,
-                                            void *user_data);
-
-#define cogl_framebuffer_remove_swap_buffers_callback \
-  cogl_framebuffer_remove_swap_buffers_callback_EXP
-void
-cogl_framebuffer_remove_swap_buffers_callback (CoglFramebuffer *framebuffer,
-                                               unsigned int id);
-
-
-typedef struct _CoglOnscreen CoglOnscreen;
-#define COGL_ONSCREEN(X) ((CoglOnscreen *)(X))
-
-CoglOnscreen *
-cogl_onscreen_new (CoglContext *context, int width, int height);
-
-#ifdef COGL_HAS_X11
-typedef void (*CoglOnscreenX11MaskCallback) (CoglOnscreen *onscreen,
-                                             guint32 event_mask,
-                                             void *user_data);
+cogl_framebuffer_discard_buffers (CoglFramebuffer *framebuffer,
+                                  unsigned long buffers);
 
 /**
- * cogl_x11_onscreen_set_foreign_window_xid:
- * @onscreen: The unallocated framebuffer to associated with an X
- *            window.
- * @xid: The XID of an existing X window
- * @update: A callback that notifies of updates to what Cogl requires
- *          to be in the core X protocol event mask.
+ * cogl_framebuffer_finish:
+ * @framebuffer: A #CoglFramebuffer pointer
  *
- * Ideally we would recommend that you let Cogl be responsible for
- * creating any X window required to back an onscreen framebuffer but
- * if you really need to target a window created manually this
- * function can be called before @onscreen has been allocated to set a
- * foreign XID for your existing X window.
+ * This blocks the CPU until all pending rendering associated with the
+ * specified framebuffer has completed. It's very rare that developers should
+ * ever need this level of synchronization with the GPU and should never be
+ * used unless you clearly understand why you need to explicitly force
+ * synchronization.
  *
- * Since Cogl needs, for example, to track changes to the size of an X
- * window it requires that certain events be selected for via the core
- * X protocol. This requirement may also be changed asynchronously so
- * you must pass in an @update callback to inform you of Cogl's
- * required event mask.
+ * One example might be for benchmarking purposes to be sure timing
+ * measurements reflect the time that the GPU is busy for not just the time it
+ * takes to queue rendering commands.
  *
- * For example if you are using Xlib you could use this API roughly
- * as follows:
- * [{
- * static void
- * my_update_cogl_x11_event_mask (CoglOnscreen *onscreen,
- *                                guint32 event_mask,
- *                                void *user_data)
- * {
- *   XSetWindowAttributes attrs;
- *   MyData *data = user_data;
- *   attrs.event_mask = event_mask | data->my_event_mask;
- *   XChangeWindowAttributes (data->xdpy,
- *                            data->xwin,
- *                            CWEventMask,
- *                            &attrs);
- * }
- *
- * {
- *   *snip*
- *   cogl_x11_onscreen_set_foreign_window_xid (onscreen,
- *                                             data->xwin,
- *                                             my_update_cogl_x11_event_mask,
- *                                             data);
- *   *snip*
- * }
- * }]
- *
- * Since: 2.0
- * Stability: Unstable
+ * Stability: unstable
+ * Since: 1.10
  */
-#define cogl_x11_onscreen_set_foreign_window_xid \
-  cogl_x11_onscreen_set_foreign_window_xid_EXP
 void
-cogl_x11_onscreen_set_foreign_window_xid (CoglOnscreen *onscreen,
-                                          guint32 xid,
-                                          CoglOnscreenX11MaskCallback update,
-                                          void *user_data);
-
-#define cogl_x11_onscreen_get_window_xid cogl_x11_onscreen_get_window_xid_EXP
-guint32
-cogl_x11_onscreen_get_window_xid (CoglOnscreen *onscreen);
-
-#define cogl_x11_onscreen_get_visual_xid cogl_x11_onscreen_get_visual_xid_EXP
-guint32
-cogl_x11_onscreen_get_visual_xid (CoglOnscreen *onscreen);
-#endif /* COGL_HAS_X11 */
-
-#ifdef COGL_HAS_WIN32_SUPPORT
-#define cogl_win32_onscreen_set_foreign_window \
-  cogl_win32_onscreen_set_foreign_window_EXP
-void
-cogl_win32_onscreen_set_foreign_window (CoglOnscreen *onscreen,
-                                        HWND hwnd);
-
-#define cogl_win32_onscreen_get_window cogl_win32_onscreen_get_window_EXP
-HWND
-cogl_win32_onscreen_get_window (CoglOnscreen *onscreen);
-#endif /* COGL_HAS_WIN32_SUPPORT */
-
-#if defined (COGL_HAS_EGL_PLATFORM_WAYLAND_SUPPORT)
-struct wl_surface *
-cogl_wayland_onscreen_get_surface (CoglOnscreen *onscreen);
-#endif /* COGL_HAS_EGL_PLATFORM_WAYLAND_SUPPORT */
-
-#define cogl_onscreen_set_swap_throttled cogl_onscreen_set_swap_throttled_EXP
-void
-cogl_onscreen_set_swap_throttled (CoglOnscreen *onscreen,
-                                  gboolean throttled);
-
-/**
- * cogl_onscreen_show:
- * @onscreen: The onscreen framebuffer to make visible
- *
- * This requests to make @onscreen visible to the user.
- *
- * Actually the precise semantics of this function depend on the
- * window system currently in use, and if you don't have a
- * multi-windowining system this function may in-fact do nothing.
- *
- * This function will implicitly allocate the given @onscreen
- * framebuffer before showing it if it hasn't already been allocated.
- *
- * <note>Since Cogl doesn't explicitly track the visibility status of
- * onscreen framebuffers it wont try to avoid redundant window system
- * requests e.g. to show an already visible window. This also means
- * that it's acceptable to alternatively use native APIs to show and
- * hide windows without confusing Cogl.</note>
- *
- * Since: 2.0
- * Stability: Unstable
- */
-#define cogl_onscreen_show cogl_onscreen_show_EXP
-void
-cogl_onscreen_show (CoglOnscreen *onscreen);
-
-/**
- * cogl_onscreen_hide:
- * @onscreen: The onscreen framebuffer to make invisible
- *
- * This requests to make @onscreen invisible to the user.
- *
- * Actually the precise semantics of this function depend on the
- * window system currently in use, and if you don't have a
- * multi-windowining system this function may in-fact do nothing.
- *
- * This function does not implicitly allocate the given @onscreen
- * framebuffer before hiding it.
- *
- * <note>Since Cogl doesn't explicitly track the visibility status of
- * onscreen framebuffers it wont try to avoid redundant window system
- * requests e.g. to show an already visible window. This also means
- * that it's acceptable to alternatively use native APIs to show and
- * hide windows without confusing Cogl.</note>
- *
- * Since: 2.0
- * Stability: Unstable
- */
-#define cogl_onscreen_hide cogl_onscreen_hide_EXP
-void
-cogl_onscreen_hide (CoglOnscreen *onscreen);
+cogl_framebuffer_finish (CoglFramebuffer *framebuffer);
 
 #define cogl_get_draw_framebuffer cogl_get_draw_framebuffer_EXP
 CoglFramebuffer *
 cogl_get_draw_framebuffer (void);
 
 #endif /* COGL_ENABLE_EXPERIMENTAL_API */
+
+/* XXX: Note these are defined outside the COGL_ENABLE_EXPERIMENTAL_API guard since
+ * otherwise the glib-mkenums stuff will get upset. */
+
+#define cogl_framebuffer_error_quark cogl_framebuffer_error_quark_EXP
+GQuark
+cogl_framebuffer_error_quark (void);
+
+#define COGL_FRAMEBUFFER_ERROR (cogl_framebuffer_error_quark ())
+
+typedef enum { /*< prefix=COGL_FRAMEBUFFER_ERROR >*/
+  COGL_FRAMEBUFFER_ERROR_ALLOCATE
+} CoglFramebufferError;
 
 G_END_DECLS
 

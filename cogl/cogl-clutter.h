@@ -28,10 +28,6 @@
 #ifndef __COGL_CLUTTER_H__
 #define __COGL_CLUTTER_H__
 
-#ifdef COGL_HAS_XLIB
-#include <X11/Xutil.h>
-#endif
-
 G_BEGIN_DECLS
 
 #define cogl_clutter_check_extension cogl_clutter_check_extension_CLUTTER
@@ -45,12 +41,6 @@ cogl_clutter_winsys_has_feature (CoglWinsysFeature feature);
 #define cogl_onscreen_clutter_backend_set_size cogl_onscreen_clutter_backend_set_size_CLUTTER
 void
 cogl_onscreen_clutter_backend_set_size (int width, int height);
-
-#ifdef COGL_HAS_XLIB
-#define cogl_clutter_winsys_xlib_get_visual_info cogl_clutter_winsys_xlib_get_visual_info_CLUTTER
-XVisualInfo *
-cogl_clutter_winsys_xlib_get_visual_info (void);
-#endif
 
 G_END_DECLS
 

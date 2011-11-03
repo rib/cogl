@@ -28,6 +28,7 @@
 #include "math.h"
 
 #include "cogl.h"
+#include "cogl-util.h"
 #include "cogl-internal.h"
 #include "cogl-spans.h"
 
@@ -35,11 +36,10 @@ void
 _cogl_span_iter_update (CoglSpanIter *iter)
 {
   /* Pick current span */
-  iter->span = &g_array_index (iter->array, CoglSpan, iter->index);
+  iter->span = &iter->spans[iter->index];
 
   /* Offset next position by span size */
-  iter->next_pos = iter->pos +
-    (float)(iter->span->size - iter->span->waste);
+  iter->next_pos = iter->pos + iter->span->size - iter->span->waste;
 
   /* Check if span intersects the area to cover */
   if (iter->next_pos <= iter->cover_start ||
@@ -67,17 +67,22 @@ _cogl_span_iter_update (CoglSpanIter *iter)
 
 void
 _cogl_span_iter_begin (CoglSpanIter *iter,
-                       GArray       *spans,
-                       float         normalize_factor,
-                       float         cover_start,
-                       float         cover_end)
+                       const CoglSpan *spans,
+                       int n_spans,
+                       float normalize_factor,
+                       float cover_start,
+                       float cover_end,
+                       CoglPipelineWrapMode wrap_mode)
 {
-  float cover_start_normalized;
+  /* XXX: If CLAMP_TO_EDGE needs to be emulated then it needs to be
+   * done at a higher level than here... */
+  _COGL_RETURN_IF_FAIL (wrap_mode == COGL_PIPELINE_WRAP_MODE_REPEAT ||
+                        wrap_mode == COGL_PIPELINE_WRAP_MODE_MIRRORED_REPEAT);
 
-  iter->index = 0;
   iter->span = NULL;
 
-  iter->array = spans;
+  iter->spans = spans;
+  iter->n_spans = n_spans;
 
   /* We always iterate in a positive direction from the origin. If
    * iter->flipped == TRUE that means whoever is using this API should
@@ -98,8 +103,34 @@ _cogl_span_iter_begin (CoglSpanIter *iter,
    * iteration of any range so we need to relate the start of the range to the
    * nearest point equivalent to 0.
    */
-  cover_start_normalized = cover_start / normalize_factor;
-  iter->origin = floorf (cover_start_normalized) * normalize_factor;
+  if (normalize_factor != 1.0)
+    {
+      float cover_start_normalized = cover_start / normalize_factor;
+      iter->origin = floorf (cover_start_normalized) * normalize_factor;
+    }
+  else
+    iter->origin = floorf (cover_start);
+
+  iter->wrap_mode = wrap_mode;
+
+  if (wrap_mode == COGL_PIPELINE_WRAP_MODE_REPEAT)
+    iter->index = 0;
+  else if (wrap_mode == COGL_PIPELINE_WRAP_MODE_MIRRORED_REPEAT)
+    {
+      if ((int)iter->origin % 2)
+        {
+          iter->index = iter->n_spans - 1;
+          iter->mirror_direction = -1;
+          iter->flipped = !iter->flipped;
+        }
+      else
+        {
+          iter->index = 0;
+          iter->mirror_direction = 1;
+        }
+    }
+  else
+    g_warn_if_reached ();
 
   iter->cover_start = cover_start;
   iter->cover_end = cover_end;
@@ -107,6 +138,9 @@ _cogl_span_iter_begin (CoglSpanIter *iter,
 
   /* Update intersection */
   _cogl_span_iter_update (iter);
+
+  while (iter->next_pos <= iter->cover_start)
+    _cogl_span_iter_next (iter);
 }
 
 void
@@ -115,8 +149,20 @@ _cogl_span_iter_next (CoglSpanIter *iter)
   /* Move current position */
   iter->pos = iter->next_pos;
 
-  /* Pick next slice (wrap when last reached) */
-  iter->index = (iter->index + 1) % iter->array->len;
+  if (iter->wrap_mode == COGL_PIPELINE_WRAP_MODE_REPEAT)
+    iter->index = (iter->index + 1) % iter->n_spans;
+  else if (iter->wrap_mode == COGL_PIPELINE_WRAP_MODE_MIRRORED_REPEAT)
+    {
+      iter->index += iter->mirror_direction;
+      if (iter->index == iter->n_spans || iter->index == -1)
+        {
+          iter->mirror_direction = -iter->mirror_direction;
+          iter->index += iter->mirror_direction;
+          iter->flipped = !iter->flipped;
+        }
+    }
+  else
+    g_warn_if_reached ();
 
   /* Update intersection */
   _cogl_span_iter_update (iter);

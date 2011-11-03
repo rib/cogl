@@ -29,6 +29,7 @@
 #include "config.h"
 #endif
 
+#include "cogl-util.h"
 #include "cogl-context-private.h"
 #include "cogl-pipeline-private.h"
 #include "cogl-pipeline-opengl-private.h"
@@ -105,7 +106,7 @@ typedef struct
    * array of texture coordinate varyings, but to know how to emit the
    * declaration we need to know how many texture coordinate
    * attributes are in use.  The boilerplate also needs to be changed
-   * if this increases. */
+   * if this changes. */
   int n_tex_coord_attribs;
 
 #ifdef HAVE_COGL_GLES2
@@ -168,8 +169,8 @@ _cogl_pipeline_progend_glsl_get_position_attribute (CoglPipeline *pipeline)
 
   _COGL_GET_CONTEXT (ctx, -1);
 
-  g_return_val_if_fail (program_state != NULL, -1);
-  g_return_val_if_fail (program_state->program != 0, -1);
+  _COGL_RETURN_VAL_IF_FAIL (program_state != NULL, -1);
+  _COGL_RETURN_VAL_IF_FAIL (program_state->program != 0, -1);
 
   if (program_state->position_attribute_location == ATTRIBUTE_LOCATION_UNKNOWN)
     GE_RET( program_state->position_attribute_location,
@@ -186,8 +187,8 @@ _cogl_pipeline_progend_glsl_get_color_attribute (CoglPipeline *pipeline)
 
   _COGL_GET_CONTEXT (ctx, -1);
 
-  g_return_val_if_fail (program_state != NULL, -1);
-  g_return_val_if_fail (program_state->program != 0, -1);
+  _COGL_RETURN_VAL_IF_FAIL (program_state != NULL, -1);
+  _COGL_RETURN_VAL_IF_FAIL (program_state->program != 0, -1);
 
   if (program_state->color_attribute_location == ATTRIBUTE_LOCATION_UNKNOWN)
     GE_RET( program_state->color_attribute_location,
@@ -204,8 +205,8 @@ _cogl_pipeline_progend_glsl_get_normal_attribute (CoglPipeline *pipeline)
 
   _COGL_GET_CONTEXT (ctx, -1);
 
-  g_return_val_if_fail (program_state != NULL, -1);
-  g_return_val_if_fail (program_state->program != 0, -1);
+  _COGL_RETURN_VAL_IF_FAIL (program_state != NULL, -1);
+  _COGL_RETURN_VAL_IF_FAIL (program_state->program != 0, -1);
 
   if (program_state->normal_attribute_location == ATTRIBUTE_LOCATION_UNKNOWN)
     GE_RET( program_state->normal_attribute_location,
@@ -223,8 +224,8 @@ _cogl_pipeline_progend_glsl_get_tex_coord_attribute (CoglPipeline *pipeline,
 
   _COGL_GET_CONTEXT (ctx, -1);
 
-  g_return_val_if_fail (program_state != NULL, -1);
-  g_return_val_if_fail (program_state->program != 0, -1);
+  _COGL_RETURN_VAL_IF_FAIL (program_state != NULL, -1);
+  _COGL_RETURN_VAL_IF_FAIL (program_state->program != 0, -1);
 
   if (unit == 0)
     {
@@ -619,11 +620,12 @@ _cogl_pipeline_progend_glsl_end (CoglPipeline *pipeline,
    * need to relink
    *
    * Also if the number of texture coordinate attributes in use has
-   * increased, then delete the program so we can prepend a new
+   * changed, then delete the program so we can prepend a new
    * _cogl_tex_coord[] varying array declaration. */
-  if (program_state->program && user_program &&
-      (user_program->age != program_state->user_program_age ||
-       n_tex_coord_attribs > program_state->n_tex_coord_attribs))
+  if ((program_state->program && user_program &&
+       user_program->age != program_state->user_program_age) ||
+      (ctx->driver == COGL_DRIVER_GLES2 &&
+       n_tex_coord_attribs != program_state->n_tex_coord_attribs))
     {
       GE( ctx, glDeleteProgram (program_state->program) );
       program_state->program = 0;
@@ -639,23 +641,6 @@ _cogl_pipeline_progend_glsl_end (CoglPipeline *pipeline,
       /* Attach all of the shader from the user program */
       if (user_program)
         {
-          if (program_state->n_tex_coord_attribs > n_tex_coord_attribs)
-            n_tex_coord_attribs = program_state->n_tex_coord_attribs;
-
-#ifdef HAVE_COGL_GLES2
-          /* Find the largest count of texture coordinate attributes
-           * associated with each of the shaders so we can ensure a consistent
-           * _cogl_tex_coord[] array declaration across all of the shaders.*/
-          if (ctx->driver == COGL_DRIVER_GLES2 &&
-              user_program)
-            for (l = user_program->attached_shaders; l; l = l->next)
-              {
-                CoglShader *shader = l->data;
-                n_tex_coord_attribs = MAX (shader->n_tex_coord_attribs,
-                                           n_tex_coord_attribs);
-              }
-#endif
-
           for (l = user_program->attached_shaders; l; l = l->next)
             {
               CoglShader *shader = l->data;
@@ -921,7 +906,7 @@ _cogl_pipeline_progend_glsl_pre_paint (CoglPipeline *pipeline)
 
   /* We only need to update the matrices if we're using the the GLSL
      vertend, but this is a requirement on GLES2 anyway */
-  g_return_if_fail (pipeline->vertend == COGL_PIPELINE_VERTEND_GLSL);
+  _COGL_RETURN_IF_FAIL (pipeline->vertend == COGL_PIPELINE_VERTEND_GLSL);
 
   program_state = get_program_state (pipeline);
 

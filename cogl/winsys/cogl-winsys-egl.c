@@ -30,17 +30,20 @@
 
 #include "cogl.h"
 
+#include "cogl-util.h"
 #include "cogl-winsys-egl-private.h"
 #include "cogl-winsys-private.h"
 #include "cogl-feature-private.h"
 #include "cogl-context-private.h"
 #include "cogl-framebuffer.h"
+#include "cogl-onscreen-private.h"
 #include "cogl-swap-chain-private.h"
 #include "cogl-renderer-private.h"
 #include "cogl-onscreen-template-private.h"
 #ifdef COGL_HAS_EGL_PLATFORM_POWERVR_X11_SUPPORT
 #include "cogl-xlib-renderer-private.h"
 #include "cogl-xlib-display-private.h"
+#include "cogl-xlib-renderer.h"
 #endif
 
 #ifdef COGL_HAS_XLIB_SUPPORT
@@ -71,6 +74,8 @@
 
 #define COGL_ONSCREEN_X11_EVENT_MASK StructureNotifyMask
 #endif
+
+#define MAX_EGL_CONFIG_ATTRIBS 30
 
 typedef enum _CoglEGLWinsysFeature
 {
@@ -143,6 +148,7 @@ typedef struct _CoglDisplayEGL
 
   EGLConfig egl_config;
   gboolean found_egl_config;
+  gboolean stencil_disabled;
 } CoglDisplayEGL;
 
 typedef struct _CoglContextEGL
@@ -518,7 +524,7 @@ update_winsys_features (CoglContext *context, GError **error)
   CoglDisplayEGL *egl_display = context->display->winsys;
   CoglRendererEGL *egl_renderer = context->display->renderer->winsys;
 
-  g_return_val_if_fail (egl_display->egl_context, FALSE);
+  _COGL_RETURN_VAL_IF_FAIL (egl_display->egl_context, FALSE);
 
   memset (context->winsys_features, 0, sizeof (context->winsys_features));
 
@@ -530,6 +536,8 @@ update_winsys_features (CoglContext *context, GError **error)
 #if defined (COGL_HAS_EGL_PLATFORM_POWERVR_X11_SUPPORT) || \
     defined (COGL_HAS_EGL_PLATFORM_WAYLAND_SUPPORT)
   context->feature_flags |= COGL_FEATURE_ONSCREEN_MULTIPLE;
+  COGL_FLAGS_SET (context->features,
+                  COGL_FEATURE_ID_ONSCREEN_MULTIPLE, TRUE);
   COGL_FLAGS_SET (context->winsys_features,
                   COGL_WINSYS_FEATURE_MULTIPLE_ONSCREEN,
                   TRUE);
@@ -596,10 +604,67 @@ get_visual_info (CoglDisplay *display, EGLConfig egl_config)
 }
 #endif
 
+static void
+egl_attributes_from_framebuffer_config (CoglDisplay *display,
+                                        CoglFramebufferConfig *config,
+                                        gboolean needs_stencil_override,
+                                        EGLint *attributes)
+{
+  int i = 0;
+
+  attributes[i++] = EGL_STENCIL_SIZE;
+  attributes[i++] = needs_stencil_override ? 2 : 0;
+
+  attributes[i++] = EGL_RED_SIZE;
+  attributes[i++] = 1;
+  attributes[i++] = EGL_GREEN_SIZE;
+  attributes[i++] = 1;
+  attributes[i++] = EGL_BLUE_SIZE;
+  attributes[i++] = 1;
+
+  attributes[i++] = EGL_ALPHA_SIZE;
+  attributes[i++] = config->swap_chain->has_alpha ? 1 : EGL_DONT_CARE;
+
+  attributes[i++] = EGL_DEPTH_SIZE;
+  attributes[i++] = 1;
+
+  /* XXX: Why does the GDL platform choose these by default? */
+#ifdef COGL_HAS_EGL_PLATFORM_GDL_SUPPORT
+  attributes[i++] = EGL_BIND_TO_TEXTURE_RGBA;
+  attributes[i++] = EGL_TRUE;
+  attributes[i++] = EGL_BIND_TO_TEXTURE_RGB;
+  attributes[i++] = EGL_TRUE;
+#endif
+
+  attributes[i++] = EGL_BUFFER_SIZE;
+  attributes[i++] = EGL_DONT_CARE;
+
+  attributes[i++] = EGL_RENDERABLE_TYPE;
+  attributes[i++] = (display->renderer->driver == COGL_DRIVER_GL ?
+                      EGL_OPENGL_BIT :
+                      display->renderer->driver == COGL_DRIVER_GLES1 ?
+                      EGL_OPENGL_ES_BIT :
+                      EGL_OPENGL_ES2_BIT);
+
+  attributes[i++] = EGL_SURFACE_TYPE;
+  attributes[i++] = EGL_WINDOW_BIT;
+
+  if (config->samples_per_pixel)
+    {
+       attributes[i++] = EGL_SAMPLE_BUFFERS;
+       attributes[i++] = 1;
+       attributes[i++] = EGL_SAMPLES;
+       attributes[i++] = config->samples_per_pixel;
+    }
+
+  attributes[i++] = EGL_NONE;
+
+  g_assert (i < MAX_EGL_CONFIG_ATTRIBS);
+}
+
 static gboolean
 try_create_context (CoglDisplay *display,
-                    int retry_cookie,
-                    gboolean *try_fallback,
+                    gboolean with_stencil_buffer,
                     GError **error)
 {
   CoglDisplayEGL *egl_display = display->winsys;
@@ -612,38 +677,8 @@ try_create_context (CoglDisplay *display,
   EGLConfig config;
   EGLint config_count = 0;
   EGLBoolean status;
-  EGLint cfg_attribs[] = {
-    /* NB: This must be the first attribute, since we may
-     * try and fallback to no stencil buffer */
-    EGL_STENCIL_SIZE,    2,
-
-    EGL_RED_SIZE,        1,
-    EGL_GREEN_SIZE,      1,
-    EGL_BLUE_SIZE,       1,
-    EGL_ALPHA_SIZE,      EGL_DONT_CARE,
-
-    EGL_DEPTH_SIZE,      1,
-
-    /* XXX: Why does the GDL platform choose these by default? */
-#ifdef COGL_HAS_EGL_PLATFORM_GDL_SUPPORT
-    EGL_BIND_TO_TEXTURE_RGBA, EGL_TRUE,
-    EGL_BIND_TO_TEXTURE_RGB, EGL_TRUE,
-#endif
-
-    EGL_BUFFER_SIZE,     EGL_DONT_CARE,
-
-    EGL_RENDERABLE_TYPE, (display->renderer->driver == COGL_DRIVER_GL ?
-                          EGL_OPENGL_BIT :
-                          display->renderer->driver == COGL_DRIVER_GLES1 ?
-                          EGL_OPENGL_ES_BIT :
-                          EGL_OPENGL_ES2_BIT),
-
-    EGL_SURFACE_TYPE,    EGL_WINDOW_BIT,
-
-    EGL_NONE
-  };
+  EGLint cfg_attribs[MAX_EGL_CONFIG_ATTRIBS];
   EGLint attribs[3];
-
 #ifdef COGL_HAS_EGL_PLATFORM_POWERVR_X11_SUPPORT
   XVisualInfo *xvisinfo;
   XSetWindowAttributes attrs;
@@ -653,27 +688,17 @@ try_create_context (CoglDisplay *display,
 #endif
   const char *error_message;
 
-  if (display->renderer->driver == COGL_DRIVER_GLES2)
-    {
-      attribs[0] = EGL_CONTEXT_CLIENT_VERSION;
-      attribs[1] = 2;
-      attribs[2] = EGL_NONE;
-    }
-  else
-    attribs[0] = EGL_NONE;
+  egl_attributes_from_framebuffer_config (display,
+                                          &display->onscreen_template->config,
+                                          with_stencil_buffer,
+                                          cfg_attribs);
+
+  _COGL_RETURN_VAL_IF_FAIL (egl_display->egl_context == NULL, TRUE);
 
   edpy = egl_renderer->edpy;
 
   if (display->renderer->driver == COGL_DRIVER_GL)
     eglBindAPI (EGL_OPENGL_API);
-
-  /* Some GLES hardware can't support a stencil buffer: */
-  if (retry_cookie == 1)
-    {
-      g_warning ("Trying with stencil buffer disabled...");
-      cfg_attribs[1 /* EGL_STENCIL_SIZE */] = 0;
-    }
-  /* XXX: at this point we only have one fallback */
 
   status = eglChooseConfig (edpy,
                             cfg_attribs,
@@ -686,6 +711,15 @@ try_create_context (CoglDisplay *display,
     }
 
   egl_display->egl_config = config;
+
+  if (display->renderer->driver == COGL_DRIVER_GLES2)
+    {
+      attribs[0] = EGL_CONTEXT_CLIENT_VERSION;
+      attribs[1] = 2;
+      attribs[2] = EGL_NONE;
+    }
+  else
+    attribs[0] = EGL_NONE;
 
   egl_display->egl_context = eglCreateContext (edpy,
                                                config,
@@ -919,20 +953,10 @@ try_create_context (CoglDisplay *display,
 
 fail:
 
-  /* Currently we only have one fallback path... */
-  if (retry_cookie == 0)
-    {
-      *try_fallback = TRUE;
-      return FALSE;
-    }
-  else
-    {
-      *try_fallback = FALSE;
-      g_set_error (error, COGL_WINSYS_ERROR,
-                   COGL_WINSYS_ERROR_CREATE_CONTEXT,
-                   "%s", error_message);
-      return FALSE;
-    }
+  g_set_error (error, COGL_WINSYS_ERROR,
+               COGL_WINSYS_ERROR_CREATE_CONTEXT,
+               "%s", error_message);
+  return FALSE;
 }
 
 static void
@@ -997,35 +1021,25 @@ static gboolean
 create_context (CoglDisplay *display, GError **error)
 {
   CoglDisplayEGL *egl_display = display->winsys;
-  gboolean support_transparent_windows;
-  int retry_cookie = 0;
-  gboolean status;
-  gboolean try_fallback;
-  GError *try_error = NULL;
 
-  g_return_val_if_fail (egl_display->egl_context == NULL, TRUE);
-
-  if (display->onscreen_template->swap_chain &&
-      display->onscreen_template->swap_chain->has_alpha)
-    support_transparent_windows = TRUE;
+  /* Note: we don't just rely on eglChooseConfig to correctly
+   * report that the driver doesn't support a stencil buffer
+   * because we've seen PVR drivers that claim stencil buffer
+   * support according to the EGLConfig but then later fail
+   * when trying to create a context with such a config.
+   */
+  if (try_create_context (display, TRUE, error))
+    {
+      egl_display->stencil_disabled = FALSE;
+      return TRUE;
+    }
   else
-    support_transparent_windows = FALSE;
-
-  retry_cookie = 0;
-  while (!(status = try_create_context (display,
-                                        retry_cookie,
-                                        &try_fallback,
-                                        &try_error)) &&
-         try_fallback)
     {
       g_clear_error (error);
       cleanup_context (display);
-      retry_cookie++;
+      egl_display->stencil_disabled = TRUE;
+      return try_create_context (display, FALSE, error);
     }
-  if (!status)
-    g_propagate_error (error, try_error);
-
-  return status;
 }
 
 static void
@@ -1033,7 +1047,7 @@ _cogl_winsys_display_destroy (CoglDisplay *display)
 {
   CoglDisplayEGL *egl_display = display->winsys;
 
-  g_return_if_fail (egl_display != NULL);
+  _COGL_RETURN_IF_FAIL (egl_display != NULL);
 
   cleanup_context (display);
 
@@ -1136,7 +1150,7 @@ _cogl_winsys_display_setup (CoglDisplay *display,
   CoglRendererEGL *egl_renderer = display->renderer->winsys;
 #endif
 
-  g_return_val_if_fail (display->winsys == NULL, FALSE);
+  _COGL_RETURN_VAL_IF_FAIL (display->winsys == NULL, FALSE);
 
   egl_display = g_slice_new0 (CoglDisplayEGL);
   display->winsys = egl_display;
@@ -1212,8 +1226,43 @@ _cogl_winsys_onscreen_init (CoglOnscreen *onscreen,
 #ifdef COGL_HAS_EGL_PLATFORM_WAYLAND_SUPPORT
   struct wl_visual *wayland_visual;
 #endif
+  EGLint attributes[MAX_EGL_CONFIG_ATTRIBS];
+  EGLConfig egl_config;
+  EGLint config_count = 0;
+  EGLBoolean status;
+  gboolean need_stencil =
+    egl_display->stencil_disabled ? FALSE : framebuffer->config.need_stencil;
 
-  g_return_val_if_fail (egl_display->egl_context, FALSE);
+  _COGL_RETURN_VAL_IF_FAIL (egl_display->egl_context, FALSE);
+
+  egl_attributes_from_framebuffer_config (display,
+                                          &framebuffer->config,
+                                          need_stencil,
+                                          attributes);
+
+  status = eglChooseConfig (egl_renderer->edpy,
+                            attributes,
+                            &egl_config, 1,
+                            &config_count);
+  if (status != EGL_TRUE || config_count == 0)
+    {
+      g_set_error (error, COGL_WINSYS_ERROR,
+                   COGL_WINSYS_ERROR_CREATE_ONSCREEN,
+                   "Failed to find a suitable EGL configuration");
+      return FALSE;
+    }
+
+  /* Update the real number of samples_per_pixel now that we have
+   * found an egl_config... */
+  if (framebuffer->config.samples_per_pixel)
+    {
+      EGLint samples;
+      status = eglGetConfigAttrib (egl_renderer->edpy,
+                                   egl_config,
+                                   EGL_SAMPLES, &samples);
+      g_return_val_if_fail (status == EGL_TRUE, TRUE);
+      framebuffer->samples_per_pixel = samples;
+    }
 
 #ifdef COGL_HAS_EGL_PLATFORM_POWERVR_X11_SUPPORT
 
@@ -1274,7 +1323,7 @@ _cogl_winsys_onscreen_init (CoglOnscreen *onscreen,
 
       _cogl_xlib_renderer_trap_errors (display->renderer, &state);
 
-      xvisinfo = get_visual_info (display, egl_display->egl_config);
+      xvisinfo = get_visual_info (display, egl_config);
       if (xvisinfo == NULL)
         {
           g_set_error (error, COGL_WINSYS_ERROR,
@@ -1336,7 +1385,7 @@ _cogl_winsys_onscreen_init (CoglOnscreen *onscreen,
 
   egl_onscreen->egl_surface =
     eglCreateWindowSurface (egl_renderer->edpy,
-                            egl_display->egl_config,
+                            egl_config,
                             (NativeWindowType) xlib_onscreen->xwin,
                             NULL);
 #elif defined (COGL_HAS_EGL_PLATFORM_WAYLAND_SUPPORT)
@@ -1369,7 +1418,7 @@ _cogl_winsys_onscreen_init (CoglOnscreen *onscreen,
 
   egl_onscreen->egl_surface =
     eglCreateWindowSurface (egl_renderer->edpy,
-                            egl_display->egl_config,
+                            egl_config,
                             (EGLNativeWindowType)
                             egl_onscreen->wayland_egl_native_window,
                             NULL);
@@ -1607,7 +1656,7 @@ _cogl_winsys_xlib_get_visual_info (void)
 
   _COGL_GET_CONTEXT (ctx, NULL);
 
-  g_return_val_if_fail (ctx->display->winsys, FALSE);
+  _COGL_RETURN_VAL_IF_FAIL (ctx->display->winsys, FALSE);
 
   egl_display = ctx->display->winsys;
 
@@ -1798,10 +1847,10 @@ void
 cogl_wayland_renderer_set_foreign_display (CoglRenderer *renderer,
                                            struct wl_display *display)
 {
-  g_return_if_fail (cogl_is_renderer (renderer));
+  _COGL_RETURN_IF_FAIL (cogl_is_renderer (renderer));
 
   /* NB: Renderers are considered immutable once connected */
-  g_return_if_fail (!renderer->connected);
+  _COGL_RETURN_IF_FAIL (!renderer->connected);
 
   renderer->foreign_wayland_display = display;
 }
@@ -1809,7 +1858,7 @@ cogl_wayland_renderer_set_foreign_display (CoglRenderer *renderer,
 struct wl_display *
 cogl_wayland_renderer_get_display (CoglRenderer *renderer)
 {
-  g_return_val_if_fail (cogl_is_renderer (renderer), NULL);
+  _COGL_RETURN_VAL_IF_FAIL (cogl_is_renderer (renderer), NULL);
 
   if (renderer->foreign_wayland_display)
     return renderer->foreign_wayland_display;
@@ -1826,10 +1875,10 @@ void
 cogl_wayland_renderer_set_foreign_compositor (CoglRenderer *renderer,
                                               struct wl_compositor *compositor)
 {
-  g_return_if_fail (cogl_is_renderer (renderer));
+  _COGL_RETURN_IF_FAIL (cogl_is_renderer (renderer));
 
   /* NB: Renderers are considered immutable once connected */
-  g_return_if_fail (!renderer->connected);
+  _COGL_RETURN_IF_FAIL (!renderer->connected);
 
   renderer->foreign_wayland_compositor = compositor;
 }
@@ -1837,7 +1886,7 @@ cogl_wayland_renderer_set_foreign_compositor (CoglRenderer *renderer,
 struct wl_compositor *
 cogl_wayland_renderer_get_compositor (CoglRenderer *renderer)
 {
-  g_return_val_if_fail (cogl_is_renderer (renderer), NULL);
+  _COGL_RETURN_VAL_IF_FAIL (cogl_is_renderer (renderer), NULL);
 
   if (renderer->foreign_wayland_compositor)
     return renderer->foreign_wayland_compositor;
@@ -1878,7 +1927,7 @@ _cogl_egl_create_image (CoglContext *ctx,
   CoglRendererEGL *egl_renderer = ctx->display->renderer->winsys;
   EGLContext egl_ctx;
 
-  g_return_val_if_fail (egl_renderer->pf_eglCreateImage, EGL_NO_IMAGE_KHR);
+  _COGL_RETURN_VAL_IF_FAIL (egl_renderer->pf_eglCreateImage, EGL_NO_IMAGE_KHR);
 
   /* The EGL_KHR_image_pixmap spec explicitly states that EGL_NO_CONTEXT must
    * always be used in conjunction with the EGL_NATIVE_PIXMAP_KHR target */
@@ -1902,7 +1951,7 @@ _cogl_egl_destroy_image (CoglContext *ctx,
 {
   CoglRendererEGL *egl_renderer = ctx->display->renderer->winsys;
 
-  g_return_if_fail (egl_renderer->pf_eglDestroyImage);
+  _COGL_RETURN_IF_FAIL (egl_renderer->pf_eglDestroyImage);
 
   egl_renderer->pf_eglDestroyImage (egl_renderer->edpy, image);
 }

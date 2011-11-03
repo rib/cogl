@@ -30,6 +30,7 @@
 
 #include "cogl.h"
 
+#include "cogl-util.h"
 #include "cogl-winsys-private.h"
 #include "cogl-feature-private.h"
 #include "cogl-context-private.h"
@@ -44,6 +45,10 @@
 #include "cogl-texture-2d-private.h"
 #include "cogl-texture-rectangle-private.h"
 #include "cogl-pipeline-opengl-private.h"
+#include "cogl-framebuffer-private.h"
+#include "cogl-onscreen-private.h"
+#include "cogl-swap-chain-private.h"
+#include "cogl-xlib-renderer.h"
 
 #include <stdlib.h>
 #include <sys/types.h>
@@ -63,6 +68,7 @@
 #endif
 
 #define COGL_ONSCREEN_X11_EVENT_MASK StructureNotifyMask
+#define MAX_GLX_CONFIG_ATTRIBS 30
 
 typedef struct _CoglContextGLX
 {
@@ -377,7 +383,7 @@ update_winsys_features (CoglContext *context, GError **error)
   int default_screen;
   int i;
 
-  g_return_val_if_fail (glx_display->glx_context, FALSE);
+  _COGL_RETURN_VAL_IF_FAIL (glx_display->glx_context, FALSE);
 
   if (!_cogl_context_update_features (context, error))
     return FALSE;
@@ -392,6 +398,8 @@ update_winsys_features (CoglContext *context, GError **error)
   COGL_NOTE (WINSYS, "  GLX Extensions: %s", glx_extensions);
 
   context->feature_flags |= COGL_FEATURE_ONSCREEN_MULTIPLE;
+  COGL_FLAGS_SET (context->features,
+                  COGL_FEATURE_ID_ONSCREEN_MULTIPLE, TRUE);
   COGL_FLAGS_SET (context->winsys_features,
                   COGL_WINSYS_FEATURE_MULTIPLE_ONSCREEN,
                   TRUE);
@@ -452,33 +460,68 @@ update_winsys_features (CoglContext *context, GError **error)
   return TRUE;
 }
 
+static void
+glx_attributes_from_framebuffer_config (CoglDisplay *display,
+                                        CoglFramebufferConfig *config,
+                                        int *attributes)
+{
+  CoglGLXRenderer *glx_renderer = display->renderer->winsys;
+  int i = 0;
+
+  attributes[i++] = GLX_DRAWABLE_TYPE;
+  attributes[i++] = GLX_WINDOW_BIT;
+
+  attributes[i++] = GLX_RENDER_TYPE;
+  attributes[i++] = GLX_RGBA_BIT;
+
+  attributes[i++] = GLX_DOUBLEBUFFER;
+  attributes[i++] = GL_TRUE;
+
+  attributes[i++] = GLX_RED_SIZE;
+  attributes[i++] = 1;
+  attributes[i++] = GLX_GREEN_SIZE;
+  attributes[i++] = 1;
+  attributes[i++] = GLX_BLUE_SIZE;
+  attributes[i++] = 1;
+  attributes[i++] = GLX_ALPHA_SIZE;
+  attributes[i++] = config->swap_chain->has_alpha ? 1 : GLX_DONT_CARE;
+  attributes[i++] = GLX_DEPTH_SIZE;
+  attributes[i++] = 1;
+  attributes[i++] = GLX_STENCIL_SIZE;
+  attributes[i++] = config->need_stencil ? 1: GLX_DONT_CARE;
+
+  if (glx_renderer->glx_major == 1 && glx_renderer->glx_minor >= 4 &&
+      config->samples_per_pixel)
+    {
+       attributes[i++] = GLX_SAMPLE_BUFFERS;
+       attributes[i++] = 1;
+       attributes[i++] = GLX_SAMPLES;
+       attributes[i++] = config->samples_per_pixel;
+    }
+
+  attributes[i++] = None;
+
+  g_assert (i < MAX_GLX_CONFIG_ATTRIBS);
+}
+
 /* It seems the GLX spec never defined an invalid GLXFBConfig that
  * we could overload as an indication of error, so we have to return
  * an explicit boolean status. */
 static gboolean
 find_fbconfig (CoglDisplay *display,
-               gboolean with_alpha,
+               CoglFramebufferConfig *config,
                GLXFBConfig *config_ret,
                GError **error)
 {
   CoglXlibRenderer *xlib_renderer = display->renderer->winsys;
   CoglGLXRenderer *glx_renderer = display->renderer->winsys;
   GLXFBConfig *configs = NULL;
-  int n_configs, i;
-  static const int attributes[] = {
-    GLX_DRAWABLE_TYPE,    GLX_WINDOW_BIT,
-    GLX_RENDER_TYPE,      GLX_RGBA_BIT,
-    GLX_DOUBLEBUFFER,     GL_TRUE,
-    GLX_RED_SIZE,         1,
-    GLX_GREEN_SIZE,       1,
-    GLX_BLUE_SIZE,        1,
-    GLX_ALPHA_SIZE,       1,
-    GLX_DEPTH_SIZE,       1,
-    GLX_STENCIL_SIZE,     1,
-    None
-  };
+  int n_configs;
+  static int attributes[MAX_GLX_CONFIG_ATTRIBS];
   gboolean ret = TRUE;
   int xscreen_num = DefaultScreen (xlib_renderer->xdpy);
+
+  glx_attributes_from_framebuffer_config (display, config, attributes);
 
   configs = glx_renderer->glXChooseFBConfig (xlib_renderer->xdpy,
                                              xscreen_num,
@@ -493,8 +536,10 @@ find_fbconfig (CoglDisplay *display,
       goto done;
     }
 
-  if (with_alpha)
+  if (config->swap_chain->has_alpha)
     {
+      int i;
+
       for (i = 0; i < n_configs; i++)
         {
           XVisualInfo *vinfo;
@@ -540,7 +585,8 @@ create_context (CoglDisplay *display, GError **error)
   CoglXlibDisplay *xlib_display = display->winsys;
   CoglXlibRenderer *xlib_renderer = display->renderer->winsys;
   CoglGLXRenderer *glx_renderer = display->renderer->winsys;
-  gboolean support_transparent_windows;
+  gboolean support_transparent_windows =
+    display->onscreen_template->config.swap_chain->has_alpha;
   GLXFBConfig config;
   GError *fbconfig_error = NULL;
   XSetWindowAttributes attrs;
@@ -548,16 +594,10 @@ create_context (CoglDisplay *display, GError **error)
   GLXDrawable dummy_drawable;
   CoglXlibTrapState old_state;
 
-  g_return_val_if_fail (glx_display->glx_context == NULL, TRUE);
-
-  if (display->onscreen_template->swap_chain &&
-      display->onscreen_template->swap_chain->has_alpha)
-    support_transparent_windows = TRUE;
-  else
-    support_transparent_windows = FALSE;
+  _COGL_RETURN_VAL_IF_FAIL (glx_display->glx_context == NULL, TRUE);
 
   glx_display->found_fbconfig =
-    find_fbconfig (display, support_transparent_windows, &config,
+    find_fbconfig (display, &display->onscreen_template->config, &config,
                    &fbconfig_error);
   if (!glx_display->found_fbconfig)
     {
@@ -676,7 +716,7 @@ _cogl_winsys_display_destroy (CoglDisplay *display)
   CoglXlibRenderer *xlib_renderer = display->renderer->winsys;
   CoglGLXRenderer *glx_renderer = display->renderer->winsys;
 
-  g_return_if_fail (glx_display != NULL);
+  _COGL_RETURN_IF_FAIL (glx_display != NULL);
 
   if (glx_display->glx_context)
     {
@@ -711,7 +751,7 @@ _cogl_winsys_display_setup (CoglDisplay *display,
   CoglGLXDisplay *glx_display;
   int i;
 
-  g_return_val_if_fail (display->winsys == NULL, FALSE);
+  _COGL_RETURN_VAL_IF_FAIL (display->winsys == NULL, FALSE);
 
   glx_display = g_slice_new0 (CoglGLXDisplay);
   display->winsys = glx_display;
@@ -762,8 +802,35 @@ _cogl_winsys_onscreen_init (CoglOnscreen *onscreen,
   Window xwin;
   CoglOnscreenXlib *xlib_onscreen;
   CoglOnscreenGLX *glx_onscreen;
+  GLXFBConfig fbconfig;
+  GError *fbconfig_error = NULL;
 
-  g_return_val_if_fail (glx_display->glx_context, FALSE);
+  _COGL_RETURN_VAL_IF_FAIL (glx_display->glx_context, FALSE);
+
+  if (!find_fbconfig (display, &framebuffer->config,
+                      &fbconfig,
+                      &fbconfig_error))
+    {
+      g_set_error (error, COGL_WINSYS_ERROR,
+                   COGL_WINSYS_ERROR_CREATE_CONTEXT,
+                   "Unable to find suitable fbconfig for the GLX context: %s",
+                   fbconfig_error->message);
+      g_error_free (fbconfig_error);
+      return FALSE;
+    }
+
+  /* Update the real number of samples_per_pixel now that we have
+   * found an fbconfig... */
+  if (framebuffer->config.samples_per_pixel)
+    {
+      int samples;
+      int status = glx_renderer->glXGetFBConfigAttrib (xlib_renderer->xdpy,
+                                                       fbconfig,
+                                                       GLX_SAMPLES,
+                                                       &samples);
+      g_return_val_if_fail (status == Success, TRUE);
+      framebuffer->samples_per_pixel = samples;
+    }
 
   /* FIXME: We need to explicitly Select for ConfigureNotify events.
    * For foreign windows we need to be careful not to mess up any
@@ -823,7 +890,7 @@ _cogl_winsys_onscreen_init (CoglOnscreen *onscreen,
       _cogl_xlib_renderer_trap_errors (display->renderer, &state);
 
       xvisinfo = glx_renderer->glXGetVisualFromFBConfig (xlib_renderer->xdpy,
-                                                         glx_display->fbconfig);
+                                                         fbconfig);
       if (xvisinfo == NULL)
         {
           g_set_error (error, COGL_WINSYS_ERROR,
@@ -887,7 +954,7 @@ _cogl_winsys_onscreen_init (CoglOnscreen *onscreen,
     {
       glx_onscreen->glxwin =
         glx_renderer->glXCreateWindow (xlib_renderer->xdpy,
-                                       glx_display->fbconfig,
+                                       fbconfig,
                                        xlib_onscreen->xwin,
                                        NULL);
     }
@@ -1431,7 +1498,7 @@ _cogl_winsys_xlib_get_visual_info (void)
 
   _COGL_GET_CONTEXT (ctx, NULL);
 
-  g_return_val_if_fail (ctx->display->winsys, FALSE);
+  _COGL_RETURN_VAL_IF_FAIL (ctx->display->winsys, FALSE);
 
   glx_display = ctx->display->winsys;
   xlib_renderer = ctx->display->renderer->winsys;
@@ -1555,7 +1622,7 @@ get_fbconfig_for_depth (CoglContext *context,
       stencil = value;
 
       /* glGenerateMipmap is defined in the offscreen extension */
-      if (cogl_features_available (COGL_FEATURE_OFFSCREEN))
+      if (cogl_has_feature (context, COGL_FEATURE_ID_OFFSCREEN))
         {
           glx_renderer->glXGetFBConfigAttrib (dpy,
                                               fbconfigs[i],
@@ -1590,7 +1657,7 @@ should_use_rectangle (CoglContext *context)
 
   if (context->rectangle_state == COGL_WINSYS_RECTANGLE_STATE_UNKNOWN)
     {
-      if (cogl_features_available (COGL_FEATURE_TEXTURE_RECTANGLE))
+      if (cogl_has_feature (context, COGL_FEATURE_ID_TEXTURE_RECTANGLE))
         {
           const char *rect_env;
 
@@ -1605,7 +1672,7 @@ should_use_rectangle (CoglContext *context)
              are not available */
 
           context->rectangle_state =
-            cogl_features_available (COGL_FEATURE_TEXTURE_NPOT) ?
+            cogl_has_feature (context, COGL_FEATURE_ID_TEXTURE_NPOT) ?
             COGL_WINSYS_RECTANGLE_STATE_DISABLE :
             COGL_WINSYS_RECTANGLE_STATE_ENABLE;
 
@@ -1870,6 +1937,7 @@ _cogl_winsys_texture_pixmap_x11_update (CoglTexturePixmapX11 *tex_pixmap,
   if (glx_tex_pixmap->glx_tex == COGL_INVALID_HANDLE)
     {
       CoglPixelFormat texture_format;
+      GError *error = NULL;
 
       texture_format = (tex_pixmap->depth >= 32 ?
                         COGL_PIXEL_FORMAT_RGBA_8888_PRE :
@@ -1878,10 +1946,11 @@ _cogl_winsys_texture_pixmap_x11_update (CoglTexturePixmapX11 *tex_pixmap,
       if (should_use_rectangle (ctx))
         {
           glx_tex_pixmap->glx_tex =
-            _cogl_texture_rectangle_new_with_size (tex_pixmap->width,
-                                                   tex_pixmap->height,
-                                                   COGL_TEXTURE_NO_ATLAS,
-                                                   texture_format);
+            cogl_texture_rectangle_new_with_size (ctx,
+                                                  tex_pixmap->width,
+                                                  tex_pixmap->height,
+                                                  texture_format,
+                                                  &error);
 
           if (glx_tex_pixmap->glx_tex)
             COGL_NOTE (TEXTURE_PIXMAP, "Created a texture rectangle for %p",
@@ -1889,8 +1958,9 @@ _cogl_winsys_texture_pixmap_x11_update (CoglTexturePixmapX11 *tex_pixmap,
           else
             {
               COGL_NOTE (TEXTURE_PIXMAP, "Falling back for %p because a "
-                         "texture rectangle could not be created",
-                         tex_pixmap);
+                         "texture rectangle could not be created: %s",
+                         tex_pixmap, error->message);
+              g_error_free (error);
               free_glx_pixmap (ctx, glx_tex_pixmap);
               return FALSE;
             }

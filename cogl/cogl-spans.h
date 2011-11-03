@@ -25,30 +25,32 @@
 #define __COGL_SPANS_PRIVATE_H
 
 #include "cogl-handle.h"
+#include "cogl-pipeline-layer-state.h"
 
 typedef struct _CoglSpan
 {
-  int start;
-  int size;
-  int waste;
+  float start;
+  float size;
+  float waste;
 } CoglSpan;
 
 typedef struct _CoglSpanIter
 {
-  int       index;
-  GArray   *array;
-  CoglSpan *span;
-  float     pos;
-  float     next_pos;
-  float     origin;
-  float     cover_start;
-  float     cover_end;
-  float     intersect_start;
-  float     intersect_end;
-  float     intersect_start_local;
-  float     intersect_end_local;
-  gboolean  intersects;
-  gboolean  flipped;
+  int index;
+  const CoglSpan *spans;
+  int n_spans;
+  const CoglSpan *span;
+  float pos;
+  float next_pos;
+  float origin;
+  float cover_start;
+  float cover_end;
+  float intersect_start;
+  float intersect_end;
+  gboolean intersects;
+  gboolean flipped;
+  CoglPipelineWrapMode wrap_mode;
+  int mirror_direction;
 } CoglSpanIter;
 
 void
@@ -56,10 +58,12 @@ _cogl_span_iter_update (CoglSpanIter *iter);
 
 void
 _cogl_span_iter_begin (CoglSpanIter *iter,
-                       GArray       *spans,
-                       float         normalize_factor,
-                       float         cover_start,
-                       float         cover_end);
+                       const CoglSpan *spans,
+                       int n_spans,
+                       float normalize_factor,
+                       float cover_start,
+                       float cover_end,
+                       CoglPipelineWrapMode wrap_mode);
 
 void
 _cogl_span_iter_next (CoglSpanIter *iter);

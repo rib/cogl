@@ -145,11 +145,11 @@ main (int argc, char **argv)
   UNPORTED_TEST ("/cogl/texture", test_cogl_npot_texture);
   UNPORTED_TEST ("/cogl/texture", test_cogl_multitexture);
   UNPORTED_TEST ("/cogl/texture", test_cogl_texture_mipmaps);
-  UNPORTED_TEST ("/cogl/texture", test_cogl_sub_texture);
+  ADD_TEST ("/cogl/texture", test_cogl_sub_texture);
   UNPORTED_TEST ("/cogl/texture", test_cogl_pixel_array);
   UNPORTED_TEST ("/cogl/texture", test_cogl_texture_rectangle);
   UNPORTED_TEST ("/cogl/texture", test_cogl_texture_3d);
-  UNPORTED_TEST ("/cogl/texture", test_cogl_wrap_modes);
+  ADD_TEST ("/cogl/texture", test_cogl_wrap_modes);
   UNPORTED_TEST ("/cogl/texture", test_cogl_texture_pixmap_x11);
   UNPORTED_TEST ("/cogl/texture", test_cogl_texture_get_set_data);
   UNPORTED_TEST ("/cogl/texture", test_cogl_atlas_migration);

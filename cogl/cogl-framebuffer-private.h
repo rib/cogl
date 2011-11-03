@@ -28,6 +28,7 @@
 #include "cogl-matrix-stack.h"
 #include "cogl-clip-state-private.h"
 #include "cogl-journal-private.h"
+#include "cogl-winsys-private.h"
 
 #ifdef COGL_HAS_XLIB_SUPPORT
 #include <X11/Xlib.h>
@@ -38,20 +39,33 @@
 #include <GL/glxext.h>
 #endif
 
-#ifdef COGL_HAS_WIN32_SUPPORT
-#include <windows.h>
-#endif
-
 typedef enum _CoglFramebufferType {
   COGL_FRAMEBUFFER_TYPE_ONSCREEN,
   COGL_FRAMEBUFFER_TYPE_OFFSCREEN
 } CoglFramebufferType;
+
+typedef struct
+{
+  CoglSwapChain *swap_chain;
+  gboolean need_stencil;
+  int samples_per_pixel;
+} CoglFramebufferConfig;
+
+/* Flags to pass to _cogl_offscreen_new_to_texture_full */
+typedef enum
+{
+  COGL_OFFSCREEN_DISABLE_DEPTH_AND_STENCIL = 1
+} CoglOffscreenFlags;
 
 struct _CoglFramebuffer
 {
   CoglObject          _parent;
   CoglContext        *context;
   CoglFramebufferType  type;
+
+  /* The user configuration before allocation... */
+  CoglFramebufferConfig config;
+
   int                 width;
   int                 height;
   /* Format of the pixels in the framebuffer (including the expected
@@ -76,6 +90,8 @@ struct _CoglFramebuffer
 
   gboolean            dither_enabled;
   CoglColorMask       color_mask;
+
+  int                 samples_per_pixel;
 
   /* We journal the textured rectangles we want to submit to OpenGL so
    * we have an oppertunity to batch them together into less draw
@@ -108,42 +124,32 @@ typedef struct _CoglOffscreen
   CoglFramebuffer  _parent;
   GLuint          fbo_handle;
   GSList          *renderbuffers;
-  CoglTexture     *texture;
-} CoglOffscreen;
 
-/* Flags to pass to _cogl_offscreen_new_to_texture_full */
-typedef enum
-{
-  COGL_OFFSCREEN_DISABLE_DEPTH_AND_STENCIL = 1
-} CoglOffscreenFlags;
+  CoglTexture    *texture;
+  int             texture_level;
+  int             texture_level_width;
+  int             texture_level_height;
+
+  /* FIXME: _cogl_offscreen_new_to_texture_full should be made to use
+   * fb->config to configure if we want a depth or stencil buffer so
+   * we can get rid of these flags */
+  CoglOffscreenFlags create_flags;
+} CoglOffscreen;
 
 #define COGL_OFFSCREEN(X) ((CoglOffscreen *)(X))
 
-struct _CoglOnscreen
-{
-  CoglFramebuffer  _parent;
-
-#ifdef COGL_HAS_X11_SUPPORT
-  guint32 foreign_xid;
-  CoglOnscreenX11MaskCallback foreign_update_mask_callback;
-  void *foreign_update_mask_data;
-#endif
-
-#ifdef COGL_HAS_WIN32_SUPPORT
-  HWND foreign_hwnd;
-#endif
-
-  gboolean swap_throttled;
-
-  void *winsys;
-};
-
 void
-_cogl_framebuffer_state_init (void);
+_cogl_framebuffer_init (CoglFramebuffer *framebuffer,
+                        CoglContext *ctx,
+                        CoglFramebufferType type,
+                        CoglPixelFormat format,
+                        int width,
+                        int height);
 
-void
-_cogl_framebuffer_winsys_update_size (CoglFramebuffer *framebuffer,
-                                      int width, int height);
+void _cogl_framebuffer_free (CoglFramebuffer *framebuffer);
+
+const CoglWinsysVtable *
+_cogl_framebuffer_get_winsys (CoglFramebuffer *framebuffer);
 
 void
 _cogl_framebuffer_clear_without_flush4f (CoglFramebuffer *framebuffer,
@@ -287,7 +293,7 @@ _cogl_push_framebuffers (CoglFramebuffer *draw_buffer,
  * This blits a region of the color buffer of the current draw buffer
  * to the current read buffer. The draw and read buffers can be set up
  * using _cogl_push_framebuffers(). This function should only be
- * called if the COGL_FEATURE_OFFSCREEN_BLIT feature is
+ * called if the COGL_PRIVATE_FEATURE_OFFSCREEN_BLIT feature is
  * advertised. The two buffers must both be offscreen and have the
  * same format.
  *
@@ -328,8 +334,4 @@ _cogl_blit_framebuffer (unsigned int src_x,
                         unsigned int width,
                         unsigned int height);
 
-CoglOnscreen *
-_cogl_onscreen_new (void);
-
 #endif /* __COGL_FRAMEBUFFER_PRIVATE_H */
-

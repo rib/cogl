@@ -1163,7 +1163,7 @@ update_primitive_attributes (CoglVertexBuffer *buffer)
         ;
     }
 
-  g_return_if_fail (n_attributes > 0);
+  _COGL_RETURN_IF_FAIL (n_attributes > 0);
 
   attributes = g_alloca (sizeof (CoglAttribute *) * n_attributes);
 
@@ -1590,9 +1590,9 @@ update_primitive_and_draw (CoglVertexBuffer *buffer,
   cogl_primitive_set_n_vertices (buffer->primitive, count);
 
   if (buffer_indices)
-    cogl_primitive_set_indices (buffer->primitive, buffer_indices->indices);
+    cogl_primitive_set_indices (buffer->primitive, buffer_indices->indices, count);
   else
-    cogl_primitive_set_indices (buffer->primitive, NULL);
+    cogl_primitive_set_indices (buffer->primitive, NULL, count);
 
   cogl_vertex_buffer_submit_real (buffer);
 

@@ -27,6 +27,10 @@
 #include <glib.h>
 #include <math.h>
 
+#ifndef COGL_HAS_GLIB_SUPPORT
+#include <stdio.h>
+#endif
+
 int
 _cogl_util_next_p2 (int a);
 
@@ -122,5 +126,31 @@ cogl_modff (float value, float *int_part)
 #else /* _MSC_VER && _M_IX86 */
 #define cogl_modff modff
 #endif /* _MSC_VER && _M_IX86 */
+
+#ifdef COGL_HAS_GLIB_SUPPORT
+#define _COGL_RETURN_IF_FAIL(EXPR) g_return_if_fail(EXPR)
+#define _COGL_RETURN_VAL_IF_FAIL(EXPR, VAL) g_return_val_if_fail(EXPR, VAL)
+#else
+#define _COGL_RETURN_IF_FAIL(EXPR) do {	                            \
+   if (!(EXPR))						            \
+     {							            \
+       fprintf (stderr, "file %s: line %d: assertion `%s' failed",  \
+                __FILE__,					    \
+                __LINE__,					    \
+                #EXPR);						    \
+       return;						            \
+     };                                                             \
+  } while(0)
+#define _COGL_RETURN_VAL_IF_FAIL(EXPR, VAL) do {	                    \
+   if (!(EXPR))						            \
+     {							            \
+       fprintf (stderr, "file %s: line %d: assertion `%s' failed",  \
+                __FILE__,					    \
+                __LINE__,					    \
+                #EXPR);						    \
+       return (VAL);						    \
+     };                                                             \
+  } while(0)
+#endif /* COGL_HAS_GLIB_SUPPORT */
 
 #endif /* __COGL_UTIL_H */

@@ -292,101 +292,6 @@ _cogl_texture_set_wrap_mode_parameters (CoglTexture *texture,
                                              wrap_mode_p);
 }
 
-/* This is like CoglSpanIter except it deals with floats and it
-   effectively assumes there is only one span from 0.0 to 1.0 */
-typedef struct _CoglTextureIter
-{
-  float pos, end, next_pos;
-  gboolean flipped;
-  float t_1, t_2;
-} CoglTextureIter;
-
-static void
-_cogl_texture_iter_update (CoglTextureIter *iter)
-{
-  float t_2;
-  float frac_part;
-
-  frac_part = cogl_modff (iter->pos, &iter->next_pos);
-
-  /* modff rounds the int part towards zero so we need to add one if
-     we're meant to be heading away from zero */
-  if (iter->pos >= 0.0f || frac_part == 0.0f)
-    iter->next_pos += 1.0f;
-
-  if (iter->next_pos > iter->end)
-    t_2 = iter->end;
-  else
-    t_2 = iter->next_pos;
-
-  if (iter->flipped)
-    {
-      iter->t_1 = t_2;
-      iter->t_2 = iter->pos;
-    }
-  else
-    {
-      iter->t_1 = iter->pos;
-      iter->t_2 = t_2;
-    }
-}
-
-static void
-_cogl_texture_iter_begin (CoglTextureIter *iter,
-                          float t_1, float t_2)
-{
-  if (t_1 <= t_2)
-    {
-      iter->pos = t_1;
-      iter->end = t_2;
-      iter->flipped = FALSE;
-    }
-  else
-    {
-      iter->pos = t_2;
-      iter->end = t_1;
-      iter->flipped = TRUE;
-    }
-
-  _cogl_texture_iter_update (iter);
-}
-
-static void
-_cogl_texture_iter_next (CoglTextureIter *iter)
-{
-  iter->pos = iter->next_pos;
-  _cogl_texture_iter_update (iter);
-}
-
-static gboolean
-_cogl_texture_iter_end (CoglTextureIter *iter)
-{
-  return iter->pos >= iter->end;
-}
-
-/* This invokes the callback with enough quads to cover the manually
-   repeated range specified by the virtual texture coordinates without
-   emitting coordinates outside the range [0,1] */
-void
-_cogl_texture_iterate_manual_repeats (CoglTextureManualRepeatCallback callback,
-                                      float tx_1, float ty_1,
-                                      float tx_2, float ty_2,
-                                      void *user_data)
-{
-  CoglTextureIter x_iter, y_iter;
-
-  for (_cogl_texture_iter_begin (&y_iter, ty_1, ty_2);
-       !_cogl_texture_iter_end (&y_iter);
-       _cogl_texture_iter_next (&y_iter))
-    for (_cogl_texture_iter_begin (&x_iter, tx_1, tx_2);
-         !_cogl_texture_iter_end (&x_iter);
-         _cogl_texture_iter_next (&x_iter))
-      {
-        float coords[4] = { x_iter.t_1, y_iter.t_1, x_iter.t_2, y_iter.t_2 };
-        callback (coords, user_data);
-      }
-}
-
 CoglTexture *
 cogl_texture_new_with_size (unsigned int     width,
 			    unsigned int     height,
@@ -405,10 +310,15 @@ cogl_texture_new_with_size (unsigned int     width,
 
   /* If it fails resort to sliced textures */
   if (tex == NULL)
-    tex = COGL_TEXTURE (_cogl_texture_2d_sliced_new_with_size (width,
-                                                               height,
-                                                               flags,
-                                                               internal_format));
+    {
+      int max_waste = flags & COGL_TEXTURE_NO_SLICING ? -1 : COGL_TEXTURE_MAX_WASTE;
+      tex = COGL_TEXTURE (cogl_texture_2d_sliced_new_with_size (ctx,
+                                                                width,
+                                                                height,
+                                                                max_waste,
+                                                                internal_format,
+                                                                NULL));
+    }
 
   return tex;
 }
@@ -471,9 +381,10 @@ cogl_texture_new_from_bitmap (CoglBitmap *bitmap,
     return tex;
 
   /* Otherwise create a sliced texture */
-  return _cogl_texture_2d_sliced_new_from_bitmap (bitmap,
-                                                  flags,
-                                                  internal_format);
+  return
+    COGL_TEXTURE (_cogl_texture_2d_sliced_new_from_bitmap (bitmap,
+                                                           flags,
+                                                           internal_format));
 }
 
 CoglTexture *
@@ -486,7 +397,7 @@ cogl_texture_new_from_file (const char        *filename,
   CoglTexture *texture = NULL;
   CoglPixelFormat src_format;
 
-  g_return_val_if_fail (error == NULL || *error == NULL, NULL);
+  _COGL_RETURN_VAL_IF_FAIL (error == NULL || *error == NULL, NULL);
 
   bmp = cogl_bitmap_new_from_file (filename, error);
   if (bmp == NULL)
@@ -521,6 +432,11 @@ cogl_texture_new_from_foreign (GLuint           gl_handle,
 #if HAVE_COGL_GL
   if (gl_target == GL_TEXTURE_RECTANGLE_ARB)
     {
+      CoglTextureRectangle *texture_rectangle;
+      CoglSubTexture *sub_texture;
+
+      _COGL_GET_CONTEXT (ctx, COGL_INVALID_HANDLE);
+
       if (x_pot_waste != 0 || y_pot_waste != 0)
         {
           /* It shouldn't be necessary to have waste in this case since
@@ -530,21 +446,29 @@ cogl_texture_new_from_foreign (GLuint           gl_handle,
           return COGL_INVALID_HANDLE;
         }
 
-      return _cogl_texture_rectangle_new_from_foreign (gl_handle,
-                                                       width,
-                                                       height,
-                                                       format);
+      texture_rectangle = _cogl_texture_rectangle_new_from_foreign (gl_handle,
+                                                                    width,
+                                                                    height,
+                                                                    format);
+      /* CoglTextureRectangle textures work with non-normalized
+       * coordinates, but the semantics for this function that people
+       * depend on are that all returned texture works with normalized
+       * coordinates so we wrap with a CoglSubTexture... */
+      sub_texture = cogl_sub_texture_new (ctx,
+                                          COGL_TEXTURE (texture_rectangle),
+                                          0, 0, width, height);
+      return COGL_TEXTURE (sub_texture);
     }
 #endif
 
   if (x_pot_waste != 0 || y_pot_waste != 0)
-    return _cogl_texture_2d_sliced_new_from_foreign (gl_handle,
-                                                     gl_target,
-                                                     width,
-                                                     height,
-                                                     x_pot_waste,
-                                                     y_pot_waste,
-                                                     format);
+    return COGL_TEXTURE (_cogl_texture_2d_sliced_new_from_foreign (gl_handle,
+                                                                   gl_target,
+                                                                   width,
+                                                                   height,
+                                                                   x_pot_waste,
+                                                                   y_pot_waste,
+                                                                   format));
   else
     {
       _COGL_GET_CONTEXT (ctx, COGL_INVALID_HANDLE);
@@ -573,8 +497,10 @@ cogl_texture_new_from_sub_texture (CoglTexture *full_texture,
                                    int sub_width,
                                    int sub_height)
 {
-  return _cogl_sub_texture_new (full_texture, sub_x, sub_y,
-                                sub_width, sub_height);
+  _COGL_GET_CONTEXT (ctx, NULL);
+  return COGL_TEXTURE (cogl_sub_texture_new (ctx,
+                                             full_texture, sub_x, sub_y,
+                                             sub_width, sub_height));
 }
 
 CoglTexture *
@@ -592,7 +518,7 @@ cogl_texture_new_from_buffer_EXP (CoglPixelBuffer    *buffer,
   CoglPixelBuffer *pixel_buffer;
   CoglBitmap *bmp;
 
-  g_return_val_if_fail (cogl_is_buffer (buffer), NULL);
+  _COGL_RETURN_VAL_IF_FAIL (cogl_is_buffer (buffer), NULL);
 
   if (format == COGL_PIXEL_FORMAT_ANY)
     return NULL;
@@ -673,33 +599,6 @@ gboolean
 cogl_texture_is_sliced (CoglTexture *texture)
 {
   return texture->vtable->is_sliced (texture);
-}
-
-/* Some CoglTextures, notably sliced textures or atlas textures when repeating
- * is used, will need to divide the coordinate space into multiple GL textures
- * (or rather; in the case of atlases duplicate a single texture in multiple
- * positions to handle repeating)
- *
- * This function helps you implement primitives using such textures by
- * invoking a callback once for each sub texture that intersects a given
- * region specified in texture coordinates.
- */
-void
-_cogl_texture_foreach_sub_texture_in_region (CoglTexture *texture,
-                                             float virtual_tx_1,
-                                             float virtual_ty_1,
-                                             float virtual_tx_2,
-                                             float virtual_ty_2,
-                                             CoglTextureSliceCallback callback,
-                                             void *user_data)
-{
-  texture->vtable->foreach_sub_texture_in_region (texture,
-                                                  virtual_tx_1,
-                                                  virtual_ty_1,
-                                                  virtual_tx_2,
-                                                  virtual_ty_2,
-                                                  callback,
-                                                  user_data);
 }
 
 /* If this returns FALSE, that implies _foreach_sub_texture_in_region
@@ -1115,7 +1014,7 @@ get_texture_bits_via_offscreen (CoglTexture    *texture,
 
   _COGL_GET_CONTEXT (ctx, FALSE);
 
-  if (!cogl_features_available (COGL_FEATURE_OFFSCREEN))
+  if (!cogl_has_feature (ctx, COGL_FEATURE_ID_OFFSCREEN))
     return FALSE;
 
   framebuffer = _cogl_offscreen_new_to_texture_full
@@ -1347,10 +1246,12 @@ cogl_texture_get_data (CoglTexture     *texture,
    * the data for a sliced texture, and allows us to do the
    * read-from-framebuffer logic here in a simple fashion rather than
    * passing offsets down through the code. */
-  _cogl_texture_foreach_sub_texture_in_region (texture,
-                                               0, 0, 1, 1,
-                                               texture_get_cb,
-                                               &tg_data);
+  cogl_meta_texture_foreach_in_region (COGL_META_TEXTURE (texture),
+                                       0, 0, 1, 1,
+                                       COGL_PIPELINE_WRAP_MODE_REPEAT,
+                                       COGL_PIPELINE_WRAP_MODE_REPEAT,
+                                       texture_get_cb,
+                                       &tg_data);
 
   _cogl_bitmap_unmap (target_bmp);
 
@@ -1451,3 +1352,115 @@ _cogl_texture_flush_journal_rendering (CoglTexture *texture)
   for (l = texture->framebuffers; l; l = l->next)
     _cogl_framebuffer_flush_journal (l->data);
 }
+
+/* This function lets you define a meta texture as a grid of textures
+ * whereby the x and y grid-lines are defined by an array of
+ * CoglSpans. With that grid based description this function can then
+ * iterate all the cells of the grid that lye within a region
+ * specified as virtual, meta-texture, coordinates.  This function can
+ * also cope with regions that extend beyond the original meta-texture
+ * grid by iterating cells repeatedly according to the wrap_x/y
+ * arguments.
+ *
+ * To differentiate between texture coordinates of a specific, real,
+ * slice texture and the texture coordinates of a composite, meta
+ * texture, the coordinates of the meta texture are called "virtual"
+ * coordinates and the coordinates of spans are called "slice"
+ * coordinates.
+ *
+ * Note: no guarantee is given about the order in which the slices
+ * will be visited.
+ *
+ * Note: The slice coordinates passed to @callback are always
+ * normalized coordinates even if the span coordinates aren't
+ * normalized.
+ */
+void
+_cogl_texture_spans_foreach_in_region (CoglSpan *x_spans,
+                                       int n_x_spans,
+                                       CoglSpan *y_spans,
+                                       int n_y_spans,
+                                       CoglTexture **textures,
+                                       float *virtual_coords,
+                                       float x_normalize_factor,
+                                       float y_normalize_factor,
+                                       CoglPipelineWrapMode wrap_x,
+                                       CoglPipelineWrapMode wrap_y,
+                                       CoglMetaTextureCallback callback,
+                                       void *user_data)
+{
+  CoglSpanIter iter_x;
+  CoglSpanIter iter_y;
+  float slice_coords[4];
+
+  /* Iterate the y axis of the virtual rectangle */
+  for (_cogl_span_iter_begin (&iter_y,
+                              y_spans,
+                              n_y_spans,
+                              y_normalize_factor,
+                              virtual_coords[1],
+                              virtual_coords[3],
+                              wrap_y);
+       !_cogl_span_iter_end (&iter_y);
+       _cogl_span_iter_next (&iter_y))
+    {
+      if (iter_y.flipped)
+        {
+          slice_coords[1] = iter_y.intersect_end;
+          slice_coords[3] = iter_y.intersect_start;
+        }
+      else
+        {
+          slice_coords[1] = iter_y.intersect_start;
+          slice_coords[3] = iter_y.intersect_end;
+        }
+
+      /* Map the current intersection to normalized slice coordinates */
+      slice_coords[1] = (slice_coords[1] - iter_y.pos) / iter_y.span->size;
+      slice_coords[3] = (slice_coords[3] - iter_y.pos) / iter_y.span->size;
+
+      /* Iterate the x axis of the virtual rectangle */
+      for (_cogl_span_iter_begin (&iter_x,
+                                  x_spans,
+                                  n_x_spans,
+                                  x_normalize_factor,
+                                  virtual_coords[0],
+                                  virtual_coords[2],
+                                  wrap_x);
+	   !_cogl_span_iter_end (&iter_x);
+	   _cogl_span_iter_next (&iter_x))
+        {
+          CoglTexture *span_tex;
+          float span_virtual_coords[4];
+
+          if (iter_x.flipped)
+            {
+              slice_coords[0] = iter_x.intersect_end;
+              slice_coords[2] = iter_x.intersect_start;
+            }
+          else
+            {
+              slice_coords[0] = iter_x.intersect_start;
+              slice_coords[2] = iter_x.intersect_end;
+            }
+
+          /* Map the current intersection to normalized slice coordinates */
+          slice_coords[0] = (slice_coords[0] - iter_x.pos) / iter_x.span->size;
+          slice_coords[2] = (slice_coords[2] - iter_x.pos) / iter_x.span->size;
+
+	  /* Pluck out the cogl texture for this span */
+          span_tex = textures[iter_y.index * n_y_spans + iter_x.index];
+
+          span_virtual_coords[0] = iter_x.intersect_start;
+          span_virtual_coords[1] = iter_y.intersect_start;
+          span_virtual_coords[2] = iter_x.intersect_end;
+          span_virtual_coords[3] = iter_y.intersect_end;
+
+          callback (COGL_TEXTURE (span_tex),
+                    slice_coords,
+                    span_virtual_coords,
+                    user_data);
+	}
+    }
+}
+

@@ -57,76 +57,9 @@ static const CoglTextureVtable cogl_texture_2d_vtable;
 typedef struct _CoglTexture2DManualRepeatData
 {
   CoglTexture2D *tex_2d;
-  CoglTextureSliceCallback callback;
+  CoglMetaTextureCallback callback;
   void *user_data;
 } CoglTexture2DManualRepeatData;
-
-static void
-_cogl_texture_2d_wrap_coords (float t_1, float t_2,
-                              float *out_t_1, float *out_t_2)
-{
-  float int_part;
-
-  /* Wrap t_1 and t_2 to the range [0,1] */
-
-  cogl_modff (t_1 < t_2 ? t_1 : t_2, &int_part);
-  t_1 -= int_part;
-  t_2 -= int_part;
-  if (cogl_util_float_signbit (int_part))
-    {
-      *out_t_1 = 1.0f + t_1;
-      *out_t_2 = 1.0f + t_2;
-    }
-  else
-    {
-      *out_t_1 = t_1;
-      *out_t_2 = t_2;
-    }
-}
-
-static void
-_cogl_texture_2d_manual_repeat_cb (const float *coords,
-                                   void *user_data)
-{
-  CoglTexture2DManualRepeatData *data = user_data;
-  float slice_coords[4];
-
-  _cogl_texture_2d_wrap_coords (coords[0], coords[2],
-                                slice_coords + 0, slice_coords + 2);
-  _cogl_texture_2d_wrap_coords (coords[1], coords[3],
-                                slice_coords + 1, slice_coords + 3);
-
-  data->callback (COGL_TEXTURE (data->tex_2d),
-                  slice_coords,
-                  coords,
-                  data->user_data);
-}
-
-static void
-_cogl_texture_2d_foreach_sub_texture_in_region (
-                                       CoglTexture *tex,
-                                       float virtual_tx_1,
-                                       float virtual_ty_1,
-                                       float virtual_tx_2,
-                                       float virtual_ty_2,
-                                       CoglTextureSliceCallback callback,
-                                       void *user_data)
-{
-  CoglTexture2D *tex_2d = COGL_TEXTURE_2D (tex);
-  CoglTexture2DManualRepeatData data;
-
-  data.tex_2d = tex_2d;
-  data.callback = callback;
-  data.user_data = user_data;
-
-  /* We need to implement manual repeating because if Cogl is calling
-     this function then it will set the wrap mode to GL_CLAMP_TO_EDGE
-     and hardware repeating can't be done */
-  _cogl_texture_iterate_manual_repeats (_cogl_texture_2d_manual_repeat_cb,
-                                        virtual_tx_1, virtual_ty_1,
-                                        virtual_tx_2, virtual_ty_2,
-                                        &data);
-}
 
 static void
 _cogl_texture_2d_set_wrap_mode_parameters (CoglTexture *tex,
@@ -181,7 +114,7 @@ _cogl_texture_2d_can_create (unsigned int width,
 
   /* If NPOT textures aren't supported then the size must be a power
      of two */
-  if (!cogl_features_available (COGL_FEATURE_TEXTURE_NPOT) &&
+  if (!cogl_has_feature (ctx, COGL_FEATURE_ID_TEXTURE_NPOT) &&
       (!_cogl_util_is_pot (width) ||
        !_cogl_util_is_pot (height)))
     return FALSE;
@@ -291,7 +224,7 @@ _cogl_texture_2d_new_from_bitmap (CoglBitmap      *bmp,
 
   _COGL_GET_CONTEXT (ctx, COGL_INVALID_HANDLE);
 
-  g_return_val_if_fail (bmp != NULL, COGL_INVALID_HANDLE);
+  _COGL_RETURN_VAL_IF_FAIL (bmp != NULL, COGL_INVALID_HANDLE);
 
   internal_format =
     _cogl_texture_determine_internal_format (_cogl_bitmap_get_format (bmp),
@@ -329,7 +262,7 @@ _cogl_texture_2d_new_from_bitmap (CoglBitmap      *bmp,
 
   /* Keep a copy of the first pixel so that if glGenerateMipmap isn't
      supported we can fallback to using GL_GENERATE_MIPMAP */
-  if (!cogl_features_available (COGL_FEATURE_OFFSCREEN) &&
+  if (!cogl_has_feature (ctx, COGL_FEATURE_ID_OFFSCREEN) &&
       (data = _cogl_bitmap_map (dst_bmp,
                                 COGL_BUFFER_ACCESS_READ, 0)))
     {
@@ -370,8 +303,8 @@ cogl_texture_2d_new_from_data (CoglContext *ctx,
   CoglBitmap *bmp;
   CoglHandle tex;
 
-  g_return_val_if_fail (format != COGL_PIXEL_FORMAT_ANY, NULL);
-  g_return_val_if_fail (data != NULL, NULL);
+  _COGL_RETURN_VAL_IF_FAIL (format != COGL_PIXEL_FORMAT_ANY, NULL);
+  _COGL_RETURN_VAL_IF_FAIL (data != NULL, NULL);
 
   /* Rowstride from width if not given */
   if (rowstride == 0)
@@ -525,11 +458,11 @@ _cogl_egl_texture_2d_new_from_image (CoglContext *ctx,
   CoglTexture2D *tex_2d;
   GLenum gl_error;
 
-  g_return_val_if_fail (_cogl_context_get_winsys (ctx) ==
+  _COGL_RETURN_VAL_IF_FAIL (_cogl_context_get_winsys (ctx) ==
                         _cogl_winsys_egl_get_vtable (),
                         NULL);
 
-  g_return_val_if_fail (ctx->private_feature_flags &
+  _COGL_RETURN_VAL_IF_FAIL (ctx->private_feature_flags &
                         COGL_PRIVATE_FEATURE_TEXTURE_2D_FROM_EGL_IMAGE,
                         NULL);
 
@@ -605,7 +538,7 @@ cogl_wayland_texture_2d_new_from_buffer (CoglContext *ctx,
     {
       EGLImageKHR image;
 
-      g_return_val_if_fail (_cogl_context_get_winsys (ctx) ==
+      _COGL_RETURN_VAL_IF_FAIL (_cogl_context_get_winsys (ctx) ==
                             _cogl_winsys_egl_get_vtable (),
                             NULL);
       image = _cogl_egl_create_image (ctx,
@@ -644,7 +577,7 @@ _cogl_texture_2d_copy_from_framebuffer (CoglHandle handle,
 
   _COGL_GET_CONTEXT (ctx, NO_RETVAL);
 
-  g_return_if_fail (cogl_is_texture_2d (handle));
+  _COGL_RETURN_IF_FAIL (cogl_is_texture_2d (handle));
 
   tex_2d = COGL_TEXTURE_2D (handle);
 
@@ -771,7 +704,7 @@ _cogl_texture_2d_pre_paint (CoglTexture *tex, CoglTexturePrePaintFlags flags)
       /* glGenerateMipmap is defined in the FBO extension. If it's not
          available we'll fallback to temporarily enabling
          GL_GENERATE_MIPMAP and reuploading the first pixel */
-      if (cogl_features_available (COGL_FEATURE_OFFSCREEN))
+      if (cogl_has_feature (ctx, COGL_FEATURE_ID_OFFSCREEN))
         ctx->texture_driver->gl_generate_mipmaps (GL_TEXTURE_2D);
 #if defined(HAVE_COGL_GLES) || defined(HAVE_COGL_GL)
       else
@@ -825,7 +758,7 @@ _cogl_texture_2d_set_region (CoglTexture    *tex,
 
   /* If this touches the first pixel then we'll update our copy */
   if (dst_x == 0 && dst_y == 0 &&
-      !cogl_features_available (COGL_FEATURE_OFFSCREEN) &&
+      !cogl_has_feature (ctx, COGL_FEATURE_ID_OFFSCREEN) &&
       (data = _cogl_bitmap_map (bmp, COGL_BUFFER_ACCESS_READ, 0)))
     {
       CoglPixelFormat bpp =
@@ -923,7 +856,7 @@ cogl_texture_2d_vtable =
   {
     _cogl_texture_2d_set_region,
     _cogl_texture_2d_get_data,
-    _cogl_texture_2d_foreach_sub_texture_in_region,
+    NULL, /* foreach_sub_texture_in_region */
     _cogl_texture_2d_get_max_waste,
     _cogl_texture_2d_is_sliced,
     _cogl_texture_2d_can_hardware_repeat,

@@ -80,7 +80,11 @@ typedef struct _CoglFramebuffer CoglFramebuffer;
 #include <cogl/cogl-euler.h>
 #include <cogl/cogl-quaternion.h>
 #include <cogl/cogl-texture-2d.h>
+#include <cogl/cogl-texture-rectangle.h>
 #include <cogl/cogl-texture-3d.h>
+#include <cogl/cogl-texture-2d-sliced.h>
+#include <cogl/cogl-sub-texture.h>
+#include <cogl/cogl-meta-texture.h>
 #include <cogl/cogl-index-buffer.h>
 #include <cogl/cogl-attribute-buffer.h>
 #include <cogl/cogl-indices.h>
@@ -91,10 +95,7 @@ typedef struct _CoglFramebuffer CoglFramebuffer;
 #include <cogl/cogl-pipeline-state.h>
 #include <cogl/cogl-pipeline-layer-state.h>
 #include <cogl/cogl-framebuffer.h>
-#ifdef COGL_HAS_XLIB
-#include <cogl/cogl-xlib.h>
-#include <cogl/cogl-xlib-renderer.h>
-#endif
+#include <cogl/cogl-onscreen.h>
 #if defined (COGL_HAS_EGL_PLATFORM_WAYLAND_SUPPORT)
 #include <cogl/cogl-wayland-renderer.h>
 #endif
@@ -155,6 +156,159 @@ cogl_get_features (void);
  */
 gboolean
 cogl_features_available (CoglFeatureFlags features);
+
+/* XXX: not guarded by the EXPERIMENTAL_2_0_API defines to avoid
+ * upsetting glib-mkenums, but this can still be considered implicitly
+ * experimental since it's only useable with experimental API... */
+/**
+ * CoglFeatureID:
+ * @COGL_FEATURE_ID_TEXTURE_NPOT_BASIC: The hardware supports non power
+ *     of two textures, but you also need to check the
+ *     %COGL_FEATURE_ID_TEXTURE_NPOT_MIPMAP and %COGL_FEATURE_ID_TEXTURE_NPOT_REPEAT
+ *     features to know if the hardware supports npot texture mipmaps
+ *     or repeat modes other than
+ *     %COGL_RENDERER_PIPELINE_WRAP_MODE_CLAMP_TO_EDGE respectively.
+ * @COGL_FEATURE_ID_TEXTURE_NPOT_MIPMAP: Mipmapping is supported in
+ *     conjuntion with non power of two textures.
+ * @COGL_FEATURE_ID_TEXTURE_NPOT_REPEAT: Repeat modes other than
+ *     %COGL_RENDERER_PIPELINE_WRAP_MODE_CLAMP_TO_EDGE are supported by the
+ *     hardware.
+ * @COGL_FEATURE_ID_TEXTURE_NPOT: Non power of two textures are supported
+ *    by the hardware. This is a equivalent to the
+ *    %COGL_FEATURE_ID_TEXTURE_NPOT_BASIC, %COGL_FEATURE_ID_TEXTURE_NPOT_MIPMAP
+ *    and %COGL_FEATURE_ID_TEXTURE_NPOT_REPEAT features combined.
+ * @COGL_FEATURE_ID_TEXTURE_RECTANGLE: Support for rectangular
+ *    textures with non-normalized texture coordinates.
+ * @COGL_FEATURE_ID_TEXTURE_3D: 3D texture support
+ * @COGL_FEATURE_ID_OFFSCREEN: Offscreen rendering support
+ * @COGL_FEATURE_ID_OFFSCREEN_MULTISAMPLE: Multisample support for
+ *    offscreen framebuffers
+ * @COGL_FEATURE_ID_ONSCREEN_MULTIPLE: Multiple onscreen framebuffers
+ *    supported.
+ * @COGL_FEATURE_ID_GLSL: GLSL support
+ * @COGL_FEATURE_ID_ARBFP: ARBFP support
+ * @COGL_FEATURE_ID_UNSIGNED_INT_INDICES: Set if
+ *     %COGL_RENDERER_INDICES_TYPE_UNSIGNED_INT is supported in
+ *     cogl_indices_new().
+ * @COGL_FEATURE_ID_DEPTH_RANGE: cogl_pipeline_set_depth_range() support
+ * @COGL_FEATURE_ID_POINT_SPRITE: Whether
+ *     cogl_pipeline_set_layer_point_sprite_coords_enabled() is supported.
+ * @COGL_FEATURE_ID_MAP_BUFFER_FOR_READ: Whether cogl_buffer_map() is
+ *     supported with CoglBufferAccess including read support.
+ * @COGL_FEATURE_ID_MAP_BUFFER_FOR_WRITE: Whether cogl_buffer_map() is
+ *     supported with CoglBufferAccess including write support.
+ * @COGL_FEATURE_ID_MIRRORED_REPEAT: Whether
+ *    %COGL_PIPELINE_WRAP_MODE_MIRRORED_REPEAT is supported.
+ *
+ *
+ * All the capabilities that can vary between different GPUs supported
+ * by Cogl. Applications that depend on any of these features should explicitly
+ * check for them using cogl_has_feature() or cogl_has_features().
+ *
+ * Since: 1.10
+ */
+typedef enum _CoglFeatureID
+{
+  COGL_FEATURE_ID_TEXTURE_NPOT_BASIC = 1,
+  COGL_FEATURE_ID_TEXTURE_NPOT_MIPMAP,
+  COGL_FEATURE_ID_TEXTURE_NPOT_REPEAT,
+  COGL_FEATURE_ID_TEXTURE_NPOT,
+  COGL_FEATURE_ID_TEXTURE_RECTANGLE,
+  COGL_FEATURE_ID_TEXTURE_3D,
+  COGL_FEATURE_ID_GLSL,
+  COGL_FEATURE_ID_ARBFP,
+  COGL_FEATURE_ID_OFFSCREEN,
+  COGL_FEATURE_ID_OFFSCREEN_MULTISAMPLE,
+  COGL_FEATURE_ID_ONSCREEN_MULTIPLE,
+  COGL_FEATURE_ID_UNSIGNED_INT_INDICES,
+  COGL_FEATURE_ID_DEPTH_RANGE,
+  COGL_FEATURE_ID_POINT_SPRITE,
+  COGL_FEATURE_ID_MAP_BUFFER_FOR_READ,
+  COGL_FEATURE_ID_MAP_BUFFER_FOR_WRITE,
+  COGL_FEATURE_ID_MIRRORED_REPEAT,
+
+  /*< private > */
+  _COGL_N_FEATURE_IDS
+} CoglFeatureID;
+
+
+#ifdef COGL_ENABLE_EXPERIMENTAL_2_0_API
+
+#define cogl_has_feature cogl_has_feature_EXP
+/**
+ * cogl_has_feature:
+ * @context: A #CoglContext pointer
+ * @feature: A #CoglFeatureID
+ *
+ * Checks if a given @feature is currently available
+ *
+ * Cogl does not aim to be a lowest common denominator API, it aims to
+ * expose all the interesting features of GPUs to application which
+ * means applications have some responsibility to explicitly check
+ * that certain features are available before depending on them.
+ *
+ * Returns: %TRUE if the @feature is currently supported or %FALSE if
+ * not.
+ *
+ * Since: 1.10
+ * Stability: unstable
+ */
+gboolean
+cogl_has_feature (CoglContext *context, CoglFeatureID feature);
+
+#define cogl_has_features cogl_has_features_EXP
+/**
+ * cogl_has_features:
+ * @context: A #CoglContext pointer
+ * @...: A 0 terminated list of CoglFeatureID<!-- -->s
+ *
+ * Checks if a list of features are all currently available.
+ *
+ * This checks all of the listed features using cogl_has_feature() and
+ * returns %TRUE if all the features are available or %FALSE
+ * otherwise.
+ *
+ * Return value: %TRUE if all the features are available, %FALSE
+ * otherwise.
+ *
+ * Since: 1.10
+ * Stability: unstable
+ */
+gboolean
+cogl_has_features (CoglContext *context, ...);
+
+/**
+ * CoglFeatureCallback:
+ * @feature: A single feature currently supported by Cogl
+ * @user_data: A private pointer passed to cogl_foreach_feature().
+ *
+ * A callback used with cogl_foreach_feature() for enumerating all
+ * context level features supported by Cogl.
+ *
+ * Since: 1.10
+ * Stability: unstable
+ */
+typedef void (*CoglFeatureCallback) (CoglFeatureID feature, void *user_data);
+
+#define cogl_foreach_feature cogl_foreach_feature_EXP
+/**
+ * cogl_foreach_feature:
+ * @context: A #CoglContext pointer
+ * @callback: A #CoglFeatureCallback called for each supported feature
+ * @user_data: Private data to pass to the callback
+ *
+ * Iterates through all the context level features currently supported
+ * for a given @context and for each feature @callback is called.
+ *
+ * Since: 1.10
+ * Stability: unstable
+ */
+void
+cogl_foreach_feature (CoglContext *context,
+                      CoglFeatureCallback callback,
+                      void *user_data);
+
+#endif /* COGL_ENABLE_EXPERIMENTAL_2_0_API */
 
 /**
  * cogl_get_proc_address:
@@ -843,6 +997,44 @@ cogl_clip_push_rectangle (float x0,
  */
 void
 cogl_clip_push_from_path_preserve (void);
+
+#ifdef COGL_ENABLE_EXPERIMENTAL_2_0_API
+#define cogl_clip_push_primitive cogl_clip_push_primitive_EXP
+/**
+ * cogl_clip_push_primitive:
+ * @primitive: A #CoglPrimitive describing a flat 2D shape
+ * @bounds_x1: x coordinate for the top-left corner of the primitives
+ *             bounds
+ * @bounds_y1: y coordinate for the top-left corner of the primitives
+ *             bounds
+ * @bounds_x2: x coordinate for the top-left corner of the primitives
+ *             bounds
+ * @bounds_y2: x coordinate for the bottom-right corner of the
+ *             primitives bounds.
+ * @bounds_x1: y coordinate for the bottom-right corner of the
+ *             primitives bounds.
+ *
+ * Sets a new clipping area using a 2D shaped described with a
+ * #CoglPrimitive. The shape must not contain self overlapping
+ * geometry and must lie on a single 2D plane. A bounding box of the
+ * 2D shape in local coordinates (the same coordinates used to
+ * describe the shape) must be given. It is acceptable for the bounds
+ * to be larger than the true bounds but behaviour is undefined if the
+ * bounds are smaller than the true bounds.
+ *
+ * The clipping area is intersected with the previous clipping area.
+ * To restore the previous clipping area, call cogl_clip_pop().
+ *
+ * Since: 1.10
+ * Stability: unstable
+ */
+void
+cogl_clip_push_primitive (CoglPrimitive *primitive,
+                          float bounds_x1,
+                          float bounds_y1,
+                          float bounds_x2,
+                          float bounds_y2);
+#endif
 
 /**
  * cogl_clip_pop:

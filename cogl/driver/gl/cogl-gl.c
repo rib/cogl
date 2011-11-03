@@ -160,6 +160,12 @@ _cogl_gl_update_features (CoglContext *context,
   flags = (COGL_FEATURE_TEXTURE_READ_PIXELS
            | COGL_FEATURE_UNSIGNED_INT_INDICES
            | COGL_FEATURE_DEPTH_RANGE);
+  COGL_FLAGS_SET (ctx->features,
+                  COGL_FEATURE_ID_UNSIGNED_INT_INDICES, TRUE);
+  COGL_FLAGS_SET (ctx->features, COGL_FEATURE_ID_DEPTH_RANGE, TRUE);
+
+  if (COGL_CHECK_GL_VERSION (gl_major, gl_minor, 1, 4))
+    COGL_FLAGS_SET (ctx->features, COGL_FEATURE_ID_MIRRORED_REPEAT, TRUE);
 
   gl_extensions = (const char *)ctx->glGetString (GL_EXTENSIONS);
 
@@ -175,14 +181,14 @@ _cogl_gl_update_features (CoglContext *context,
         | COGL_FEATURE_TEXTURE_NPOT_BASIC
         | COGL_FEATURE_TEXTURE_NPOT_MIPMAP
         | COGL_FEATURE_TEXTURE_NPOT_REPEAT;
+      COGL_FLAGS_SET (ctx->features, COGL_FEATURE_ID_TEXTURE_NPOT, TRUE);
+      COGL_FLAGS_SET (ctx->features,
+                      COGL_FEATURE_ID_TEXTURE_NPOT_BASIC, TRUE);
+      COGL_FLAGS_SET (ctx->features,
+                      COGL_FEATURE_ID_TEXTURE_NPOT_MIPMAP, TRUE);
+      COGL_FLAGS_SET (ctx->features,
+                      COGL_FEATURE_ID_TEXTURE_NPOT_REPEAT, TRUE);
     }
-
-#ifdef GL_YCBCR_MESA
-  if (_cogl_check_extension ("GL_MESA_ycbcr_texture", gl_extensions))
-    {
-      flags |= COGL_FEATURE_TEXTURE_YUV;
-    }
-#endif
 
   if (_cogl_check_extension ("GL_MESA_pack_invert", gl_extensions))
     private_flags |= COGL_PRIVATE_FEATURE_MESA_PACK_INVERT;
@@ -190,45 +196,74 @@ _cogl_gl_update_features (CoglContext *context,
   GE( ctx, glGetIntegerv (GL_STENCIL_BITS, &num_stencil_bits) );
   /* We need at least three stencil bits to combine clips */
   if (num_stencil_bits > 2)
-    flags |= COGL_FEATURE_STENCIL_BUFFER;
+    private_flags |= COGL_PRIVATE_FEATURE_STENCIL_BUFFER;
 
   GE( ctx, glGetIntegerv (GL_MAX_CLIP_PLANES, &max_clip_planes) );
   if (max_clip_planes >= 4)
-    flags |= COGL_FEATURE_FOUR_CLIP_PLANES;
+    private_flags |= COGL_PRIVATE_FEATURE_FOUR_CLIP_PLANES;
 
   if (context->glGenRenderbuffers)
-    flags |= COGL_FEATURE_OFFSCREEN;
+    {
+      flags |= COGL_FEATURE_OFFSCREEN;
+      COGL_FLAGS_SET (ctx->features, COGL_FEATURE_ID_OFFSCREEN, TRUE);
+    }
 
   if (context->glBlitFramebuffer)
-    flags |= COGL_FEATURE_OFFSCREEN_BLIT;
+    private_flags |= COGL_PRIVATE_FEATURE_OFFSCREEN_BLIT;
 
-  if (context->glRenderbufferStorageMultisample)
-    flags |= COGL_FEATURE_OFFSCREEN_MULTISAMPLE;
+  if (context->glRenderbufferStorageMultisampleIMG)
+    {
+      flags |= COGL_FEATURE_OFFSCREEN_MULTISAMPLE;
+      COGL_FLAGS_SET (ctx->features,
+                      COGL_FEATURE_ID_OFFSCREEN_MULTISAMPLE, TRUE);
+    }
 
   if (COGL_CHECK_GL_VERSION (gl_major, gl_minor, 2, 1) ||
       _cogl_check_extension ("GL_EXT_pixel_buffer_object", gl_extensions))
-    flags |= COGL_FEATURE_PBOS;
+    private_flags |= COGL_PRIVATE_FEATURE_PBOS;
 
   if (COGL_CHECK_GL_VERSION (gl_major, gl_minor, 2, 0) ||
       _cogl_check_extension ("GL_ARB_point_sprite", gl_extensions))
-    flags |= COGL_FEATURE_POINT_SPRITE;
+    {
+      flags |= COGL_FEATURE_POINT_SPRITE;
+      COGL_FLAGS_SET (ctx->features, COGL_FEATURE_ID_POINT_SPRITE, TRUE);
+    }
 
   if (context->glGenPrograms)
-    flags |= COGL_FEATURE_SHADERS_ARBFP;
+    {
+      flags |= COGL_FEATURE_SHADERS_ARBFP;
+      COGL_FLAGS_SET (ctx->features, COGL_FEATURE_ID_ARBFP, TRUE);
+    }
 
   if (context->glCreateProgram)
-    flags |= COGL_FEATURE_SHADERS_GLSL;
+    {
+      flags |= COGL_FEATURE_SHADERS_GLSL;
+      COGL_FLAGS_SET (ctx->features, COGL_FEATURE_ID_GLSL, TRUE);
+    }
 
   if (context->glGenBuffers)
-    flags |= (COGL_FEATURE_VBOS |
-              COGL_FEATURE_MAP_BUFFER_FOR_READ |
-              COGL_FEATURE_MAP_BUFFER_FOR_WRITE);
+    {
+      private_flags |= COGL_PRIVATE_FEATURE_VBOS;
+      flags |= (COGL_FEATURE_MAP_BUFFER_FOR_READ |
+                COGL_FEATURE_MAP_BUFFER_FOR_WRITE);
+      COGL_FLAGS_SET (ctx->features,
+                         COGL_FEATURE_ID_MAP_BUFFER_FOR_READ, TRUE);
+      COGL_FLAGS_SET (ctx->features,
+                      COGL_FEATURE_ID_MAP_BUFFER_FOR_WRITE, TRUE);
+    }
 
   if (_cogl_check_extension ("GL_ARB_texture_rectangle", gl_extensions))
-    flags |= COGL_FEATURE_TEXTURE_RECTANGLE;
+    {
+      flags |= COGL_FEATURE_TEXTURE_RECTANGLE;
+      COGL_FLAGS_SET (ctx->features,
+                      COGL_FEATURE_ID_TEXTURE_RECTANGLE, TRUE);
+    }
 
   if (context->glTexImage3D)
-    flags |= COGL_FEATURE_TEXTURE_3D;
+    {
+      flags |= COGL_FEATURE_TEXTURE_3D;
+      COGL_FLAGS_SET (ctx->features, COGL_FEATURE_ID_TEXTURE_3D, TRUE);
+    }
 
   if (context->glEGLImageTargetTexture2D)
     private_flags |= COGL_PRIVATE_FEATURE_TEXTURE_2D_FROM_EGL_IMAGE;

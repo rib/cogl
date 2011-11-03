@@ -36,6 +36,7 @@
 #include "cogl-pipeline-private.h"
 #include "cogl-context-private.h"
 #include "cogl-texture-private.h"
+#include "cogl-framebuffer-private.h"
 
 /* This is needed to set the color attribute on GLES2 */
 #ifdef HAVE_COGL_GLES2
@@ -687,8 +688,8 @@ get_max_activateable_texture_units (void)
              defines the number of texture coordinates that can be
              uploaded (but doesn't necessarily relate to how many texture
              images can be sampled) */
-          if (cogl_features_available (COGL_FEATURE_SHADERS_GLSL) ||
-              cogl_features_available (COGL_FEATURE_SHADERS_ARBFP))
+          if (cogl_has_feature (ctx, COGL_FEATURE_ID_GLSL) ||
+              cogl_has_feature (ctx, COGL_FEATURE_ID_ARBFP))
             /* Previously this code subtracted the value by one but there
                was no explanation for why it did this and it doesn't seem
                to make sense so it has been removed */
@@ -697,7 +698,7 @@ get_max_activateable_texture_units (void)
 
           /* GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS is defined for GLSL but
              not ARBfp */
-          if (cogl_features_available (COGL_FEATURE_SHADERS_GLSL))
+          if (cogl_has_feature (ctx, COGL_FEATURE_ID_GLSL))
             GE (ctx, glGetIntegerv (GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS,
                                     values + n_values++));
         }
@@ -1199,6 +1200,16 @@ _cogl_pipeline_flush_gl_state (CoglPipeline *pipeline,
   else
     layer_differences = NULL;
 
+  /* Make sure we generate the texture coordinate array to be at least
+     the number of layers. This is important because the vertend will
+     try to pass along the corresponding varying for each layer
+     regardless of whether the fragment shader is actually using
+     it. Also it is possible that the application is assuming that if
+     the attribute isn't passed then it will default to 0,0. This is
+     what test-cogl-primitive does */
+  if (n_layers > n_tex_coord_attribs)
+    n_tex_coord_attribs = n_layers;
+
   /* First flush everything that's the same regardless of which
    * pipeline backend is being used...
    *
@@ -1299,7 +1310,8 @@ _cogl_pipeline_flush_gl_state (CoglPipeline *pipeline,
        * scratch buffers here... */
       if (G_UNLIKELY (!vertend->start (pipeline,
                                        n_layers,
-                                       pipelines_difference)))
+                                       pipelines_difference,
+                                       n_tex_coord_attribs)))
         continue;
 
       state.vertend = vertend;

@@ -66,6 +66,7 @@
 #endif
 
 #include <cogl.h>
+#include <cogl-util.h>
 #include <cogl-debug.h>
 #include <cogl-quaternion.h>
 #include <cogl-quaternion-private.h>
@@ -107,7 +108,8 @@ enum CoglMatrixType {
    COGL_MATRIX_TYPE_PERSPECTIVE,	/**< perspective projection matrix */
    COGL_MATRIX_TYPE_2D,		/**< 2-D transformation */
    COGL_MATRIX_TYPE_2D_NO_ROT,	/**< 2-D scale & translate only */
-   COGL_MATRIX_TYPE_3D		/**< 3-D transformation */
+   COGL_MATRIX_TYPE_3D,		/**< 3-D transformation */
+   COGL_MATRIX_N_TYPES
 } ;
 
 #define DEG2RAD (G_PI/180.0)
@@ -372,8 +374,15 @@ print_matrix_floats (const float m[16])
 void
 _cogl_matrix_print (const CoglMatrix *matrix)
 {
-  g_print ("Matrix type: %s, flags: %x\n",
-           types[matrix->type], (int)matrix->flags);
+  if (!(matrix->flags & MAT_DIRTY_TYPE))
+    {
+      _COGL_RETURN_IF_FAIL (matrix->type < COGL_MATRIX_N_TYPES);
+      g_print ("Matrix type: %s, flags: %x\n",
+               types[matrix->type], (int)matrix->flags);
+    }
+  else
+    g_print ("Matrix type: DIRTY, flags: %x\n", (int)matrix->flags);
+
   print_matrix_floats ((float *)matrix);
   g_print ("Inverse: \n");
   if (!(matrix->flags & MAT_DIRTY_INVERSE))
@@ -1769,8 +1778,8 @@ cogl_matrix_equal (gconstpointer v1, gconstpointer v2)
   const CoglMatrix *a = v1;
   const CoglMatrix *b = v2;
 
-  g_return_val_if_fail (v1 != NULL, FALSE);
-  g_return_val_if_fail (v2 != NULL, FALSE);
+  _COGL_RETURN_VAL_IF_FAIL (v1 != NULL, FALSE);
+  _COGL_RETURN_VAL_IF_FAIL (v2 != NULL, FALSE);
 
   /* We want to avoid having a fuzzy _equal() function (e.g. that uses
    * an arbitrary epsilon value) since this function noteably conforms
@@ -1994,7 +2003,7 @@ cogl_matrix_transform_points (const CoglMatrix *matrix,
                               int n_points)
 {
   /* The results of transforming always have three components... */
-  g_return_if_fail (stride_out >= sizeof (Point3f));
+  _COGL_RETURN_IF_FAIL (stride_out >= sizeof (Point3f));
 
   if (n_components == 2)
     _cogl_matrix_transform_points_f2 (matrix,
@@ -2003,7 +2012,7 @@ cogl_matrix_transform_points (const CoglMatrix *matrix,
                                       n_points);
   else
     {
-      g_return_if_fail (n_components == 3);
+      _COGL_RETURN_IF_FAIL (n_components == 3);
 
       _cogl_matrix_transform_points_f3 (matrix,
                                         stride_in, points_in,
@@ -2033,7 +2042,7 @@ cogl_matrix_project_points (const CoglMatrix *matrix,
                                     n_points);
   else
     {
-      g_return_if_fail (n_components == 4);
+      _COGL_RETURN_IF_FAIL (n_components == 4);
 
       _cogl_matrix_project_points_f4 (matrix,
                                       stride_in, points_in,
@@ -2107,9 +2116,9 @@ cogl_matrix_look_at (CoglMatrix *matrix,
   tmp.zw = 0;
   tmp.ww = 1;
 
-  cogl_matrix_translate (&tmp, -eye_position_x, -eye_position_y, -eye_position_z);
-
   tmp.flags = (MAT_FLAG_GENERAL_3D | MAT_DIRTY_TYPE | MAT_DIRTY_INVERSE);
+
+  cogl_matrix_translate (&tmp, -eye_position_x, -eye_position_y, -eye_position_z);
 
   cogl_matrix_multiply (matrix, matrix, &tmp);
 }

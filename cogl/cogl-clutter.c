@@ -31,12 +31,17 @@
 #include <glib.h>
 
 #include "cogl.h"
+#include "cogl-util.h"
 #include "cogl-types.h"
 #include "cogl-private.h"
 #include "cogl-context-private.h"
 #include "cogl-winsys-private.h"
 #include "cogl-winsys-stub-private.h"
 #include "cogl-framebuffer-private.h"
+#include "cogl-onscreen-private.h"
+#ifdef COGL_HAS_XLIB_SUPPORT
+#include "cogl-clutter-xlib.h"
+#endif
 
 gboolean
 cogl_clutter_check_extension (const char *name, const char *ext)
@@ -76,7 +81,7 @@ cogl_clutter_winsys_xlib_get_visual_info (void)
   winsys = _cogl_context_get_winsys (ctx);
 
   /* This should only be called for xlib contexts */
-  g_return_val_if_fail (winsys->xlib_get_visual_info != NULL, NULL);
+  _COGL_RETURN_VAL_IF_FAIL (winsys->xlib_get_visual_info != NULL, NULL);
 
   return winsys->xlib_get_visual_info ();
 }

@@ -77,6 +77,10 @@ cogl_public_h = \
 	$(srcdir)/cogl-texture.h 		\
 	$(srcdir)/cogl-texture-3d.h             \
 	$(srcdir)/cogl-texture-2d.h             \
+	$(srcdir)/cogl-texture-rectangle.h      \
+	$(srcdir)/cogl-texture-2d-sliced.h      \
+	$(srcdir)/cogl-sub-texture.h            \
+	$(srcdir)/cogl-meta-texture.h		\
 	$(srcdir)/cogl-types.h 			\
 	$(srcdir)/cogl-vertex-buffer.h 		\
 	$(srcdir)/cogl-index-buffer.h 		\
@@ -86,6 +90,7 @@ cogl_public_h = \
 	$(srcdir)/cogl-primitive.h 		\
 	$(srcdir)/cogl-clip-state.h		\
 	$(srcdir)/cogl-framebuffer.h		\
+	$(srcdir)/cogl-onscreen.h		\
 	$(srcdir)/cogl-clutter.h       		\
 	$(srcdir)/cogl.h			\
 	$(NULL)
@@ -294,6 +299,7 @@ cogl_sources_c = \
 	$(srcdir)/cogl-atlas.c                          \
 	$(srcdir)/cogl-atlas-texture-private.h          \
 	$(srcdir)/cogl-atlas-texture.c                  \
+	$(srcdir)/cogl-meta-texture.c			\
 	$(srcdir)/cogl-blit.h				\
 	$(srcdir)/cogl-blit.c				\
 	$(srcdir)/cogl-spans.h				\
@@ -302,6 +308,8 @@ cogl_sources_c = \
 	$(srcdir)/cogl-journal.c			\
 	$(srcdir)/cogl-framebuffer-private.h		\
 	$(srcdir)/cogl-framebuffer.c 			\
+	$(srcdir)/cogl-onscreen-private.h		\
+	$(srcdir)/cogl-onscreen.c 			\
 	$(srcdir)/cogl-profile.h 			\
 	$(srcdir)/cogl-profile.c 			\
 	$(srcdir)/cogl-flags.h				\
@@ -323,6 +331,7 @@ cogl_sources_c = \
 
 if SUPPORT_XLIB
 cogl_public_h += \
+	$(srcdir)/cogl-clutter-xlib.h \
 	$(srcdir)/cogl-xlib-renderer.h
 
 cogl_experimental_h += \

@@ -32,9 +32,11 @@
 
 #include "cogl.h"
 
+#include "cogl-util.h"
 #include "cogl-winsys-private.h"
 #include "cogl-context-private.h"
 #include "cogl-framebuffer.h"
+#include "cogl-onscreen-private.h"
 #include "cogl-swap-chain-private.h"
 #include "cogl-renderer-private.h"
 #include "cogl-display-private.h"
@@ -316,12 +318,17 @@ pixel_format_is_better (const PIXELFORMATDESCRIPTOR *pfa,
 }
 
 static int
-choose_pixel_format (HDC dc, PIXELFORMATDESCRIPTOR *pfd)
+choose_pixel_format (CoglFramebufferConfig *config,
+                     HDC dc, PIXELFORMATDESCRIPTOR *pfd)
 {
   int i, num_formats, best_pf = 0;
   PIXELFORMATDESCRIPTOR best_pfd;
 
   num_formats = DescribePixelFormat (dc, 0, sizeof (best_pfd), NULL);
+
+  /* XXX: currently we don't support multisampling on windows... */
+  if (config->samples_per_pixel)
+    return best_pf;
 
   for (i = 1; i <= num_formats; i++)
     {
@@ -341,6 +348,11 @@ choose_pixel_format (HDC dc, PIXELFORMATDESCRIPTOR *pfd)
              already found */
           (best_pf == 0 || pixel_format_is_better (&best_pfd, pfd)))
         {
+          if (config->swap_chain->has_alpha && pfd->cAlphaBits == 0)
+            continue;
+          if (config->need_stencil && pfd->cStencilBits == 0)
+            continue;
+
           best_pf = i;
           best_pfd = *pfd;
         }
@@ -409,7 +421,7 @@ create_context (CoglDisplay *display, GError **error)
 {
   CoglDisplayWgl *wgl_display = display->winsys;
 
-  g_return_val_if_fail (wgl_display->wgl_context == NULL, FALSE);
+  _COGL_RETURN_VAL_IF_FAIL (wgl_display->wgl_context == NULL, FALSE);
 
   /* Cogl assumes that there is always a GL context selected; in order
    * to make sure that a WGL context exists and is made current, we
@@ -445,7 +457,8 @@ create_context (CoglDisplay *display, GError **error)
 
       wgl_display->dummy_dc = GetDC (wgl_display->dummy_hwnd);
 
-      pf = choose_pixel_format (wgl_display->dummy_dc, &pfd);
+      pf = choose_pixel_format (&display->onscreen_template->config,
+                                wgl_display->dummy_dc, &pfd);
 
       if (pf == 0 || !SetPixelFormat (wgl_display->dummy_dc, pf, &pfd))
         {
@@ -484,7 +497,7 @@ _cogl_winsys_display_destroy (CoglDisplay *display)
 {
   CoglDisplayWgl *wgl_display = display->winsys;
 
-  g_return_if_fail (wgl_display != NULL);
+  _COGL_RETURN_IF_FAIL (wgl_display != NULL);
 
   if (wgl_display->wgl_context)
     {
@@ -512,7 +525,7 @@ _cogl_winsys_display_setup (CoglDisplay *display,
 {
   CoglDisplayWgl *wgl_display;
 
-  g_return_val_if_fail (display->winsys == NULL, FALSE);
+  _COGL_RETURN_VAL_IF_FAIL (display->winsys == NULL, FALSE);
 
   wgl_display = g_slice_new0 (CoglDisplayWgl);
   display->winsys = wgl_display;
@@ -573,7 +586,7 @@ update_winsys_features (CoglContext *context, GError **error)
   const char *wgl_extensions;
   int i;
 
-  g_return_val_if_fail (wgl_display->wgl_context, FALSE);
+  _COGL_RETURN_VAL_IF_FAIL (wgl_display->wgl_context, FALSE);
 
   if (!_cogl_context_update_features (context, error))
     return FALSE;
@@ -581,6 +594,8 @@ update_winsys_features (CoglContext *context, GError **error)
   memset (context->winsys_features, 0, sizeof (context->winsys_features));
 
   context->feature_flags |= COGL_FEATURE_ONSCREEN_MULTIPLE;
+  COGL_FLAGS_SET (context->features,
+                  COGL_FEATURE_ID_ONSCREEN_MULTIPLE, TRUE);
   COGL_FLAGS_SET (context->winsys_features,
                   COGL_WINSYS_FEATURE_MULTIPLE_ONSCREEN,
                   TRUE);
@@ -646,7 +661,7 @@ _cogl_winsys_onscreen_bind (CoglOnscreen *onscreen)
      NULL, but this isn't really going to work because before checking
      whether onscreen == NULL it reads the pointer to get the
      context */
-  g_return_if_fail (onscreen != NULL);
+  _COGL_RETURN_IF_FAIL (onscreen != NULL);
 
   context = COGL_FRAMEBUFFER (onscreen)->context;
   wgl_context = context->winsys;
@@ -720,7 +735,7 @@ _cogl_winsys_onscreen_init (CoglOnscreen *onscreen,
   int pf;
   HWND hwnd;
 
-  g_return_val_if_fail (wgl_display->wgl_context, FALSE);
+  _COGL_RETURN_VAL_IF_FAIL (wgl_display->wgl_context, FALSE);
 
   /* XXX: Note we ignore the user's original width/height when given a
    * foreign window. */
@@ -784,9 +799,10 @@ _cogl_winsys_onscreen_init (CoglOnscreen *onscreen,
   wgl_onscreen->client_dc = GetDC (hwnd);
 
   /* Use the same pixel format as the dummy DC from the renderer */
-  pf = GetPixelFormat (wgl_display->dummy_dc);
-  DescribePixelFormat (wgl_display->dummy_dc, pf, sizeof (pfd), &pfd);
-  if (!SetPixelFormat (wgl_onscreen->client_dc, pf, &pfd))
+  pf = choose_pixel_format (&framebuffer->config,
+                            wgl_onscreen->client_dc, &pfd);
+
+  if (pf == 0 || !SetPixelFormat (wgl_onscreen->client_dc, pf, &pfd))
     {
       g_set_error (error, COGL_WINSYS_ERROR,
                    COGL_WINSYS_ERROR_CREATE_ONSCREEN,
