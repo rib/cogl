@@ -396,8 +396,6 @@ _cogl_context_free (CoglContext *context)
 
   winsys->context_deinit (context);
 
-  _cogl_destroy_texture_units ();
-
   if (context->window_buffer)
     {
       cogl_object_unref (context->window_buffer);
@@ -473,6 +471,8 @@ _cogl_context_free (CoglContext *context)
 #endif
 
   cogl_pipeline_cache_free (context->pipeline_cache);
+
+  _cogl_destroy_texture_units ();
 
   g_byte_array_free (context->buffer_map_fallback_array, TRUE);
 
