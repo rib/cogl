@@ -9,5 +9,7 @@ EXTRA_DIST = \
 	test-conformance-cogl.vcprojin	\
 	cogl-hello.vcproj	\
 	cogl-crate.vcproj	\
+	cogl-msaa.vcproj	\
+	cogl-info.vcproj	\
 	install.vcproj	\
 	README.txt

@@ -11,6 +11,10 @@ EXTRA_DIST = \
 	cogl-pango.vcxproj.filtersin	\
 	cogl-hello.vcxproj	\
 	cogl-hello.vcxproj.filters	\
+	cogl-msaa.vcxproj	\
+	cogl-msaa.vcxproj.filters	\
+	cogl-info.vcxproj	\
+	cogl-info.vcxproj.filters	\
 	cogl-crate.vcxproj	\
 	cogl-crate.vcxproj.filters	\
 	test-conformance-cogl.vcxproj	\
