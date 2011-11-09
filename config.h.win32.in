@@ -3,6 +3,9 @@
 /* Can use Cogl 2.0 API internally */
 #define COGL_ENABLE_EXPERIMENTAL_2_0_API 1
 
+/* Can use experimental API internally */
+#define COGL_ENABLE_EXPERIMENTAL_API 1
+
 /* Cogl supports OpenGL using the WGL API */
 #define COGL_HAS_WGL_SUPPORT 1
 
