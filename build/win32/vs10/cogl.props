@@ -7,7 +7,7 @@
     <LibBuildDefines>HAVE_CONFIG_H;CLUTTER_COMPILATION;$(BaseBuildDefines)</LibBuildDefines>
     <ReleaseLibBuildDefines>$(LibBuildDefines);G_DISABLE_CHECKS;G_DISABLE_CAST_CHECKS</ReleaseLibBuildDefines>
     <DebugLibBuildDefines>_DEBUG;$(LibBuildDefines);COGL_GL_DEBUG;COGL_OBJECT_DEBUG;COGL_HANDLE_DEBUG</DebugLibBuildDefines>
-    <CoglBuildDefines>G_LOG_DOMAIN="Cogl";COGL_HAS_WIN32_SUPPORT;COGL_BUILD_EXP;COGL_GL_LIBNAME="";COGL_LOCALEDIR="/some/random/dir"</CoglBuildDefines>
+    <CoglBuildDefines>G_LOG_DOMAIN="Cogl";COGL_HAS_WIN32_SUPPORT;COGL_BUILD_EXP;COGL_GL_LIBNAME="";COGL_LOCALEDIR="/some/random/dir";COGL_ENABLE_EXPERIMENTAL_API</CoglBuildDefines>
     <CoglPangoBuildDefines>G_LOG_DOMAIN="Cogl-Pango"</CoglPangoBuildDefines>
     <TestProgDef>TESTS_DATADIR="../share/cogl-$(CoglApiVersion)/tests"</TestProgDef>
     <CopyDir>$(GlibEtcInstallRoot)</CopyDir>
@@ -62,6 +62,8 @@ copy $(SolutionDir)$(Configuration)\$(Platform)\bin\*.exe $(CopyDir)\bin
 
 copy ..\*.bat $(CopyDir)\bin
 
+
+mkdir $(CopyDir)\share\cogl-$(CoglApiVersion)\examples-data
 
 copy ..\..\..\examples\*.jpg $(CopyDir)\share\cogl-$(CoglApiVersion)\examples-data
 
