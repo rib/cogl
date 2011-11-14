@@ -90,6 +90,7 @@ cogl_public_h = \
 	$(srcdir)/cogl-primitive.h 		\
 	$(srcdir)/cogl-clip-state.h		\
 	$(srcdir)/cogl-framebuffer.h		\
+	$(srcdir)/cogl-virtual-framebuffer.h	\
 	$(srcdir)/cogl-onscreen.h		\
 	$(srcdir)/cogl-clutter.h       		\
 	$(srcdir)/cogl.h			\
@@ -309,6 +310,8 @@ cogl_sources_c = \
 	$(srcdir)/cogl-framebuffer-private.h		\
 	$(srcdir)/cogl-framebuffer.c 			\
 	$(srcdir)/cogl-onscreen-private.h		\
+	$(srcdir)/cogl-virtual-framebuffer-private.h	\
+	$(srcdir)/cogl-virtual-framebuffer.c		\
 	$(srcdir)/cogl-onscreen.c 			\
 	$(srcdir)/cogl-profile.h 			\
 	$(srcdir)/cogl-profile.c 			\

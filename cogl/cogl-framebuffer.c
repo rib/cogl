@@ -35,6 +35,8 @@
 #include "cogl-util.h"
 #include "cogl-texture-private.h"
 #include "cogl-framebuffer-private.h"
+#include "cogl-virtual-framebuffer-private.h"
+#include "cogl-virtual-framebuffer.h"
 #include "cogl-onscreen-template-private.h"
 #include "cogl-clip-stack.h"
 #include "cogl-journal-private.h"
@@ -137,7 +139,8 @@ _cogl_is_framebuffer (void *object)
     return FALSE;
 
   return obj->klass->type == _cogl_object_onscreen_get_type ()
-    || obj->klass->type == _cogl_object_offscreen_get_type ();
+    || obj->klass->type == _cogl_object_offscreen_get_type ()
+    || obj->klass->type == _cogl_object_virtual_framebuffer_get_type ();
 }
 
 void
@@ -171,6 +174,7 @@ _cogl_framebuffer_init (CoglFramebuffer *framebuffer,
 
   /* Initialise the clip stack */
   _cogl_clip_state_init (&framebuffer->clip_state);
+  framebuffer->clip_stack_of_current_stencil = NULL;
 
   framebuffer->journal = _cogl_journal_new ();
 
@@ -413,6 +417,15 @@ cogl_framebuffer_clear4f (CoglFramebuffer *framebuffer,
   _cogl_framebuffer_clear_without_flush4f (framebuffer, buffers,
                                            red, green, blue, alpha);
 
+  /* We are clobbering the stencil state so we can no longer assume it
+   * will match any clip_stack.
+   *
+   * Note: although NULL is a valid clip_stack value that's ok because
+   * in that case it doesn't matter what the stencil buffer contains.
+   */
+  if (buffers & COGL_BUFFER_BIT_STENCIL)
+    framebuffer->clip_stack_of_current_stencil = NULL;
+
   /* This is a debugging variable used to visually display the quad
    * batches from the journal. It is reset here to increase the
    * chances of getting the same colours for each frame during an
@@ -532,6 +545,7 @@ cogl_framebuffer_set_viewport (CoglFramebuffer *framebuffer,
   framebuffer->viewport_width = width;
   framebuffer->viewport_height = height;
 
+#warning "XXX: I think we also need to dirty the clip state here too"
   if (framebuffer->context->current_draw_buffer == framebuffer)
     framebuffer->context->current_draw_buffer_changes |=
       COGL_FRAMEBUFFER_STATE_VIEWPORT;
@@ -1327,6 +1341,8 @@ bind_gl_framebuffer (CoglContext *ctx,
                      GLenum target,
                      CoglFramebuffer *framebuffer)
 {
+  _COGL_RETURN_IF_FAIL (!cogl_is_virtual_framebuffer (framebuffer));
+
   if (framebuffer->type == COGL_FRAMEBUFFER_TYPE_OFFSCREEN)
     GE (ctx, glBindFramebuffer (target,
                            COGL_OFFSCREEN (framebuffer)->fbo_handle));
@@ -1513,6 +1529,8 @@ _cogl_framebuffer_flush_clip_state (CoglFramebuffer *framebuffer)
 {
   CoglClipStack *stack = _cogl_clip_state_get_stack (&framebuffer->clip_state);
   _cogl_clip_stack_flush (stack, framebuffer);
+#warning "should we take a reference here?"
+  framebuffer->clip_stack_of_current_stencil = stack;
 }
 
 static void
@@ -1601,7 +1619,8 @@ _cogl_framebuffer_flush_state (CoglFramebuffer *draw_buffer,
   unsigned long differences;
   int bit;
 
-  _COGL_RETURN_IF_FAIL (!cogl_is_virtual_framebuffer (framebuffer));
+  _COGL_RETURN_IF_FAIL (!cogl_is_virtual_framebuffer (draw_buffer));
+  _COGL_RETURN_IF_FAIL (!cogl_is_virtual_framebuffer (read_buffer));
 
   /* We can assume that any state that has changed for the current
    * framebuffer is different to the currently flushed value. */

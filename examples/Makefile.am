@@ -18,7 +18,7 @@ common_ldadd = \
 	$(COGL_DEP_LIBS) \
 	$(top_builddir)/cogl/libcogl.la
 
-programs = cogl-hello cogl-info cogl-msaa
+programs = cogl-hello cogl-info cogl-msaa cogl-virtual-framebuffer
 examples_datadir = $(pkgdatadir)/examples-data
 examples_data_DATA =
 
@@ -28,6 +28,8 @@ cogl_info_SOURCES = cogl-info.c
 cogl_info_LDADD = $(common_ldadd)
 cogl_msaa_SOURCES = cogl-msaa.c
 cogl_msaa_LDADD = $(common_ldadd)
+cogl_virtual_framebuffer_SOURCES = cogl-virtual-framebuffer.c
+cogl_virtual_framebuffer_LDADD = $(common_ldadd)
 
 if BUILD_COGL_PANGO
 programs += cogl-crate

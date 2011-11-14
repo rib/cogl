@@ -41,7 +41,8 @@
 
 typedef enum _CoglFramebufferType {
   COGL_FRAMEBUFFER_TYPE_ONSCREEN,
-  COGL_FRAMEBUFFER_TYPE_OFFSCREEN
+  COGL_FRAMEBUFFER_TYPE_OFFSCREEN,
+  COGL_FRAMEBUFFER_TYPE_VIRTUAL
 } CoglFramebufferType;
 
 typedef struct
@@ -114,6 +115,11 @@ struct _CoglFramebuffer
   float               viewport_height;
 
   CoglClipState       clip_state;
+
+  /* The stencil buffer matches what's required for this
+   * clip stack. NULL means the stencil buffer contents
+   * are undefined. */
+  CoglClipStack      *clip_stack_of_current_stencil;
 
   gboolean            dirty_bitmasks;
   int                 red_bits;

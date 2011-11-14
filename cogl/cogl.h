@@ -95,6 +95,7 @@ typedef struct _CoglFramebuffer CoglFramebuffer;
 #include <cogl/cogl-pipeline-state.h>
 #include <cogl/cogl-pipeline-layer-state.h>
 #include <cogl/cogl-framebuffer.h>
+#include <cogl/cogl-virtual-framebuffer.h>
 #include <cogl/cogl-onscreen.h>
 #if defined (COGL_HAS_EGL_PLATFORM_WAYLAND_SUPPORT)
 #include <cogl/cogl-wayland-renderer.h>
