@@ -1132,7 +1132,7 @@ notify_buffers_changed (CoglFramebuffer *old_draw_buffer,
          front face is flipped for offscreen buffers */
       if (old_draw_buffer->type != new_draw_buffer->type &&
           ctx->current_pipeline &&
-          _cogl_pipeline_get_cull_face_mode (ctx->current_pipeline) !=
+          cogl_pipeline_get_cull_face_mode (ctx->current_pipeline) !=
           COGL_PIPELINE_CULL_FACE_MODE_NONE)
         {
           ctx->current_pipeline_changes_since_flush |=
@@ -1141,18 +1141,16 @@ notify_buffers_changed (CoglFramebuffer *old_draw_buffer,
         }
     }
 
-  /* XXX:
-   * To support the deprecated cogl_set_draw_buffer API we keep track
-   * of the last onscreen framebuffer that was set so that it can
-   * be restored if the COGL_WINDOW_BUFFER enum is used. */
+  /* XXX: To support the deprecated cogl_set_draw_buffer API we keep
+   * track of the last onscreen framebuffer that was set so that it
+   * can be restored if the COGL_WINDOW_BUFFER enum is used. A
+   * reference isn't taken to the framebuffer because otherwise we
+   * would have a circular reference between the context and the
+   * framebuffer. Instead the pointer is set to NULL in
+   * _cogl_onscreen_free as a kind of a cheap weak reference */
   if (new_draw_buffer &&
       new_draw_buffer->type == COGL_FRAMEBUFFER_TYPE_ONSCREEN)
-    {
-      cogl_object_ref (new_draw_buffer);
-      if (ctx->window_buffer)
-        cogl_object_unref (ctx->window_buffer);
-      ctx->window_buffer = new_draw_buffer;
-    }
+    ctx->window_buffer = new_draw_buffer;
 }
 
 /* Set the current framebuffer without checking if it's already the
