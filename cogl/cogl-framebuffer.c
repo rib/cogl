@@ -1042,6 +1042,9 @@ _cogl_onscreen_free (CoglOnscreen *onscreen)
   CoglFramebuffer *framebuffer = COGL_FRAMEBUFFER (onscreen);
   const CoglWinsysVtable *winsys = _cogl_framebuffer_get_winsys (framebuffer);
 
+  if (framebuffer->context->window_buffer == onscreen)
+    framebuffer->context->window_buffer = NULL;
+
   winsys->onscreen_deinit (onscreen);
   g_return_if_fail (onscreen->winsys == NULL);
 
@@ -1172,18 +1175,16 @@ notify_buffers_changed (CoglFramebuffer *old_draw_buffer,
         }
     }
 
-  /* XXX:
-   * To support the deprecated cogl_set_draw_buffer API we keep track
-   * of the last onscreen framebuffer that was set so that it can
-   * be restored if the COGL_WINDOW_BUFFER enum is used. */
+  /* XXX: To support the deprecated cogl_set_draw_buffer API we keep
+   * track of the last onscreen framebuffer that was set so that it
+   * can be restored if the COGL_WINDOW_BUFFER enum is used. A
+   * reference isn't taken to the framebuffer because otherwise we
+   * would have a circular reference between the context and the
+   * framebuffer. Instead the pointer is set to NULL in
+   * _cogl_onscreen_free as a kind of a cheap weak reference */
   if (new_draw_buffer &&
       new_draw_buffer->type == COGL_FRAMEBUFFER_TYPE_ONSCREEN)
-    {
-      cogl_object_ref (new_draw_buffer);
-      if (ctx->window_buffer)
-        cogl_object_unref (ctx->window_buffer);
-      ctx->window_buffer = new_draw_buffer;
-    }
+    ctx->window_buffer = new_draw_buffer;
 }
 
 /* Set the current framebuffer without checking if it's already the
