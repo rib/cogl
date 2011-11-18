@@ -490,6 +490,7 @@ cogl_matrix_transform_points_EXP
 #endif
 
 cogl_matrix_translate
+cogl_matrix_transpose
 
 #ifdef COGL_ENABLE_EXPERIMENTAL_API
 cogl_matrix_view_2d_in_frustum_EXP
@@ -582,6 +583,7 @@ cogl_pipeline_get_n_layers_EXP
 cogl_pipeline_get_point_size_EXP
 cogl_pipeline_get_shininess_EXP
 cogl_pipeline_get_specular_EXP
+cogl_pipeline_get_uniform_location_EXP
 cogl_pipeline_get_user_program_EXP
 cogl_pipeline_new_EXP
 cogl_pipeline_set_alpha_test_function_EXP
@@ -612,6 +614,11 @@ cogl_pipeline_set_point_size_EXP
 cogl_pipeline_remove_layer_EXP
 cogl_pipeline_set_shininess_EXP
 cogl_pipeline_set_specular_EXP
+cogl_pipeline_set_uniform_float_EXP
+cogl_pipeline_set_uniform_int_EXP
+cogl_pipeline_set_uniform_matrix_EXP
+cogl_pipeline_set_uniform_1f_EXP
+cogl_pipeline_set_uniform_1i_EXP
 cogl_pipeline_set_user_program_EXP
 #endif
 
