@@ -161,6 +161,9 @@ main (int argc, char **argv)
   UNPORTED_TEST ("/cogl/vertex-array", test_cogl_primitive);
 
   ADD_TEST ("/cogl/shaders", test_cogl_just_vertex_shader);
+  ADD_TEST ("/cogl/shaders", test_cogl_pipeline_uniforms);
+
+  ADD_TEST ("/cogl/internal/bitmask", test_cogl_bitmask);
 
   /* left to the end because they aren't currently very orthogonal and tend to
    * break subsequent tests! */

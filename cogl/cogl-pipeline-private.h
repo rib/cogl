@@ -36,6 +36,7 @@
 #include "cogl-profile.h"
 #include "cogl-queue.h"
 #include "cogl-internal.h"
+#include "cogl-boxed-value.h"
 
 #include <glib.h>
 
@@ -166,6 +167,7 @@ typedef enum
   COGL_PIPELINE_STATE_POINT_SIZE_INDEX,
   COGL_PIPELINE_STATE_LOGIC_OPS_INDEX,
   COGL_PIPELINE_STATE_CULL_FACE_INDEX,
+  COGL_PIPELINE_STATE_UNIFORMS_INDEX,
 
   /* non-sparse */
   COGL_PIPELINE_STATE_REAL_BLEND_ENABLE_INDEX,
@@ -213,6 +215,8 @@ typedef enum _CoglPipelineState
     1L<<COGL_PIPELINE_STATE_LOGIC_OPS_INDEX,
   COGL_PIPELINE_STATE_CULL_FACE =
     1L<<COGL_PIPELINE_STATE_CULL_FACE_INDEX,
+  COGL_PIPELINE_STATE_UNIFORMS =
+    1L<<COGL_PIPELINE_STATE_UNIFORMS_INDEX,
 
   COGL_PIPELINE_STATE_REAL_BLEND_ENABLE =
     1L<<COGL_PIPELINE_STATE_REAL_BLEND_ENABLE_INDEX,
@@ -248,7 +252,8 @@ typedef enum _CoglPipelineState
    COGL_PIPELINE_STATE_FOG | \
    COGL_PIPELINE_STATE_POINT_SIZE | \
    COGL_PIPELINE_STATE_LOGIC_OPS | \
-   COGL_PIPELINE_STATE_CULL_FACE)
+   COGL_PIPELINE_STATE_CULL_FACE | \
+   COGL_PIPELINE_STATE_UNIFORMS)
 
 #define COGL_PIPELINE_STATE_MULTI_PROPERTY \
   (COGL_PIPELINE_STATE_LAYERS | \
@@ -257,7 +262,8 @@ typedef enum _CoglPipelineState
    COGL_PIPELINE_STATE_DEPTH | \
    COGL_PIPELINE_STATE_FOG | \
    COGL_PIPELINE_STATE_LOGIC_OPS | \
-   COGL_PIPELINE_STATE_CULL_FACE)
+   COGL_PIPELINE_STATE_CULL_FACE | \
+   COGL_PIPELINE_STATE_UNIFORMS)
 
 #define COGL_PIPELINE_STATE_AFFECTS_VERTEX_CODEGEN \
   (COGL_PIPELINE_STATE_LAYERS | \
@@ -335,6 +341,20 @@ typedef struct
 
 typedef struct
 {
+  CoglBitmask override_mask;
+
+  /* This is an array of values. Only the uniforms that have a bit set
+     in override_mask have a corresponding value here. The uniform's
+     location is implicit from the order in this array */
+  CoglBoxedValue *override_values;
+
+  /* Uniforms that have been modified since this pipeline was last
+     flushed */
+  CoglBitmask changed_mask;
+} CoglPipelineUniformsState;
+
+typedef struct
+{
   CoglPipelineLightingState lighting_state;
   CoglPipelineAlphaFuncState alpha_state;
   CoglPipelineBlendState blend_state;
@@ -344,6 +364,7 @@ typedef struct
   float point_size;
   CoglPipelineLogicOpsState logic_ops_state;
   CoglPipelineCullFaceState cull_face_state;
+  CoglPipelineUniformsState uniforms_state;
 } CoglPipelineBigState;
 
 typedef enum

@@ -63,7 +63,7 @@ struct _CoglContext
   const CoglTextureDriver *texture_driver;
 
   /* Features cache */
-  unsigned int features[COGL_FLAGS_N_INTS_FOR_SIZE (_COGL_N_FEATURE_IDS)];
+  unsigned long features[COGL_FLAGS_N_LONGS_FOR_SIZE (_COGL_N_FEATURE_IDS)];
   CoglFeatureFlags feature_flags; /* legacy/deprecated feature flags */
   CoglPrivateFeatureFlags private_feature_flags;
 
@@ -254,9 +254,21 @@ struct _CoglContext
   CoglXlibTrapState *trap_state;
 #endif
 
-  unsigned int winsys_features
-    [COGL_FLAGS_N_INTS_FOR_SIZE (COGL_WINSYS_FEATURE_N_FEATURES)];
+  unsigned long winsys_features
+    [COGL_FLAGS_N_LONGS_FOR_SIZE (COGL_WINSYS_FEATURE_N_FEATURES)];
   void *winsys;
+
+  /* Array of names of uniforms. These are used like quarks to give a
+     unique number to each uniform name except that we ensure that
+     they increase sequentially so that we can use the id as an index
+     into a bitfield representing the uniforms that a pipeline
+     overrides from its parent. */
+  GPtrArray *uniform_names;
+  /* A hash table to quickly get an index given an existing name. The
+     name strings are owned by the uniform_names array. The values are
+     the uniform location cast to a pointer. */
+  GHashTable *uniform_name_hash;
+  int n_uniform_names;
 
   /* This defines a list of function pointers that Cogl uses from
      either GL or GLES. All functions are accessed indirectly through

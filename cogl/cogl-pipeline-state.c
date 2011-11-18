@@ -34,7 +34,7 @@
 #include "cogl-blend-string.h"
 #include "cogl-util.h"
 #include "cogl-depth-state-private.h"
-#include "cogl-pipeline-private.h"
+#include "cogl-pipeline-state-private.h"
 
 #include "string.h"
 
@@ -236,6 +236,102 @@ _cogl_pipeline_user_shader_equal (CoglPipeline *authority0,
 {
   return (authority0->big_state->user_program ==
           authority1->big_state->user_program);
+}
+
+typedef struct
+{
+  const CoglBoxedValue **dst_values;
+  const CoglBoxedValue *src_values;
+  int override_count;
+} GetUniformsClosure;
+
+static gboolean
+get_uniforms_cb (int uniform_num, void *user_data)
+{
+  GetUniformsClosure *data = user_data;
+
+  if (data->dst_values[uniform_num] == NULL)
+    data->dst_values[uniform_num] = data->src_values + data->override_count;
+
+  data->override_count++;
+
+  return TRUE;
+}
+
+static void
+_cogl_pipeline_get_all_uniform_values (CoglPipeline *pipeline,
+                                       const CoglBoxedValue **values)
+{
+  GetUniformsClosure data;
+
+  _COGL_GET_CONTEXT (ctx, NO_RETVAL);
+
+  memset (values, 0,
+          sizeof (const CoglBoxedValue *) * ctx->n_uniform_names);
+
+  data.dst_values = values;
+
+  do
+    {
+      const CoglPipelineUniformsState *uniforms_state =
+        &pipeline->big_state->uniforms_state;
+
+      data.override_count = 0;
+      data.src_values = uniforms_state->override_values;
+
+      if ((pipeline->differences & COGL_PIPELINE_STATE_UNIFORMS))
+        _cogl_bitmask_foreach (&uniforms_state->override_mask,
+                               get_uniforms_cb,
+                               &data);
+
+      pipeline = _cogl_pipeline_get_parent (pipeline);
+    }
+  while (pipeline);
+}
+
+gboolean
+_cogl_pipeline_uniforms_state_equal (CoglPipeline *authority0,
+                                     CoglPipeline *authority1)
+{
+  unsigned long *differences;
+  const CoglBoxedValue **values0, **values1;
+  int n_longs;
+  int i;
+
+  _COGL_GET_CONTEXT (ctx, FALSE);
+
+  if (authority0 == authority1)
+    return TRUE;
+
+  values0 = g_alloca (sizeof (const CoglBoxedValue *) * ctx->n_uniform_names);
+  values1 = g_alloca (sizeof (const CoglBoxedValue *) * ctx->n_uniform_names);
+
+  n_longs = COGL_FLAGS_N_LONGS_FOR_SIZE (ctx->n_uniform_names);
+  differences = g_alloca (n_longs * sizeof (unsigned long));
+  memset (differences, 0, sizeof (unsigned long) * n_longs);
+  _cogl_pipeline_compare_uniform_differences (differences,
+                                              authority0,
+                                              authority1);
+
+  _cogl_pipeline_get_all_uniform_values (authority0, values0);
+  _cogl_pipeline_get_all_uniform_values (authority1, values1);
+
+  COGL_FLAGS_FOREACH_START (differences, n_longs, i)
+    {
+      const CoglBoxedValue *value0 = values0[i];
+      const CoglBoxedValue *value1 = values1[i];
+
+      if (value0 == NULL || value0->type == COGL_BOXED_NONE)
+        {
+          if (value1 != NULL && value1->type != COGL_BOXED_NONE)
+            return FALSE;
+        }
+      else if (!_cogl_boxed_value_equal (value0, value1))
+        return FALSE;
+    }
+  COGL_FLAGS_FOREACH_END;
+
+  return TRUE;
 }
 
 void
@@ -1304,6 +1400,149 @@ cogl_pipeline_set_point_size (CoglPipeline *pipeline,
                                    _cogl_pipeline_point_size_equal);
 }
 
+static CoglBoxedValue *
+_cogl_pipeline_override_uniform (CoglPipeline *pipeline,
+                                 int location)
+{
+  CoglPipelineState state = COGL_PIPELINE_STATE_UNIFORMS;
+  CoglPipelineUniformsState *uniforms_state;
+  int override_index;
+
+  _COGL_GET_CONTEXT (ctx, NULL);
+
+  g_return_val_if_fail (cogl_is_pipeline (pipeline), NULL);
+  g_return_val_if_fail (location >= 0, NULL);
+  g_return_val_if_fail (location < ctx->n_uniform_names, NULL);
+
+  /* - Flush journal primitives referencing the current state.
+   * - Make sure the pipeline has no dependants so it may be modified.
+   * - If the pipeline isn't currently an authority for the state being
+   *   changed, then initialize that state from the current authority.
+   */
+  _cogl_pipeline_pre_change_notify (pipeline, state, NULL, FALSE);
+
+  uniforms_state = &pipeline->big_state->uniforms_state;
+
+  /* Count the number of bits that are set below this location. That
+     should give us the position where our new value should lie */
+  override_index = _cogl_bitmask_popcount_upto (&uniforms_state->override_mask,
+                                                location);
+
+  _cogl_bitmask_set (&uniforms_state->changed_mask, location, TRUE);
+
+  /* If this pipeline already has an override for this value then we
+     can just use it directly */
+  if (_cogl_bitmask_get (&uniforms_state->override_mask, location))
+    return uniforms_state->override_values + override_index;
+
+  /* We need to create a new override value in the right position
+     within the array. This is pretty inefficient but the hope is that
+     it will be much more common to modify an existing uniform rather
+     than modify a new one so it is more important to optimise the
+     former case. */
+
+  if (uniforms_state->override_values == NULL)
+    {
+      g_assert (override_index == 0);
+      uniforms_state->override_values = g_new (CoglBoxedValue, 1);
+    }
+  else
+    {
+      /* We need to grow the array and copy in the old values */
+      CoglBoxedValue *old_values = uniforms_state->override_values;
+      int old_size = _cogl_bitmask_popcount (&uniforms_state->override_mask);
+
+      uniforms_state->override_values = g_new (CoglBoxedValue, old_size + 1);
+
+      /* Copy in the old values leaving a gap for the new value */
+      memcpy (uniforms_state->override_values,
+              old_values,
+              sizeof (CoglBoxedValue) * override_index);
+      memcpy (uniforms_state->override_values,
+              old_values + override_index + 1,
+              sizeof (CoglBoxedValue) * (old_size - override_index));
+
+      g_free (old_values);
+    }
+
+  _cogl_boxed_value_init (uniforms_state->override_values + override_index);
+
+  _cogl_bitmask_set (&uniforms_state->override_mask, location, TRUE);
+
+  return uniforms_state->override_values + override_index;
+}
+
+void
+cogl_pipeline_set_uniform_1f (CoglPipeline *pipeline,
+                              int uniform_location,
+                              float value)
+{
+  CoglBoxedValue *boxed_value;
+
+  boxed_value = _cogl_pipeline_override_uniform (pipeline, uniform_location);
+
+  _cogl_boxed_value_set_1f (boxed_value, value);
+}
+
+void
+cogl_pipeline_set_uniform_1i (CoglPipeline *pipeline,
+                              int uniform_location,
+                              int value)
+{
+  CoglBoxedValue *boxed_value;
+
+  boxed_value = _cogl_pipeline_override_uniform (pipeline, uniform_location);
+
+  _cogl_boxed_value_set_1i (boxed_value, value);
+}
+
+void
+cogl_pipeline_set_uniform_float (CoglPipeline *pipeline,
+                                 int uniform_location,
+                                 int n_components,
+                                 int count,
+                                 const float *value)
+{
+  CoglBoxedValue *boxed_value;
+
+  boxed_value = _cogl_pipeline_override_uniform (pipeline, uniform_location);
+
+  _cogl_boxed_value_set_float (boxed_value, n_components, count, value);
+}
+
+void
+cogl_pipeline_set_uniform_int (CoglPipeline *pipeline,
+                               int uniform_location,
+                               int n_components,
+                               int count,
+                               const int *value)
+{
+  CoglBoxedValue *boxed_value;
+
+  boxed_value = _cogl_pipeline_override_uniform (pipeline, uniform_location);
+
+  _cogl_boxed_value_set_int (boxed_value, n_components, count, value);
+}
+
+void
+cogl_pipeline_set_uniform_matrix (CoglPipeline *pipeline,
+                                  int uniform_location,
+                                  int dimensions,
+                                  int count,
+                                  gboolean transpose,
+                                  const float *value)
+{
+  CoglBoxedValue *boxed_value;
+
+  boxed_value = _cogl_pipeline_override_uniform (pipeline, uniform_location);
+
+  _cogl_boxed_value_set_matrix (boxed_value,
+                                dimensions,
+                                count,
+                                transpose,
+                                value);
+}
+
 void
 _cogl_pipeline_hash_color_state (CoglPipeline *authority,
                                  CoglPipelineHashState *state)
@@ -1496,4 +1735,91 @@ _cogl_pipeline_hash_cull_face_state (CoglPipeline *authority,
       _cogl_util_one_at_a_time_hash (state->hash,
                                      cull_face_state,
                                      sizeof (CoglPipelineCullFaceState));
+}
+
+void
+_cogl_pipeline_hash_uniforms_state (CoglPipeline *authority,
+                                    CoglPipelineHashState *state)
+{
+  /* This isn't used anywhere yet because the uniform state doesn't
+     affect program generation. It's quite a hassle to implement so
+     let's just leave it until something actually needs it */
+  g_warn_if_reached ();
+}
+
+void
+_cogl_pipeline_compare_uniform_differences (unsigned long *differences,
+                                            CoglPipeline *pipeline0,
+                                            CoglPipeline *pipeline1)
+{
+  GSList *head0 = NULL;
+  GSList *head1 = NULL;
+  CoglPipeline *node0;
+  CoglPipeline *node1;
+  int len0 = 0;
+  int len1 = 0;
+  int count;
+  GSList *common_ancestor0;
+  GSList *common_ancestor1;
+
+  /* This algorithm is copied from
+     _cogl_pipeline_compare_differences(). It might be nice to share
+     the code more */
+
+  for (node0 = pipeline0; node0; node0 = _cogl_pipeline_get_parent (node0))
+    {
+      GSList *link = alloca (sizeof (GSList));
+      link->next = head0;
+      link->data = node0;
+      head0 = link;
+      len0++;
+    }
+  for (node1 = pipeline1; node1; node1 = _cogl_pipeline_get_parent (node1))
+    {
+      GSList *link = alloca (sizeof (GSList));
+      link->next = head1;
+      link->data = node1;
+      head1 = link;
+      len1++;
+    }
+
+  /* NB: There's no point looking at the head entries since we know both
+   * pipelines must have the same default pipeline as their root node. */
+  common_ancestor0 = head0;
+  common_ancestor1 = head1;
+  head0 = head0->next;
+  head1 = head1->next;
+  count = MIN (len0, len1) - 1;
+  while (count--)
+    {
+      if (head0->data != head1->data)
+        break;
+      common_ancestor0 = head0;
+      common_ancestor1 = head1;
+      head0 = head0->next;
+      head1 = head1->next;
+    }
+
+  for (head0 = common_ancestor0->next; head0; head0 = head0->next)
+    {
+      node0 = head0->data;
+      if ((node0->differences & COGL_PIPELINE_STATE_UNIFORMS))
+        {
+          const CoglPipelineUniformsState *uniforms_state =
+            &node0->big_state->uniforms_state;
+          _cogl_bitmask_set_flags (&uniforms_state->override_mask,
+                                   differences);
+        }
+    }
+  for (head1 = common_ancestor1->next; head1; head1 = head1->next)
+    {
+      node1 = head1->data;
+      if ((node1->differences & COGL_PIPELINE_STATE_UNIFORMS))
+        {
+          const CoglPipelineUniformsState *uniforms_state =
+            &node1->big_state->uniforms_state;
+          _cogl_bitmask_set_flags (&uniforms_state->override_mask,
+                                   differences);
+        }
+    }
 }
