@@ -69,6 +69,8 @@ COGL_EXT_FUNCTION (void, glClearColor,
                     GLclampf alpha))
 COGL_EXT_FUNCTION (void, glClearStencil,
                    (GLint s))
+COGL_EXT_FUNCTION (void, glClearDepthf,
+                   (GLclampf depth))
 COGL_EXT_FUNCTION (void, glColorMask,
                    (GLboolean red,
                     GLboolean green,
@@ -150,6 +152,10 @@ COGL_EXT_FUNCTION (void, glTexImage2D,
                     const GLvoid* pixels))
 COGL_EXT_FUNCTION (void, glTexParameterfv,
                    (GLenum target, GLenum pname, const GLfloat* params))
+COGL_EXT_FUNCTION (void, glTexParameterf,
+                   (GLenum target,
+                    GLenum pname,
+                    GLfloat param))
 COGL_EXT_FUNCTION (void, glTexParameteri,
                    (GLenum target, GLenum pname, GLint param))
 COGL_EXT_FUNCTION (void, glTexSubImage2D,
@@ -164,6 +170,31 @@ COGL_EXT_FUNCTION (void, glTexSubImage2D,
                     const GLvoid* pixels))
 COGL_EXT_FUNCTION (void, glViewport,
                    (GLint x, GLint y, GLsizei width, GLsizei height))
+COGL_EXT_FUNCTION (void, glGetActiveAttrib,
+                   (GLuint program,
+                    GLuint index,
+                    GLsizei bufsize,
+                    GLsizei* length,
+                    GLint* size,
+                    GLenum* type,
+                    GLchar* name))
+COGL_EXT_FUNCTION (void, glColor3f,
+                   (GLfloat red,
+                    GLfloat green,
+                    GLfloat blue))
+COGL_EXT_FUNCTION (void, glRectf,
+                   (GLfloat x1,
+                    GLfloat y1,
+                    GLfloat x2,
+                    GLfloat y2))
+COGL_EXT_FUNCTION (void, glBegin,
+                   (GLenum mode))
+COGL_EXT_FUNCTION (void, glEnd,
+                   ())
+COGL_EXT_FUNCTION (void, glVertex3f,
+                   (GLfloat x,
+                    GLfloat y,
+                    GLfloat z))
 COGL_EXT_END ()
 
 /* These are the core GL functions which are available when the API

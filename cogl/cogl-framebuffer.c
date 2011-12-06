@@ -41,6 +41,7 @@
 #include "cogl-winsys-private.h"
 #include "cogl-pipeline-state-private.h"
 #include "cogl-matrix-private.h"
+#include "cogl-gles2-context-private.h"
 
 #ifndef GL_FRAMEBUFFER
 #define GL_FRAMEBUFFER		0x8D40
@@ -2406,4 +2407,59 @@ _cogl_framebuffer_restore_clip_stack (CoglFramebuffer *framebuffer)
   if (framebuffer->context->current_draw_buffer == framebuffer)
     framebuffer->context->current_draw_buffer_changes |=
       COGL_FRAMEBUFFER_STATE_CLIP;
+}
+
+gboolean
+cogl_framebuffer_push_gles2_context (CoglFramebuffer *framebuffer,
+                                     CoglGLES2Context *gles2_ctx,
+                                     GError **error)
+{
+  CoglContext *ctx = gles2_ctx->context;
+  CoglOffscreen *offscreen = COGL_OFFSCREEN (framebuffer);
+  const CoglWinsysVtable *winsys;
+  GLuint tex_gl_handle;
+  GLenum tex_gl_target;
+  GLuint fbo_gl_handle;
+  gboolean result;
+
+  if (!cogl_has_feature (ctx, COGL_FEATURE_ID_GLES2_CONTEXT))
+    return FALSE;
+
+  winsys = ctx->display->renderer->winsys_vtable;
+  result = winsys->make_current (gles2_ctx, error);
+  if (!result)
+    return FALSE;
+
+  fbo_gl_handle = cogl_object_get_user_data (COGL_OBJECT (framebuffer), gles2_ctx);
+  if (fbo_gl_handle == 0)
+    {
+      ctx->glGenFramebuffers(1, &fbo_gl_handle);
+      cogl_object_set_user_data (COGL_OBJECT (framebuffer), gles2_ctx, fbo_gl_handle, NULL);
+    }
+
+  GE (ctx, glBindFramebuffer (GL_FRAMEBUFFER, fbo_gl_handle));
+
+  if (!cogl_texture_get_gl_texture (offscreen->texture,
+                                    &tex_gl_handle, &tex_gl_target))
+    return FALSE;
+
+  GE (ctx, glFramebufferTexture2D (GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                                   tex_gl_target, tex_gl_handle,
+                                   offscreen->texture_level));
+
+  return TRUE;
+}
+
+void
+cogl_framebuffer_pop_gles2_context (CoglFramebuffer *framebuffer)
+{
+  //CoglContext *ctx = cogl_framebuffer_get_context (framebuffer);
+  const CoglWinsysVtable *winsys;
+
+  _COGL_GET_CONTEXT (ctx, NO_RETVAL);
+
+  ctx->glFlush ();
+
+  winsys = ctx->display->renderer->winsys_vtable;
+  winsys->make_current (NULL, NULL);
 }

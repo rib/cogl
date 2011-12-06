@@ -97,10 +97,11 @@ typedef struct _CoglFramebuffer CoglFramebuffer;
 #include <cogl/cogl-snippet.h>
 #include <cogl/cogl-framebuffer.h>
 #include <cogl/cogl-onscreen.h>
+#include <cogl/cogl-gles2-context.h>
 #if defined (COGL_HAS_EGL_PLATFORM_WAYLAND_SUPPORT)
 #include <cogl/cogl-wayland-renderer.h>
 #endif
-#if COGL_HAS_WIN32_SUPPORT
+#ifdef COGL_HAS_WIN32_SUPPORT
 #include <cogl/cogl-win32-renderer.h>
 #endif
 /* XXX: This will definitly go away once all the Clutter winsys
@@ -200,6 +201,8 @@ cogl_features_available (CoglFeatureFlags features);
  *     supported with CoglBufferAccess including write support.
  * @COGL_FEATURE_ID_MIRRORED_REPEAT: Whether
  *    %COGL_PIPELINE_WRAP_MODE_MIRRORED_REPEAT is supported.
+ * @COGL_FEATURE_ID_GLES2_CONTEXT: Whether creating new GLES2 contexts is
+ *    suported.
  *
  *
  * All the capabilities that can vary between different GPUs supported
@@ -227,6 +230,7 @@ typedef enum _CoglFeatureID
   COGL_FEATURE_ID_MAP_BUFFER_FOR_READ,
   COGL_FEATURE_ID_MAP_BUFFER_FOR_WRITE,
   COGL_FEATURE_ID_MIRRORED_REPEAT,
+  COGL_FEATURE_ID_GLES2_CONTEXT,
 
   /*< private > */
   _COGL_N_FEATURE_IDS

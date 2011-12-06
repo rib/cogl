@@ -40,6 +40,7 @@
 #include "cogl-swap-chain-private.h"
 #include "cogl-renderer-private.h"
 #include "cogl-onscreen-template-private.h"
+#include "cogl-gles2-context-private.h"
 
 #include "cogl-private.h"
 
@@ -423,6 +424,9 @@ _cogl_winsys_context_init (CoglContext *context, GError **error)
                       COGL_WINSYS_FEATURE_SWAP_REGION_THROTTLE, TRUE);
     }
 
+  COGL_FLAGS_SET (context->features,
+                  COGL_FEATURE_ID_GLES2_CONTEXT, TRUE);
+
   if (egl_renderer->platform_vtable->context_init &&
       !egl_renderer->platform_vtable->context_init (context, error))
     return FALSE;
@@ -638,6 +642,104 @@ _cogl_winsys_context_egl_get_egl_display (CoglContext *context)
   return egl_renderer->edpy;
 }
 
+static const gchar *
+get_error_string ()
+{
+  switch (eglGetError()){
+  case EGL_BAD_DISPLAY:
+    return "Invalid display";
+  case EGL_NOT_INITIALIZED:
+    return "Display not initialized";
+  case EGL_BAD_ALLOC:
+    return "Not enough resources to allocate context";
+  case EGL_BAD_ATTRIBUTE:
+    return "Invalid attribute";
+  case EGL_BAD_CONFIG:
+    return "Invalid config";
+  case EGL_BAD_CONTEXT:
+    return "Invalid context";
+  case EGL_BAD_CURRENT_SURFACE:
+     return "Invalid current surface";
+  case EGL_BAD_MATCH:
+     return "Bad match";
+  case EGL_BAD_NATIVE_PIXMAP:
+     return "Invalid native pixmap";
+  case EGL_BAD_NATIVE_WINDOW:
+     return "Invalid native window";
+  case EGL_BAD_PARAMETER:
+     return "Invalid parameter";
+  case EGL_BAD_SURFACE:
+     return "Invalid surface";
+  default:
+    g_assert_not_reached ();
+  }
+}
+
+void *
+_cogl_winsys_create_gles2_context (CoglContext *ctx, GError **error)
+{
+  CoglRendererEGL *egl_renderer = ctx->display->renderer->winsys;
+  CoglDisplayEGL *egl_display = ctx->display->winsys;
+  EGLint attribs[3];
+  EGLContext egl_context;
+
+  attribs[0] = EGL_CONTEXT_CLIENT_VERSION;
+  attribs[1] = 2;
+  attribs[2] = EGL_NONE;
+
+  egl_context = eglCreateContext (egl_renderer->edpy,
+                                  egl_display->egl_config,
+                                  egl_display->egl_context,
+                                  attribs);
+  if (egl_context == EGL_NO_CONTEXT)
+    {
+      g_set_error (error, COGL_WINSYS_ERROR,
+                   COGL_WINSYS_ERROR_CREATE_GLES2_CONTEXT,
+                   "%s", get_error_string ());
+    }
+
+  return egl_context;
+}
+
+gboolean
+_cogl_winsys_make_current (CoglGLES2Context *gles2_ctx,
+                           GError **error)
+{
+  //CoglContext *ctx = gles2_ctx->context;
+  CoglDisplayEGL *egl_display;
+  CoglRendererEGL *egl_renderer;
+  EGLContext egl_context;
+  gboolean result;
+
+  _COGL_GET_CONTEXT (ctx, NO_RETVAL);
+
+  egl_display = ctx->display->winsys;
+  egl_renderer = ctx->display->renderer->winsys;
+
+  if (gles2_ctx != NULL)
+    {
+      ctx = gles2_ctx->context;
+      egl_context = gles2_ctx->winsys;
+    }
+  else
+    {
+      egl_context = egl_display->egl_context;
+    }
+
+  result = eglMakeCurrent (egl_renderer->edpy,
+                           egl_display->dummy_surface,
+                           egl_display->dummy_surface,
+                           egl_context);
+  if (!result)
+    {
+      g_set_error (error, COGL_WINSYS_ERROR,
+                   COGL_WINSYS_ERROR_MAKE_CURRENT,
+                   "%s", get_error_string ());
+    }
+
+  return result;
+}
+
 static CoglWinsysVtable _cogl_winsys_vtable =
   {
     .criteria = COGL_WINSYS_CRITERIA_USES_EGL,
@@ -661,6 +763,10 @@ static CoglWinsysVtable _cogl_winsys_vtable =
     .onscreen_swap_region = _cogl_winsys_onscreen_swap_region,
     .onscreen_update_swap_throttled =
       _cogl_winsys_onscreen_update_swap_throttled,
+    .create_gles2_context =
+      _cogl_winsys_create_gles2_context,
+    .make_current =
+      _cogl_winsys_make_current,
   };
 
 /* XXX: we use a function because no doubt someone will complain

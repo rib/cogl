@@ -26,6 +26,7 @@
 
 #include "cogl-renderer.h"
 #include "cogl-onscreen.h"
+#include "cogl-gles2-context.h"
 
 #ifdef COGL_HAS_XLIB_SUPPORT
 #include "cogl-texture-pixmap-x11-private.h"
@@ -45,6 +46,8 @@ typedef enum { /*< prefix=COGL_WINSYS_ERROR >*/
   COGL_WINSYS_ERROR_INIT,
   COGL_WINSYS_ERROR_CREATE_CONTEXT,
   COGL_WINSYS_ERROR_CREATE_ONSCREEN,
+  COGL_WINSYS_ERROR_MAKE_CURRENT,
+  COGL_WINSYS_ERROR_CREATE_GLES2_CONTEXT,
 } CoglWinsysError;
 
 typedef enum
@@ -167,6 +170,13 @@ typedef struct _CoglWinsysVtable
   CoglHandle
   (*texture_pixmap_x11_get_texture) (CoglTexturePixmapX11 *tex_pixmap);
 #endif
+
+  void *
+  (*create_gles2_context) (CoglContext *ctx, GError **error);
+
+  gboolean
+  (*make_current) (CoglGLES2Context *gles2_ctx,
+                   GError **error);
 
 } CoglWinsysVtable;
 

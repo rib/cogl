@@ -105,6 +105,8 @@ cogl_experimental_h = \
 	$(srcdir)/cogl-pipeline-state.h 	\
 	$(srcdir)/cogl-pipeline-layer-state.h 	\
 	$(srcdir)/cogl-snippet.h		\
+	$(srcdir)/cogl-ext-functions.h			\
+	$(srcdir)/cogl-gles2-context.h			\
 	$(srcdir)/cogl2-path.h 			\
 	$(srcdir)/cogl2-clip-state.h		\
 	$(srcdir)/cogl2-experimental.h		\
@@ -216,7 +218,6 @@ cogl_sources_c = \
 	$(srcdir)/cogl-clip-state.c			\
 	$(srcdir)/cogl2-clip-state.h 			\
 	$(srcdir)/cogl2-clip-state.c 			\
-	$(srcdir)/cogl-ext-functions.h			\
 	$(srcdir)/cogl-feature-private.h                \
 	$(srcdir)/cogl-feature-private.c                \
 	$(srcdir)/cogl-fixed.c		    		\
@@ -336,6 +337,7 @@ cogl_sources_c = \
 	$(srcdir)/cogl-boxed-value.c			\
 	$(srcdir)/cogl-snippet-private.h		\
 	$(srcdir)/cogl-snippet.c			\
+	$(srcdir)/cogl-gles2-context.c			\
 	$(NULL)
 
 if SUPPORT_XLIB

@@ -29,6 +29,7 @@
 #define __COGL_FRAMEBUFFER_H
 
 #include <cogl/cogl.h>
+#include <cogl/cogl-gles2-context.h>
 
 #include <glib.h>
 
@@ -942,6 +943,14 @@ cogl_framebuffer_finish (CoglFramebuffer *framebuffer);
 #define cogl_get_draw_framebuffer cogl_get_draw_framebuffer_EXP
 CoglFramebuffer *
 cogl_get_draw_framebuffer (void);
+
+#define cogl_framebuffer_push_gles2_context cogl_framebuffer_push_gles2_context_EXP
+gboolean cogl_framebuffer_push_gles2_context (CoglFramebuffer *framebuffer,
+                                              CoglGLES2Context *gles2_ctx,
+                                              GError **error);
+
+#define cogl_framebuffer_pop_gles2_context cogl_framebuffer_pop_gles2_context_EXP
+void cogl_framebuffer_pop_gles2_context (CoglFramebuffer *framebuffer);
 
 #endif /* COGL_ENABLE_EXPERIMENTAL_API */
 
