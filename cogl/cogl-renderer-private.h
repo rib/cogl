@@ -84,4 +84,7 @@ void *
 _cogl_renderer_get_proc_address (CoglRenderer *renderer,
                                  const char *name);
 
+CoglRendererFramebufferOrientation
+_cogl_renderer_get_framebuffer_orientation (CoglRenderer *renderer);
+
 #endif /* __COGL_RENDERER_PRIVATE_H */

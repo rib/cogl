@@ -403,6 +403,18 @@ _cogl_renderer_get_proc_address (CoglRenderer *renderer,
   return winsys->renderer_get_proc_address (renderer, name);
 }
 
+CoglRendererFramebufferOrientation
+_cogl_renderer_get_framebuffer_orientation (CoglRenderer *renderer)
+{
+  const CoglWinsysVtable *winsys = _cogl_renderer_get_winsys (renderer);
+
+  if (winsys->renderer_get_framebuffer_orientation)
+    return winsys->renderer_get_framebuffer_orientation (renderer);
+  else
+    /* Most backends just need to flip the offscreen buffers */
+    return COGL_RENDERER_FLIP_OFFSCREEN;
+}
+
 int
 cogl_renderer_get_n_fragment_texture_units (CoglRenderer *renderer)
 {

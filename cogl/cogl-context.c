@@ -375,6 +375,8 @@ cogl_context_new (CoglDisplay *display,
   _context->current_projection_stack = NULL;
   _cogl_matrix_stack_init_cache (&_context->builtin_flushed_projection);
   _cogl_matrix_stack_init_cache (&_context->builtin_flushed_modelview);
+  _context->framebuffer_orientation =
+    _cogl_renderer_get_framebuffer_orientation (display->renderer);
 
   /* Create default textures used for fall backs */
   context->default_gl_texture_2d_tex =

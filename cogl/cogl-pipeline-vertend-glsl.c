@@ -469,10 +469,22 @@ _cogl_pipeline_vertend_glsl_end (CoglPipeline *pipeline,
          uniform */
       if (_cogl_pipeline_has_vertex_snippets (pipeline))
         {
-          g_string_append (shader_state->header,
-                           "uniform vec4 _cogl_flip_vector;\n");
-          g_string_append (shader_state->source,
-                           "  cogl_position_out *= _cogl_flip_vector;\n");
+          /* If the backend always needs flipping then we might as
+             well hardcode the flip instead of using a uniform */
+          if (ctx->framebuffer_orientation ==
+              (COGL_RENDERER_FLIP_ONSCREEN | COGL_RENDERER_FLIP_OFFSCREEN))
+            {
+              g_string_append (shader_state->source,
+                               "  cogl_position_out *= "
+                               "vec4 (1.0, -1.0, 1.0, 1.0);\n");
+            }
+          else if (ctx->framebuffer_orientation != 0)
+            {
+              g_string_append (shader_state->header,
+                               "uniform vec4 _cogl_flip_vector;\n");
+              g_string_append (shader_state->source,
+                               "  cogl_position_out *= _cogl_flip_vector;\n");
+            }
         }
 
       g_string_append (shader_state->source,

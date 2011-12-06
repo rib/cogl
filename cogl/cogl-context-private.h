@@ -277,6 +277,11 @@ struct _CoglContext
   GHashTable *uniform_name_hash;
   int n_uniform_names;
 
+  /* Cache of the result of _cogl_renderer_get_framebuffer_orientation().
+     This will be used every time a matrix is flushed so it's probably
+     worthwhile caching it */
+  CoglRendererFramebufferOrientation framebuffer_orientation;
+
   /* This defines a list of function pointers that Cogl uses from
      either GL or GLES. All functions are accessed indirectly through
      these pointers rather than linking to them directly */

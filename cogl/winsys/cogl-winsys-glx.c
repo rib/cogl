@@ -1211,11 +1211,12 @@ _cogl_winsys_onscreen_swap_region (CoglOnscreen *onscreen,
    * we are given rectangles relative to the top left so we need to flip
    * them... */
   memcpy (rectangles, user_rectangles, sizeof (int) * n_rectangles * 4);
-  for (i = 0; i < n_rectangles; i++)
-    {
-      int *rect = &rectangles[4 * i];
-      rect[1] = framebuffer_height - rect[1] - rect[3];
-    }
+  if (!_cogl_framebuffer_is_flipped (framebuffer))
+    for (i = 0; i < n_rectangles; i++)
+      {
+        int *rect = &rectangles[4 * i];
+        rect[1] = framebuffer_height - rect[1] - rect[3];
+      }
 
   _cogl_framebuffer_flush_state (framebuffer,
                                  framebuffer,

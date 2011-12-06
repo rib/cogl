@@ -363,4 +363,7 @@ _cogl_framebuffer_save_clip_stack (CoglFramebuffer *framebuffer);
 void
 _cogl_framebuffer_restore_clip_stack (CoglFramebuffer *framebuffer);
 
+gboolean
+_cogl_framebuffer_is_flipped (CoglFramebuffer *framebuffer);
+
 #endif /* __COGL_FRAMEBUFFER_PRIVATE_H */

@@ -1535,11 +1535,12 @@ _cogl_winsys_onscreen_swap_region (CoglOnscreen *onscreen,
    * but we are given rectangles relative to the top left so we need to flip
    * them... */
   memcpy (rectangles, user_rectangles, sizeof (int) * n_rectangles * 4);
-  for (i = 0; i < n_rectangles; i++)
-    {
-      int *rect = &rectangles[4 * i];
-      rect[1] = framebuffer_height - rect[1] - rect[3];
-    }
+  if (!_cogl_framebuffer_is_flipped (framebuffer))
+    for (i = 0; i < n_rectangles; i++)
+      {
+        int *rect = &rectangles[4 * i];
+        rect[1] = framebuffer_height - rect[1] - rect[3];
+      }
 
   /* At least for eglSwapBuffers the EGL spec says that the surface to
      swap must be bound to the current context. It looks like Mesa

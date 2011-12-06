@@ -431,7 +431,7 @@ _cogl_read_pixels_with_rowstride (int x,
    * NB: all offscreen rendering is done upside down so no conversion
    * is necissary in this case.
    */
-  if (!cogl_is_offscreen (framebuffer))
+  if (!_cogl_framebuffer_is_flipped (framebuffer))
     y = framebuffer_height - y - height;
 
   /* Initialise the CoglBitmap */
@@ -462,7 +462,7 @@ _cogl_read_pixels_with_rowstride (int x,
   /* NB: All offscreen rendering is done upside down so there is no need
    * to flip in this case... */
   if ((ctx->private_feature_flags & COGL_PRIVATE_FEATURE_MESA_PACK_INVERT) &&
-      !cogl_is_offscreen (framebuffer))
+      !_cogl_framebuffer_is_flipped (framebuffer))
     {
       GE (ctx, glPixelStorei (GL_PACK_INVERT_MESA, TRUE));
       pack_invert_set = TRUE;
@@ -541,7 +541,7 @@ _cogl_read_pixels_with_rowstride (int x,
 
   /* NB: All offscreen rendering is done upside down so there is no need
    * to flip in this case... */
-  if (!cogl_is_offscreen (framebuffer) && !pack_invert_set)
+  if (!_cogl_framebuffer_is_flipped (framebuffer) && !pack_invert_set)
     {
       guint8 *temprow = g_alloca (rowstride * sizeof (guint8));
 

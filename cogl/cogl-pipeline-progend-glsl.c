@@ -142,6 +142,7 @@ typedef struct
      the framebuffer requires it only when there are vertex
      snippets. Otherwise this is acheived using the projection
      matrix */
+  gboolean has_vertex_snippets;
   GLint flip_uniform;
   int flushed_flip_state;
 
@@ -797,6 +798,8 @@ _cogl_pipeline_progend_glsl_end (CoglPipeline *pipeline,
       GE_RET (program_state->flip_uniform,
               ctx, glGetUniformLocation (gl_program, "_cogl_flip_vector"));
       program_state->flushed_flip_state = -1;
+      program_state->has_vertex_snippets =
+        _cogl_pipeline_has_vertex_snippets (pipeline);
     }
 
   state.unit = 0;
@@ -951,7 +954,7 @@ _cogl_pipeline_progend_glsl_pre_paint (CoglPipeline *pipeline)
   if (modelview_stack == NULL || projection_stack == NULL)
     return;
 
-  needs_flip = cogl_is_offscreen (cogl_get_draw_framebuffer ());
+  needs_flip = _cogl_framebuffer_is_flipped (cogl_get_draw_framebuffer ());
 
 #ifdef HAVE_COGL_GLES2
   if (ctx->driver == COGL_DRIVER_GLES2)
@@ -967,8 +970,8 @@ _cogl_pipeline_progend_glsl_pre_paint (CoglPipeline *pipeline)
                                                    &program_state->
                                                    projection_cache,
                                                    needs_flip &&
-                                                   program_state->
-                                                   flip_uniform == -1);
+                                                   !program_state->
+                                                   has_vertex_snippets);
 
       modelview_changed =
         _cogl_matrix_stack_check_and_update_cache (modelview_stack,
@@ -993,7 +996,7 @@ _cogl_pipeline_progend_glsl_pre_paint (CoglPipeline *pipeline)
             _cogl_matrix_stack_get (modelview_stack, &modelview);
           if (need_projection)
             {
-              if (needs_flip && program_state->flip_uniform == -1)
+              if (needs_flip && !program_state->has_vertex_snippets)
                 {
                   CoglMatrix tmp_matrix;
                   _cogl_matrix_stack_get (projection_stack, &tmp_matrix);
@@ -1053,7 +1056,7 @@ _cogl_pipeline_progend_glsl_pre_paint (CoglPipeline *pipeline)
 
       /* If there are vertex snippets, then we'll disable flipping the
          geometry via the matrix and use the flip vertex instead */
-      disable_flip = program_state->flip_uniform != -1;
+      disable_flip = program_state->has_vertex_snippets;
 
       _cogl_matrix_stack_flush_to_gl_builtins (ctx,
                                                projection_stack,

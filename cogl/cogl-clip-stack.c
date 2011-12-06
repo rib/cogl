@@ -861,7 +861,7 @@ _cogl_clip_stack_flush (CoglClipStack *stack,
        * down so in this case no conversion is needed.
        */
 
-      if (cogl_is_offscreen (framebuffer))
+      if (_cogl_framebuffer_is_flipped (framebuffer))
         scissor_y_start = scissor_y0;
       else
         {

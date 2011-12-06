@@ -1489,7 +1489,7 @@ _cogl_framebuffer_flush_viewport_state (CoglFramebuffer *framebuffer)
    * left, while Cogl defines them to be top left.
    * NB: We render upside down to offscreen framebuffers so we don't
    * need to convert the y offset in this case. */
-  if (cogl_is_offscreen (framebuffer))
+  if (_cogl_framebuffer_is_flipped (framebuffer))
     gl_viewport_y = framebuffer->viewport_y;
   else
     gl_viewport_y = framebuffer->height -
@@ -2406,4 +2406,21 @@ _cogl_framebuffer_restore_clip_stack (CoglFramebuffer *framebuffer)
   if (framebuffer->context->current_draw_buffer == framebuffer)
     framebuffer->context->current_draw_buffer_changes |=
       COGL_FRAMEBUFFER_STATE_CLIP;
+}
+
+gboolean
+_cogl_framebuffer_is_flipped (CoglFramebuffer *framebuffer)
+{
+  CoglRendererFramebufferOrientation orientation =
+    framebuffer->context->framebuffer_orientation;
+
+  switch (framebuffer->type)
+    {
+    case COGL_FRAMEBUFFER_TYPE_ONSCREEN:
+      return !!(orientation & COGL_RENDERER_FLIP_ONSCREEN);
+    case COGL_FRAMEBUFFER_TYPE_OFFSCREEN:
+      return !!(orientation & COGL_RENDERER_FLIP_OFFSCREEN);
+    }
+
+  g_assert_not_reached ();
 }

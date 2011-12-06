@@ -54,6 +54,18 @@ typedef enum
   COGL_WINSYS_RECTANGLE_STATE_ENABLE
 } CoglWinsysRectangleState;
 
+/* Flags to specify which types of buffers need to be rendered to
+   upside-down for this particularly renderer. Currently all offscreen
+   buffers need to be rendered upside down in Cogl because the texture
+   coordinate 0,0 is expected to be the topleft whereas in GL it is
+   the bottom-left. Additionally, some backends may require rendering
+   upside-down to onscreen buffers as well */
+typedef enum
+{
+  COGL_RENDERER_FLIP_ONSCREEN = (1 << 0),
+  COGL_RENDERER_FLIP_OFFSCREEN = (1 << 1),
+} CoglRendererFramebufferOrientation;
+
 typedef struct _CoglWinsysVtable
 {
   CoglWinsysID id;
@@ -109,6 +121,9 @@ typedef struct _CoglWinsysVtable
   (*onscreen_swap_region) (CoglOnscreen *onscreen,
                            const int *rectangles,
                            int n_rectangles);
+
+  CoglRendererFramebufferOrientation
+  (*renderer_get_framebuffer_orientation) (CoglRenderer *renderer);
 
 #ifdef COGL_HAS_EGL_SUPPORT
   EGLDisplay
