@@ -156,7 +156,7 @@ typedef struct _CoglOffscreen
 {
   CoglFramebuffer  _parent;
   GLuint          fbo_handle;
-  GSList          *renderbuffers;
+  GHashTable     *renderbuffers;
 
   CoglTexture    *texture;
   int             texture_level;

@@ -104,6 +104,11 @@ typedef enum {
   _TRY_STENCIL       = 1L<<2
 } TryFBOFlags;
 
+typedef enum {
+  _ATTACHMENT_DEPTH         = 1L<<0,
+  _ATTACHMENT_STENCIL       = 1L<<1
+} AttachmentFlags;
+
 typedef struct _CoglFramebufferStackEntry
 {
   CoglFramebuffer *draw_buffer;
@@ -752,6 +757,7 @@ _cogl_offscreen_new_to_texture_full (CoglTexture *texture,
   offscreen->texture_level_width = level_width;
   offscreen->texture_level_height = level_height;
   offscreen->create_flags = create_flags;
+  offscreen->renderbuffers = g_hash_table_new (g_direct_hash, g_direct_equal);
 
   fb = COGL_FRAMEBUFFER (offscreen);
 
@@ -776,21 +782,28 @@ cogl_offscreen_new_to_texture (CoglTexture *texture)
 }
 
 static void
+_cogl_offscreen_delete_renderbuffer (gpointer key,
+                                     gpointer value,
+                                     gpointer user_data)
+{
+  GLuint renderbuffer = GPOINTER_TO_UINT (value);
+  GE (COGL_CONTEXT (user_data), glDeleteRenderbuffers (1, &renderbuffer));
+}
+
+static void
 _cogl_offscreen_free (CoglOffscreen *offscreen)
 {
   CoglFramebuffer *framebuffer = COGL_FRAMEBUFFER (offscreen);
   CoglContext *ctx = framebuffer->context;
-  GSList *l;
 
   /* Chain up to parent */
   _cogl_framebuffer_free (framebuffer);
 
-  for (l = offscreen->renderbuffers; l; l = l->next)
-    {
-      GLuint renderbuffer = GPOINTER_TO_UINT (l->data);
-      GE (ctx, glDeleteRenderbuffers (1, &renderbuffer));
-    }
-  g_slist_free (offscreen->renderbuffers);
+  g_hash_table_foreach (offscreen->renderbuffers,
+                        _cogl_offscreen_delete_renderbuffer,
+                        ctx);
+  g_hash_table_remove_all (offscreen->renderbuffers);
+  g_hash_table_unref (offscreen->renderbuffers);
 
   GE (ctx, glDeleteFramebuffers (1, &offscreen->fbo_handle));
 
@@ -885,9 +898,10 @@ try_creating_fbo (CoglOffscreen *offscreen,
                                           GL_DEPTH_ATTACHMENT,
                                           GL_RENDERBUFFER,
                                           gl_depth_stencil_handle));
-      offscreen->renderbuffers =
-        g_slist_prepend (offscreen->renderbuffers,
-                         GUINT_TO_POINTER (gl_depth_stencil_handle));
+      g_hash_table_insert (offscreen->renderbuffers,
+                           GUINT_TO_POINTER (_ATTACHMENT_DEPTH |
+                                             _ATTACHMENT_STENCIL),
+                           GUINT_TO_POINTER (gl_depth_stencil_handle));
     }
 
   if (flags & _TRY_DEPTH)
@@ -908,9 +922,9 @@ try_creating_fbo (CoglOffscreen *offscreen,
       GE (ctx, glFramebufferRenderbuffer (GL_FRAMEBUFFER,
                                           GL_DEPTH_ATTACHMENT,
                                           GL_RENDERBUFFER, gl_depth_handle));
-      offscreen->renderbuffers =
-        g_slist_prepend (offscreen->renderbuffers,
-                         GUINT_TO_POINTER (gl_depth_handle));
+      g_hash_table_insert (offscreen->renderbuffers,
+                           GUINT_TO_POINTER (_ATTACHMENT_DEPTH),
+                           GUINT_TO_POINTER (gl_depth_handle));
     }
 
   if (flags & _TRY_STENCIL)
@@ -929,9 +943,9 @@ try_creating_fbo (CoglOffscreen *offscreen,
       GE (ctx, glFramebufferRenderbuffer (GL_FRAMEBUFFER,
                                           GL_STENCIL_ATTACHMENT,
                                           GL_RENDERBUFFER, gl_stencil_handle));
-      offscreen->renderbuffers =
-        g_slist_prepend (offscreen->renderbuffers,
-                         GUINT_TO_POINTER (gl_stencil_handle));
+      g_hash_table_insert (offscreen->renderbuffers,
+                           GUINT_TO_POINTER (_ATTACHMENT_STENCIL),
+                           GUINT_TO_POINTER (gl_stencil_handle));
     }
 
   /* Make sure it's complete */
@@ -939,18 +953,12 @@ try_creating_fbo (CoglOffscreen *offscreen,
 
   if (status != GL_FRAMEBUFFER_COMPLETE)
     {
-      GSList *l;
-
       GE (ctx, glDeleteFramebuffers (1, &fbo_gl_handle));
 
-      for (l = offscreen->renderbuffers; l; l = l->next)
-        {
-          GLuint renderbuffer = GPOINTER_TO_UINT (l->data);
-          GE (ctx, glDeleteRenderbuffers (1, &renderbuffer));
-        }
-
-      g_slist_free (offscreen->renderbuffers);
-      offscreen->renderbuffers = NULL;
+      g_hash_table_foreach (offscreen->renderbuffers,
+                            _cogl_offscreen_delete_renderbuffer,
+                            ctx);
+      g_hash_table_remove_all (offscreen->renderbuffers);
 
       return FALSE;
     }
@@ -2420,12 +2428,15 @@ cogl_framebuffer_push_gles2_context (CoglFramebuffer *framebuffer,
   GLuint tex_gl_handle;
   GLenum tex_gl_target;
   GLuint fbo_gl_handle;
-  GLuint gl_stencil_handle;
-  gint width, height;
   gboolean result;
   GLenum status;
+  GHashTableIter iter;
+  gpointer key, value;
 
   if (!cogl_has_feature (ctx, COGL_FEATURE_ID_GLES2_CONTEXT))
+    return FALSE;
+
+  if (!cogl_framebuffer_allocate (framebuffer, NULL))
     return FALSE;
 
   /* Make current the GL context being pushed */
@@ -2435,11 +2446,11 @@ cogl_framebuffer_push_gles2_context (CoglFramebuffer *framebuffer,
     return FALSE;
 
   /* Ensure we have a framebuffer in this context */
-  fbo_gl_handle = cogl_object_get_user_data (COGL_OBJECT (framebuffer), gles2_ctx);
+  fbo_gl_handle = cogl_object_get_user_data (COGL_OBJECT (framebuffer), (CoglUserDataKey *)gles2_ctx);
   if (fbo_gl_handle == 0)
     {
       ctx->glGenFramebuffers(1, &fbo_gl_handle);
-      cogl_object_set_user_data (COGL_OBJECT (framebuffer), gles2_ctx, fbo_gl_handle, NULL);
+      cogl_object_set_user_data (COGL_OBJECT (framebuffer), (CoglUserDataKey *)gles2_ctx, fbo_gl_handle, NULL);
     }
 
   /* Bind the new framebuffer */
@@ -2453,19 +2464,24 @@ cogl_framebuffer_push_gles2_context (CoglFramebuffer *framebuffer,
                                    tex_gl_target, tex_gl_handle,
                                    offscreen->texture_level));
 
-  /* Create the depth buffer */
-  width = offscreen->texture_level_width;
-  height = offscreen->texture_level_height;
-
-  /* FIXME: should keep a reference for deleting */
-  GE (ctx, glGenRenderbuffers (1, &gl_stencil_handle));
-  GE (ctx, glBindRenderbuffer (GL_RENDERBUFFER, gl_stencil_handle));
-  GE (ctx, glRenderbufferStorage (GL_RENDERBUFFER, GL_STENCIL_INDEX8,
-                                    width, height));
-  GE (ctx, glBindRenderbuffer (GL_RENDERBUFFER, 0));
-  GE (ctx, glFramebufferRenderbuffer (GL_FRAMEBUFFER,
-                                      GL_STENCIL_ATTACHMENT,
-                                      GL_RENDERBUFFER, gl_stencil_handle));
+  g_hash_table_iter_init (&iter, offscreen->renderbuffers);
+  while (g_hash_table_iter_next (&iter, &key, &value)) 
+    {
+      GLuint attachment = GPOINTER_TO_UINT (key);
+      GLuint renderbuffer = GPOINTER_TO_UINT (value);
+      if (attachment & _ATTACHMENT_DEPTH)
+        {
+          GE (ctx, glFramebufferRenderbuffer (GL_FRAMEBUFFER,
+                                              GL_DEPTH_ATTACHMENT,
+                                              GL_RENDERBUFFER, renderbuffer));
+        }
+      if (attachment & _ATTACHMENT_STENCIL)
+        {
+          GE (ctx, glFramebufferRenderbuffer (GL_FRAMEBUFFER,
+                                              GL_STENCIL_ATTACHMENT,
+                                              GL_RENDERBUFFER, renderbuffer));
+        }
+    }
 
   status = ctx->glCheckFramebufferStatus (GL_FRAMEBUFFER);
   g_return_val_if_fail (status == GL_FRAMEBUFFER_COMPLETE, FALSE);
