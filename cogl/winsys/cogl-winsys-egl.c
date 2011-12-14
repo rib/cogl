@@ -709,9 +709,10 @@ _cogl_winsys_make_current (CoglGLES2Context *gles2_ctx,
   CoglDisplayEGL *egl_display;
   CoglRendererEGL *egl_renderer;
   EGLContext egl_context;
+  EGLSurface egl_surface;
   gboolean result;
 
-  _COGL_GET_CONTEXT (ctx, NO_RETVAL);
+  _COGL_GET_CONTEXT (ctx, FALSE);
 
   egl_display = ctx->display->winsys;
   egl_renderer = ctx->display->renderer->winsys;
@@ -720,15 +721,17 @@ _cogl_winsys_make_current (CoglGLES2Context *gles2_ctx,
     {
       ctx = gles2_ctx->context;
       egl_context = gles2_ctx->winsys;
+      egl_surface = egl_display->dummy_surface;
     }
   else
     {
       egl_context = egl_display->egl_context;
+      egl_surface = ((CoglContextEGL *)ctx->winsys)->current_surface;
     }
 
   result = eglMakeCurrent (egl_renderer->edpy,
-                           egl_display->dummy_surface,
-                           egl_display->dummy_surface,
+                           egl_surface,
+                           egl_surface,
                            egl_context);
   if (!result)
     {
