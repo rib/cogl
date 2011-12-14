@@ -655,6 +655,9 @@ COGL_EXT_BEGIN (blend_equation_separate, 2, 0,
 COGL_EXT_FUNCTION (void, glBlendEquationSeparate,
                    (GLenum                modeRGB,
                     GLenum                modeAlpha))
+COGL_EXT_FUNCTION (void, glDetachShader,
+                   (GLuint  program,
+                    GLuint  shader))
 COGL_EXT_END ()
 
 COGL_EXT_BEGIN (EGL_image, 255, 255,

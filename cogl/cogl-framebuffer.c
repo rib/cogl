@@ -886,9 +886,15 @@ try_creating_fbo (CoglOffscreen *offscreen,
                                                       n_samples,
                                                       GL_DEPTH_STENCIL,
                                                       width, height));
-      else
+#ifdef HAVE_COGL_GL
+      else if (ctx->driver == COGL_DRIVER_GL)
         GE (ctx, glRenderbufferStorage (GL_RENDERBUFFER, GL_DEPTH_STENCIL,
                                         width, height));
+#endif
+      else /* FIXME: We should check GL_OES_packed_depth_stencil */
+        GE (ctx, glRenderbufferStorage (GL_RENDERBUFFER, GL_DEPTH24_STENCIL8_OES,
+                                        width, height));
+
       GE (ctx, glBindRenderbuffer (GL_RENDERBUFFER, 0));
       GE (ctx, glFramebufferRenderbuffer (GL_FRAMEBUFFER,
                                           GL_STENCIL_ATTACHMENT,
@@ -1009,10 +1015,7 @@ _cogl_offscreen_allocate (CoglOffscreen *offscreen,
     {
       if ((have_working_flags &&
            try_creating_fbo (offscreen, flags)) ||
-#ifdef HAVE_COGL_GL
-          (ctx->driver == COGL_DRIVER_GL &&
-           try_creating_fbo (offscreen, flags = _TRY_DEPTH_STENCIL)) ||
-#endif
+          try_creating_fbo (offscreen, flags = _TRY_DEPTH_STENCIL) ||
           try_creating_fbo (offscreen, flags = _TRY_DEPTH | _TRY_STENCIL) ||
           try_creating_fbo (offscreen, flags = _TRY_STENCIL) ||
           try_creating_fbo (offscreen, flags = _TRY_DEPTH) ||
