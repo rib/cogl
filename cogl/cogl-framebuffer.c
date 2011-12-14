@@ -2420,16 +2420,21 @@ cogl_framebuffer_push_gles2_context (CoglFramebuffer *framebuffer,
   GLuint tex_gl_handle;
   GLenum tex_gl_target;
   GLuint fbo_gl_handle;
+  GLuint gl_stencil_handle;
+  gint width, height;
   gboolean result;
+  GLenum status;
 
   if (!cogl_has_feature (ctx, COGL_FEATURE_ID_GLES2_CONTEXT))
     return FALSE;
 
+  /* Make current the GL context being pushed */
   winsys = ctx->display->renderer->winsys_vtable;
   result = winsys->make_current (gles2_ctx, error);
   if (!result)
     return FALSE;
 
+  /* Ensure we have a framebuffer in this context */
   fbo_gl_handle = cogl_object_get_user_data (COGL_OBJECT (framebuffer), gles2_ctx);
   if (fbo_gl_handle == 0)
     {
@@ -2437,6 +2442,7 @@ cogl_framebuffer_push_gles2_context (CoglFramebuffer *framebuffer,
       cogl_object_set_user_data (COGL_OBJECT (framebuffer), gles2_ctx, fbo_gl_handle, NULL);
     }
 
+  /* Bind the new framebuffer */
   GE (ctx, glBindFramebuffer (GL_FRAMEBUFFER, fbo_gl_handle));
 
   if (!cogl_texture_get_gl_texture (offscreen->texture,
@@ -2446,6 +2452,23 @@ cogl_framebuffer_push_gles2_context (CoglFramebuffer *framebuffer,
   GE (ctx, glFramebufferTexture2D (GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
                                    tex_gl_target, tex_gl_handle,
                                    offscreen->texture_level));
+
+  /* Create the depth buffer */
+  width = offscreen->texture_level_width;
+  height = offscreen->texture_level_height;
+
+  /* FIXME: should keep a reference for deleting */
+  GE (ctx, glGenRenderbuffers (1, &gl_stencil_handle));
+  GE (ctx, glBindRenderbuffer (GL_RENDERBUFFER, gl_stencil_handle));
+  GE (ctx, glRenderbufferStorage (GL_RENDERBUFFER, GL_STENCIL_INDEX8,
+                                    width, height));
+  GE (ctx, glBindRenderbuffer (GL_RENDERBUFFER, 0));
+  GE (ctx, glFramebufferRenderbuffer (GL_FRAMEBUFFER,
+                                      GL_STENCIL_ATTACHMENT,
+                                      GL_RENDERBUFFER, gl_stencil_handle));
+
+  status = ctx->glCheckFramebufferStatus (GL_FRAMEBUFFER);
+  g_return_val_if_fail (status == GL_FRAMEBUFFER_COMPLETE, FALSE);
 
   return TRUE;
 }
