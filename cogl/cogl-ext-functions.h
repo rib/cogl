@@ -195,6 +195,8 @@ COGL_EXT_FUNCTION (void, glVertex3f,
                    (GLfloat x,
                     GLfloat y,
                     GLfloat z))
+COGL_EXT_FUNCTION (void, glLineWidth,
+                   (GLfloat width))
 COGL_EXT_END ()
 
 /* These are the core GL functions which are available when the API
