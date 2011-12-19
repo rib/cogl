@@ -136,10 +136,16 @@ COGL_EXT_FUNCTION (void, glScissor,
                    (GLint x, GLint y, GLsizei width, GLsizei height))
 COGL_EXT_FUNCTION (void, glStencilFunc,
                    (GLenum func, GLint ref, GLuint mask))
+COGL_EXT_FUNCTION (void, glStencilFuncSeparate,
+                   (GLenum face, GLenum func, GLint ref, GLuint mask))
 COGL_EXT_FUNCTION (void, glStencilMask,
                    (GLuint mask))
+COGL_EXT_FUNCTION (void, glStencilMaskSeparate,
+                   (GLenum face, GLuint mask))
 COGL_EXT_FUNCTION (void, glStencilOp,
                    (GLenum fail, GLenum zfail, GLenum zpass))
+COGL_EXT_FUNCTION (void, glStencilOpSeparate,
+                   (GLenum face, GLenum sfail, GLenum dpfail, GLenum dppass))
 COGL_EXT_FUNCTION (void, glTexImage2D,
                    (GLenum target,
                     GLint level,
@@ -178,6 +184,14 @@ COGL_EXT_FUNCTION (void, glGetActiveAttrib,
                     GLint* size,
                     GLenum* type,
                     GLchar* name))
+COGL_EXT_FUNCTION (void, glGetActiveUniform,
+                   (GLuint program,
+                    GLuint index,
+                    GLsizei bufSize,
+                    GLsizei *length,
+                    GLint *size,
+                    GLenum *type,
+                    GLchar *name))
 COGL_EXT_FUNCTION (void, glColor3f,
                    (GLfloat red,
                     GLfloat green,
