@@ -595,6 +595,8 @@ _cogl_framebuffer_add_dependency (CoglFramebuffer *framebuffer,
 {
   GList *l;
 
+  g_return_if_fail (framebuffer != dependency);
+
   for (l = framebuffer->deps; l; l = l->next)
     {
       CoglFramebuffer *existing_dep = l->data;
@@ -1278,7 +1280,66 @@ _cogl_push_framebuffers (CoglFramebuffer *draw_buffer,
 void
 cogl_push_framebuffer (CoglFramebuffer *buffer)
 {
+  CoglOffscreen *offscreen;
+  CoglContext *ctx = buffer->context;
+  const CoglWinsysVtable *winsys;
+  GLuint tex_gl_handle;
+  GLenum tex_gl_target;
+  GLenum status;
+  GHashTableIter iter;
+  gpointer key, value;
+
   _cogl_push_framebuffers (buffer, buffer);
+
+  if (buffer->gles2_context == NULL)
+    return;
+
+  /* FIXME: Deal with onscreen framebuffers */
+  g_return_if_fail (buffer->type == COGL_FRAMEBUFFER_TYPE_OFFSCREEN);
+
+  g_return_if_fail (cogl_framebuffer_allocate (buffer, NULL));
+
+  /* Make current the GL context being pushed */
+  winsys = ctx->display->renderer->winsys_vtable;
+  g_return_if_fail (winsys->make_current (buffer->gles2_context, NULL));
+  ctx->current_gles2_context = buffer->gles2_context;
+
+  if (buffer->foreign_fbo_gl_handle == 0)
+    ctx->glGenFramebuffers(1, &buffer->foreign_fbo_gl_handle);
+
+  GE (ctx, glBindFramebuffer (GL_FRAMEBUFFER, buffer->foreign_fbo_gl_handle));
+
+  offscreen = COGL_OFFSCREEN (buffer);
+
+  if (!cogl_texture_get_gl_texture (offscreen->texture,
+                                    &tex_gl_handle, &tex_gl_target))
+    return;
+
+  GE (ctx, glFramebufferTexture2D (GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                                   tex_gl_target, tex_gl_handle,
+                                   offscreen->texture_level));
+
+  g_hash_table_iter_init (&iter, offscreen->renderbuffers);
+  while (g_hash_table_iter_next (&iter, &key, &value)) 
+    {
+      GLuint attachment = GPOINTER_TO_UINT (key);
+      GLuint renderbuffer = GPOINTER_TO_UINT (value);
+      if (attachment & _ATTACHMENT_DEPTH)
+        {
+          GE (ctx, glFramebufferRenderbuffer (GL_FRAMEBUFFER,
+                                              GL_DEPTH_ATTACHMENT,
+                                              GL_RENDERBUFFER, renderbuffer));
+        }
+      if (attachment & _ATTACHMENT_STENCIL)
+        {
+          GE (ctx, glFramebufferRenderbuffer (GL_FRAMEBUFFER,
+                                              GL_STENCIL_ATTACHMENT,
+                                              GL_RENDERBUFFER, renderbuffer));
+        }
+    }
+
+  status = ctx->glCheckFramebufferStatus (GL_FRAMEBUFFER);
+  g_return_if_fail (status == GL_FRAMEBUFFER_COMPLETE);
 }
 
 /* XXX: deprecated API */
@@ -1318,6 +1379,9 @@ cogl_pop_framebuffer (void)
                               to_restore->read_buffer);
     }
 
+  if (to_pop->draw_buffer->gles2_context != NULL)
+    ctx->glFlush ();
+
   cogl_object_unref (to_pop->draw_buffer);
   cogl_object_unref (to_pop->read_buffer);
   g_slice_free (CoglFramebufferStackEntry, to_pop);
@@ -1340,8 +1404,16 @@ bind_gl_framebuffer (CoglContext *ctx,
                      CoglFramebuffer *framebuffer)
 {
   if (framebuffer->type == COGL_FRAMEBUFFER_TYPE_OFFSCREEN)
-    GE (ctx, glBindFramebuffer (target,
-                           COGL_OFFSCREEN (framebuffer)->fbo_handle));
+    {
+        if (framebuffer->gles2_context == NULL && FALSE)
+          {
+            const CoglWinsysVtable *winsys = ctx->display->renderer->winsys_vtable;
+            winsys->make_current (NULL, NULL);
+          }
+
+        GE (ctx, glBindFramebuffer (target,
+                                    COGL_OFFSCREEN (framebuffer)->fbo_handle));
+    }
   else
     {
       const CoglWinsysVtable *winsys =
@@ -1644,6 +1716,12 @@ _cogl_framebuffer_flush_state (CoglFramebuffer *draw_buffer,
        * reference. */
       ctx->current_draw_buffer = draw_buffer;
       ctx->current_draw_buffer_state_flushed = 0;
+    }
+
+  if (ctx->current_gles2_context != draw_buffer->gles2_context)
+    {
+      differences |= COGL_FRAMEBUFFER_STATE_BIND;
+      ctx->current_gles2_context = draw_buffer->gles2_context;
     }
 
   if (ctx->current_read_buffer != read_buffer &&
@@ -2426,68 +2504,15 @@ cogl_framebuffer_push_gles2_context (CoglFramebuffer *framebuffer,
                                      GError **error)
 {
   CoglContext *ctx = gles2_ctx->context;
-  CoglOffscreen *offscreen = COGL_OFFSCREEN (framebuffer);
-  const CoglWinsysVtable *winsys;
-  GLuint tex_gl_handle;
-  GLenum tex_gl_target;
-  GLuint fbo_gl_handle;
-  gboolean result;
-  GLenum status;
-  GHashTableIter iter;
-  gpointer key, value;
 
   if (!cogl_has_feature (ctx, COGL_FEATURE_ID_GLES2_CONTEXT))
     return FALSE;
 
-  if (!cogl_framebuffer_allocate (framebuffer, NULL))
-    return FALSE;
+  framebuffer->gles2_context = gles2_ctx;
+  /* FIXME: take a ref on the context */
 
-  /* Make current the GL context being pushed */
-  winsys = ctx->display->renderer->winsys_vtable;
-  result = winsys->make_current (gles2_ctx, error);
-  if (!result)
-    return FALSE;
-
-  /* Ensure we have a framebuffer in this context */
-  fbo_gl_handle = cogl_object_get_user_data (COGL_OBJECT (framebuffer), (CoglUserDataKey *)gles2_ctx);
-  if (fbo_gl_handle == 0)
-    {
-      ctx->glGenFramebuffers(1, &fbo_gl_handle);
-      cogl_object_set_user_data (COGL_OBJECT (framebuffer), (CoglUserDataKey *)gles2_ctx, fbo_gl_handle, NULL);
-    }
-
-  /* Bind the new framebuffer */
-  GE (ctx, glBindFramebuffer (GL_FRAMEBUFFER, fbo_gl_handle));
-
-  if (!cogl_texture_get_gl_texture (offscreen->texture,
-                                    &tex_gl_handle, &tex_gl_target))
-    return FALSE;
-
-  GE (ctx, glFramebufferTexture2D (GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-                                   tex_gl_target, tex_gl_handle,
-                                   offscreen->texture_level));
-
-  g_hash_table_iter_init (&iter, offscreen->renderbuffers);
-  while (g_hash_table_iter_next (&iter, &key, &value)) 
-    {
-      GLuint attachment = GPOINTER_TO_UINT (key);
-      GLuint renderbuffer = GPOINTER_TO_UINT (value);
-      if (attachment & _ATTACHMENT_DEPTH)
-        {
-          GE (ctx, glFramebufferRenderbuffer (GL_FRAMEBUFFER,
-                                              GL_DEPTH_ATTACHMENT,
-                                              GL_RENDERBUFFER, renderbuffer));
-        }
-      if (attachment & _ATTACHMENT_STENCIL)
-        {
-          GE (ctx, glFramebufferRenderbuffer (GL_FRAMEBUFFER,
-                                              GL_STENCIL_ATTACHMENT,
-                                              GL_RENDERBUFFER, renderbuffer));
-        }
-    }
-
-  status = ctx->glCheckFramebufferStatus (GL_FRAMEBUFFER);
-  g_return_val_if_fail (status == GL_FRAMEBUFFER_COMPLETE, FALSE);
+  /* FIXME: If the framebuffer is current, we need to make the new context
+     current here as well, like in cogl_push_framebuffer */
 
   return TRUE;
 }
@@ -2496,12 +2521,9 @@ void
 cogl_framebuffer_pop_gles2_context (CoglFramebuffer *framebuffer)
 {
   //CoglContext *ctx = cogl_framebuffer_get_context (framebuffer);
-  const CoglWinsysVtable *winsys;
 
-  _COGL_GET_CONTEXT (ctx, NO_RETVAL);
+  //_COGL_GET_CONTEXT (ctx, NO_RETVAL);
 
-  ctx->glFlush ();
-
-  winsys = ctx->display->renderer->winsys_vtable;
-  winsys->make_current (NULL, NULL);
+  /* FIXME: If the framebuffer is current, we need to make its context
+     uncurrent here as well, like in cogl_pop_framebuffer */
 }

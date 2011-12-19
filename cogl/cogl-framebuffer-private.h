@@ -150,6 +150,9 @@ struct _CoglFramebuffer
   int                 clear_clip_x1;
   int                 clear_clip_y1;
   gboolean            clear_clip_dirty;
+
+  CoglGLES2Context   *gles2_context;
+  GLuint              foreign_fbo_gl_handle;
 };
 
 typedef struct _CoglOffscreen

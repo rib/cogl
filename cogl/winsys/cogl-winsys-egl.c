@@ -739,6 +739,7 @@ _cogl_winsys_make_current (CoglGLES2Context *gles2_ctx,
                    COGL_WINSYS_ERROR_MAKE_CURRENT,
                    "%s", get_error_string ());
     }
+  ((CoglContextEGL *)ctx->winsys)->current_surface = egl_surface;
 
   return result;
 }

@@ -165,6 +165,7 @@ struct _CoglContext
   unsigned long     current_draw_buffer_changes;
   CoglFramebuffer  *current_draw_buffer;
   CoglFramebuffer  *current_read_buffer;
+  CoglGLES2Context *current_gles2_context;
 
   /* Primitives */
   CoglPath         *current_path;
