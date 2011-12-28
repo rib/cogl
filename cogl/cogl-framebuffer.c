@@ -231,6 +231,8 @@ _cogl_framebuffer_free (CoglFramebuffer *framebuffer)
 
   cogl_object_unref (framebuffer->journal);
 
+  /* FIXME: Unref gles2_context and destroy foreign_fbo_gl_handle, if any */
+
   ctx->framebuffers = g_list_remove (ctx->framebuffers, framebuffer);
   cogl_object_unref (ctx);
 
