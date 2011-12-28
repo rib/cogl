@@ -35,7 +35,7 @@ update_offscreen_texture (CoglContext *ctx, CoglTexture *offscreen_texture)
 
   cogl_push_framebuffer (offscreen_framebuffer);
 
-  /* Clear offscreen framebuffer with green */
+  /* Clear offscreen framebuffer with a random color */
   vtable->glClearColor(g_random_double (), g_random_double (), g_random_double (), 1.0f);
   vtable->glClear(GL_COLOR_BUFFER_BIT);
 
