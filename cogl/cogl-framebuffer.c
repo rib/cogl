@@ -1407,14 +1407,8 @@ bind_gl_framebuffer (CoglContext *ctx,
 {
   if (framebuffer->type == COGL_FRAMEBUFFER_TYPE_OFFSCREEN)
     {
-        if (framebuffer->gles2_context == NULL && FALSE)
-          {
-            const CoglWinsysVtable *winsys = ctx->display->renderer->winsys_vtable;
-            winsys->make_current (NULL, NULL);
-          }
-
-        GE (ctx, glBindFramebuffer (target,
-                                    COGL_OFFSCREEN (framebuffer)->fbo_handle));
+      GE (ctx, glBindFramebuffer (target,
+                                  COGL_OFFSCREEN (framebuffer)->fbo_handle));
     }
   else
     {
