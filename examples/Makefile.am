@@ -23,7 +23,7 @@ cogl_info_SOURCES = cogl-info.c
 cogl_info_LDADD = $(common_ldadd)
 
 if USE_GLIB
-programs += cogl-hello cogl-msaa
+programs += cogl-hello cogl-msaa cogl-hair
 examples_datadir = $(pkgdatadir)/examples-data
 examples_data_DATA =
 
@@ -31,6 +31,8 @@ cogl_hello_SOURCES = cogl-hello.c
 cogl_hello_LDADD = $(common_ldadd)
 cogl_msaa_SOURCES = cogl-msaa.c
 cogl_msaa_LDADD = $(common_ldadd)
+cogl_hair_SOURCES = cogl-hair.c
+cogl_hair_LDADD = $(common_ldadd)
 
 if BUILD_COGL_PANGO
 programs += cogl-crate
@@ -70,6 +72,8 @@ endif
 
 EXTRA_DIST = \
 	crate.jpg \
+	leopard.jpg \
+	shave.jpg \
 	android/hello/AndroidManifest.xml \
 	android/hello/jni/Application.mk \
 	android/hello/jni/Android.mk \
