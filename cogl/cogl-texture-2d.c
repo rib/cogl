@@ -552,7 +552,7 @@ cogl_wayland_texture_2d_new_from_buffer (CoglContext *ctx,
       return _cogl_egl_texture_2d_new_from_image (ctx,
                                                   buffer->width,
                                                   buffer->height,
-                                                  COGL_PIXEL_FORMAT_ARGB_8888_PRE,
+                                                  COGL_PIXEL_FORMAT_RGB_888,
                                                   image,
                                                   error);
     }
