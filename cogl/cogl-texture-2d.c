@@ -546,6 +546,7 @@ cogl_wayland_texture_2d_new_from_buffer (CoglContext *ctx,
   else
     {
       EGLImageKHR image;
+      CoglTexture2D *tex;
 
       _COGL_RETURN_VAL_IF_FAIL (_cogl_context_get_winsys (ctx)->criteria &
                                 COGL_WINSYS_CRITERIA_USES_EGL,
@@ -555,12 +556,14 @@ cogl_wayland_texture_2d_new_from_buffer (CoglContext *ctx,
                                       buffer,
                                       NULL);
 #warning "XXX: without a way to query the format of a wayland buffer we have to guess!"
-      return _cogl_egl_texture_2d_new_from_image (ctx,
-                                                  buffer->width,
-                                                  buffer->height,
-                                                  COGL_PIXEL_FORMAT_RGB_888,
-                                                  image,
-                                                  error);
+      tex = _cogl_egl_texture_2d_new_from_image (ctx,
+                                                 buffer->width,
+                                                 buffer->height,
+                                                 COGL_PIXEL_FORMAT_RGB_888,
+                                                 image,
+                                                 error);
+      _cogl_egl_destroy_image (ctx, image);
+      return tex;
     }
 }
 #endif /* COGL_HAS_WAYLAND_EGL_SERVER_SUPPORT */
