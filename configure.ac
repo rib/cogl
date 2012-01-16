@@ -159,8 +159,7 @@ AS_CASE([$host],
 AC_MSG_RESULT([$platform_win32])
 AM_CONDITIONAL(OS_WIN32, [test "$platform_win32" = "yes"])
 
-AC_CHECK_HEADER([OpenGL/gl.h], [platform_quartz=yes], [platform_quartz=no])
-AM_CONDITIONAL(OS_QUARTZ, [test "$platform_quartz" = "yes"])
+AC_CHECK_HEADER([OpenGL/gl.h], [platform_osx=yes], [platform_osx=no])
 
 dnl ================================================================
 dnl Handle extra configure options
@@ -317,6 +316,26 @@ AS_CASE([$enable_deprecated],
 
 # strip leading spaces
 COGL_EXTRA_CFLAGS="$COGL_EXTRA_CFLAGS ${DEPRECATED_CFLAGS#*  }"
+
+COGL_OBJCFLAGS=""
+AC_ARG_ENABLE(
+  [osx],
+  [AC_HELP_STRING([--enable-osx=@<:@no/yes@:>@], [Enable the osx winsys (also works with gnustep) @<:@default=auto@:>@])],
+  [platform_osx=$enable_osx],
+)
+if test "x$platform_osx" = "xyes"; then
+  AC_CHECK_PROG(platform_gnustep, gnustep-config, yes, no)
+  AC_PROG_OBJC
+  COGL_DEFINES_SYMBOLS="$COGL_DEFINES_SYMBOLS COGL_HAS_OSX_SUPPORT"
+  GL_WINSYS_APIS="$GL_WINSYS_APIS osx"
+fi
+if test "x$platform_gnustep" = "xyes"; then
+  COGL_OBJCFLAGS=`gnustep-config --objc-flags`
+  COGL_EXTRA_LDFLAGS="$COGL_EXTRA_LDFLAGS `gnustep-config --gui-libs`"
+  AC_DEFINE([USING_GNUSTEP], 1, [Using the gnustep build environment])
+fi
+AM_CONDITIONAL(OS_OSX, [test "$platform_osx" = "yes"])
+AC_SUBST(COGL_OBJCFLAGS)
 
 dnl     ============================================================
 dnl     Choose image loading backend
@@ -565,9 +584,19 @@ AS_IF([test "x$enable_gl" = "xyes"],
 
         cogl_gl_headers="GL/gl.h"
 
-        AS_IF([test "x$platform_quartz" = "xyes"],
+        AS_IF([test "x$platform_osx" = "xyes" -a "x$platform_gnustep" != "xyes"],
               [
                 cogl_gl_headers="OpenGL/gl.h"
+                COGL_EXTRA_LDFLAGS="$COGL_EXTRA_LDFLAGS -framework OpenGL"
+                dnl The GL API is being directly linked in so there is
+                dnl no need to dlopen it separately
+                GL_LIBRARY_DIRECTLY_LINKED=yes
+                COGL_GL_LIBNAME=""
+                ALLOW_GLX=no
+              ],
+
+              [test "x$platform_gnustep" = "xyes"],
+              [
                 COGL_EXTRA_LDFLAGS="$COGL_EXTRA_LDFLAGS -framework OpenGL"
                 dnl The GL API is being directly linked in so there is
                 dnl no need to dlopen it separately

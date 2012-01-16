@@ -34,6 +34,8 @@ AM_CPPFLAGS = \
 
 AM_CFLAGS = $(COGL_DEP_CFLAGS) $(COGL_EXTRA_CFLAGS) $(MAINTAINER_CFLAGS)
 
+AM_OBJCFLAGS= $(COGL_OBJCFLAGS) $(COGL_DEP_CFLAGS) $(COGL_EXTRA_CFLAGS) $(MAINTAINER_CFLAGS)
+
 BUILT_SOURCES += cogl-defines.h
 DISTCLEANFILES += cogl-defines.h
 EXTRA_DIST += cogl-defines.h.in
@@ -430,6 +432,11 @@ endif
 if SUPPORT_SDL
 cogl_sources_c += \
        $(srcdir)/winsys/cogl-winsys-sdl.c
+endif
+
+if OS_OSX
+cogl_sources_c += \
+	$(srcdir)/winsys/cogl-winsys-osx.m
 endif
 
 EXTRA_DIST += stb_image.c

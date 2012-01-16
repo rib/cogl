@@ -72,6 +72,7 @@ cogl_renderer_new (void);
  * @COGL_WINSYS_ID_EGL_ANDROID: Use EGL with the Android platform
  * @COGL_WINSYS_ID_WGL: Use the Microsoft Windows WGL binding API
  * @COGL_WINSYS_ID_SDL: Use the SDL window system
+ * @COGL_WINSYS_ID_OSX: Use the OSX window system
  *
  * Identifies specific window system backends that Cogl supports.
  *
