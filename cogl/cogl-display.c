@@ -101,7 +101,7 @@ cogl_display_new (CoglRenderer *renderer,
     {
       g_warning ("Failed to connect renderer: %s\n", error->message);
       g_error_free (error);
-      g_object_unref (display->renderer);
+      cogl_object_unref (display->renderer);
       g_slice_free (CoglDisplay, display);
       return NULL;
     }
