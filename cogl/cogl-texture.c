@@ -1438,6 +1438,11 @@ cogl_texture_get_data (CoglHandle       handle,
     }
   tg_data.success = TRUE;
 
+  /* If there are any dependent framebuffers on the texture then we
+     need to flush their journals so the texture contents will be
+     up-to-date */
+  _cogl_texture_flush_journal_rendering (handle);
+
   /* Iterating through the subtextures allows piecing together
    * the data for a sliced texture, and allows us to do the
    * read-from-framebuffer logic here in a simple fashion rather than
