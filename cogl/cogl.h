@@ -104,6 +104,7 @@
 #include <cogl/cogl-poll.h>
 #if defined (COGL_HAS_EGL_PLATFORM_KMS_SUPPORT)
 #include <cogl/cogl-kms-renderer.h>
+#include <cogl/cogl-kms-display.h>
 #endif
 #if defined (COGL_HAS_EGL_PLATFORM_WAYLAND_SUPPORT)
 #include <cogl/cogl-wayland-renderer.h>
