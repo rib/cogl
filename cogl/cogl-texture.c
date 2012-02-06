@@ -1213,6 +1213,12 @@ get_texture_bits_via_offscreen (CoglHandle      texture_handle,
   if (framebuffer == NULL)
     return FALSE;
 
+  if (!cogl_framebuffer_allocate (framebuffer, NULL))
+    {
+      cogl_object_unref (framebuffer);
+      return FALSE;
+    }
+
   cogl_push_framebuffer (framebuffer);
 
   _cogl_read_pixels_with_rowstride (x, y, width, height,
