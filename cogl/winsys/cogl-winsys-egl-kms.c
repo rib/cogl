@@ -640,7 +640,9 @@ handle_drm_event (CoglRendererKMS *kms_renderer)
 }
 
 static void
-_cogl_winsys_onscreen_swap_buffers (CoglOnscreen *onscreen)
+_cogl_winsys_onscreen_swap_buffers_real (CoglOnscreen *onscreen,
+                                         const int *rectangles,
+                                         int n_rectangles)
 {
   CoglContext *context = COGL_FRAMEBUFFER (onscreen)->context;
   CoglDisplayEGL *egl_display = context->display->winsys;
@@ -658,8 +660,13 @@ _cogl_winsys_onscreen_swap_buffers (CoglOnscreen *onscreen)
   while (kms_onscreen->next_fb_id != 0)
     handle_drm_event (kms_renderer);
 
-  /* First chain-up. This will call eglSwapBuffers */
-  parent_vtable->onscreen_swap_buffers (onscreen);
+  /* First chain-up. */
+  if (rectangles == NULL)
+    parent_vtable->onscreen_swap_buffers (onscreen);
+  else
+    parent_vtable->onscreen_swap_buffers_with_damage (onscreen,
+                                                      rectangles,
+                                                      n_rectangles);
 
   /* Now we need to set the CRTC to whatever is the front buffer */
   kms_onscreen->next_bo = gbm_surface_get_bo (kms_onscreen->surface);
@@ -727,6 +734,20 @@ _cogl_winsys_onscreen_swap_buffers (CoglOnscreen *onscreen)
       /* Ensure the onscreen remains valid while it has any pending flips... */
       cogl_object_ref (flip->onscreen);
     }
+}
+
+static void
+_cogl_winsys_onscreen_swap_buffers (CoglOnscreen *onscreen)
+{
+  _cogl_winsys_onscreen_swap_buffers_real (onscreen, NULL, 0);
+}
+
+static void
+_cogl_winsys_onscreen_swap_buffers_with_damage (CoglOnscreen *onscreen,
+                                                const int *rectangles,
+                                                int n_rectangles)
+{
+  _cogl_winsys_onscreen_swap_buffers_real (onscreen, rectangles, n_rectangles);
 }
 
 static gboolean
@@ -945,6 +966,8 @@ _cogl_winsys_egl_kms_get_vtable (void)
       /* The KMS winsys doesn't support swap region */
       vtable.onscreen_swap_region = NULL;
       vtable.onscreen_swap_buffers = _cogl_winsys_onscreen_swap_buffers;
+      vtable.onscreen_swap_buffers_with_damage =
+        _cogl_winsys_onscreen_swap_buffers_with_damage;
 
       vtable.poll_get_info = _cogl_winsys_poll_get_info;
       vtable.poll_dispatch = _cogl_winsys_poll_dispatch;

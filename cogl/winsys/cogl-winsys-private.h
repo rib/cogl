@@ -109,6 +109,11 @@ typedef struct _CoglWinsysVtable
   /* Optional functions */
 
   void
+  (*onscreen_swap_buffers_with_damage) (CoglOnscreen *onscreen,
+                                        const int *rectangles,
+                                        int n_rectangles);
+
+  void
   (*onscreen_swap_region) (CoglOnscreen *onscreen,
                            const int *rectangles,
                            int n_rectangles);

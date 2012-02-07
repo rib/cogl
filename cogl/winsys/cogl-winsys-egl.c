@@ -590,7 +590,9 @@ _cogl_winsys_onscreen_swap_region (CoglOnscreen *onscreen,
 }
 
 static void
-_cogl_winsys_onscreen_swap_buffers (CoglOnscreen *onscreen)
+_cogl_winsys_onscreen_swap_buffers_with_damage (CoglOnscreen *onscreen,
+                                                const int *rectangles,
+                                                int n_rectangles)
 {
   CoglContext *context = COGL_FRAMEBUFFER (onscreen)->context;
   CoglRenderer *renderer = context->display->renderer;
@@ -606,7 +608,27 @@ _cogl_winsys_onscreen_swap_buffers (CoglOnscreen *onscreen)
                                  COGL_FRAMEBUFFER (onscreen),
                                  COGL_FRAMEBUFFER_STATE_BIND);
 
-  eglSwapBuffers (egl_renderer->edpy, egl_onscreen->egl_surface);
+#ifdef EGL_EXT_swap_buffers_with_damage
+  if (egl_renderer->pf_eglSwapBuffersWithDamage)
+    {
+      if (egl_renderer->pf_eglSwapBuffersWithDamage (egl_renderer->edpy,
+                                                     egl_onscreen->egl_surface,
+                                                     rectangles,
+                                                     n_rectangles) == EGL_FALSE)
+        g_warning ("Error reported by eglSwapBuffersWithDamage");
+    }
+  else
+#endif
+    eglSwapBuffers (egl_renderer->edpy, egl_onscreen->egl_surface);
+}
+
+static void
+_cogl_winsys_onscreen_swap_buffers (CoglOnscreen *onscreen)
+{
+  CoglFramebuffer *fb = COGL_FRAMEBUFFER (onscreen);
+  int rect[] = {0, 0, fb->width, fb->height};
+
+  _cogl_winsys_onscreen_swap_buffers_with_damage (onscreen, rect, 1);
 }
 
 static void
@@ -652,6 +674,8 @@ static CoglWinsysVtable _cogl_winsys_vtable =
     .onscreen_deinit = _cogl_winsys_onscreen_deinit,
     .onscreen_bind = _cogl_winsys_onscreen_bind,
     .onscreen_swap_buffers = _cogl_winsys_onscreen_swap_buffers,
+    .onscreen_swap_buffers_with_damage =
+      _cogl_winsys_onscreen_swap_buffers_with_damage,
     .onscreen_swap_region = _cogl_winsys_onscreen_swap_region,
     .onscreen_update_swap_throttled =
       _cogl_winsys_onscreen_update_swap_throttled,

@@ -145,6 +145,31 @@ cogl_onscreen_swap_buffers (CoglOnscreen *onscreen)
 }
 
 void
+cogl_onscreen_swap_buffers_with_damage (CoglOnscreen *onscreen,
+                                        const int *rectangles,
+                                        int n_rectangles)
+{
+  CoglFramebuffer *framebuffer = COGL_FRAMEBUFFER (onscreen);
+  const CoglWinsysVtable *winsys;
+
+  /* FIXME: we shouldn't need to flush *all* journals here! */
+  cogl_flush ();
+  winsys = _cogl_framebuffer_get_winsys (framebuffer);
+
+  if (winsys->onscreen_swap_buffers_with_damage)
+    winsys->onscreen_swap_buffers_with_damage (onscreen,
+                                               rectangles,
+                                               n_rectangles);
+  else
+    winsys->onscreen_swap_buffers (COGL_ONSCREEN (framebuffer));
+
+  cogl_framebuffer_discard_buffers (framebuffer,
+                                    COGL_BUFFER_BIT_COLOR |
+                                    COGL_BUFFER_BIT_DEPTH |
+                                    COGL_BUFFER_BIT_STENCIL);
+}
+
+void
 cogl_onscreen_swap_region (CoglOnscreen *onscreen,
                            const int *rectangles,
                            int n_rectangles)
