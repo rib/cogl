@@ -416,6 +416,11 @@ _cogl_winsys_context_init (CoglContext *context, GError **error)
                       COGL_WINSYS_FEATURE_SWAP_REGION_THROTTLE, TRUE);
     }
 
+#ifdef EGL_EXT_start_frame
+  if (egl_renderer->pf_eglStartFrame)
+    COGL_FLAGS_SET (context->features, COGL_FEATURE_ID_START_FRAME, TRUE);
+#endif
+
   if (egl_renderer->platform_vtable->context_init &&
       !egl_renderer->platform_vtable->context_init (context, error))
     return FALSE;
@@ -551,6 +556,58 @@ _cogl_winsys_onscreen_bind (CoglOnscreen *onscreen)
 }
 
 static void
+transient_onscreen_bind (CoglOnscreen *onscreen)
+{
+  CoglFramebuffer *fb = COGL_FRAMEBUFFER (onscreen);
+  CoglContext *context = fb->context;
+  CoglContextEGL *egl_context = context->winsys;
+  CoglOnscreenEGL *egl_onscreen = onscreen->winsys;
+
+  if (egl_context->current_surface != egl_onscreen->egl_surface)
+    {
+      _cogl_winsys_onscreen_bind (onscreen);
+
+      /* Make sure that next time _cogl_framebuffer_flush_state() is
+       * called then we will re-bind the previous framebufer. */
+      context->current_draw_buffer_changes |= COGL_FRAMEBUFFER_STATE_BIND;
+    }
+}
+
+static void
+_cogl_winsys_onscreen_start_frame (CoglOnscreen *onscreen)
+{
+  CoglFramebuffer *fb = COGL_FRAMEBUFFER (onscreen);
+  CoglContext *context = fb->context;
+  CoglRenderer *renderer = context->display->renderer;
+  CoglRendererEGL *egl_renderer = renderer->winsys;
+  CoglOnscreenEGL *egl_onscreen = onscreen->winsys;
+  int width, height;
+
+  /* NB: cogl_onscreen_start_frame() is documented to be a NOP if
+   * the COGL_FEATURE_ID_START_FRAME isn't available so we can't
+   * crash/abort in this case. */
+  if (!egl_renderer->pf_eglStartFrame)
+    return;
+
+  transient_onscreen_bind (onscreen);
+
+  if (egl_renderer->pf_eglStartFrame (egl_renderer->edpy,
+                                      egl_onscreen->egl_surface) == EGL_FALSE)
+    g_warning ("Error reported by eglStartFrameEXT");
+
+  if (eglQuerySurface (egl_renderer->edpy, egl_onscreen->egl_surface,
+                       EGL_WIDTH, &width) == EGL_TRUE &&
+      eglQuerySurface (egl_renderer->edpy, egl_onscreen->egl_surface,
+                       EGL_HEIGHT, &height) == EGL_TRUE)
+    {
+      if (fb->width != width || fb->height != height)
+        _cogl_framebuffer_winsys_update_size (fb, width, height);
+    }
+  else
+    g_warning ("Error reported by eglQuerySurface");
+}
+
+static void
 _cogl_winsys_onscreen_swap_region (CoglOnscreen *onscreen,
                                    const int *user_rectangles,
                                    int n_rectangles)
@@ -578,9 +635,7 @@ _cogl_winsys_onscreen_swap_region (CoglOnscreen *onscreen,
      swap must be bound to the current context. It looks like Mesa
      also validates that this is the case for eglSwapBuffersRegion so
      we must bind here too */
-  _cogl_framebuffer_flush_state (COGL_FRAMEBUFFER (onscreen),
-                                 COGL_FRAMEBUFFER (onscreen),
-                                 COGL_FRAMEBUFFER_STATE_BIND);
+  transient_onscreen_bind (onscreen);
 
   if (egl_renderer->pf_eglSwapBuffersRegion (egl_renderer->edpy,
                                              egl_onscreen->egl_surface,
@@ -604,9 +659,7 @@ _cogl_winsys_onscreen_swap_buffers_with_damage (CoglOnscreen *onscreen,
      although it may change in future. Mesa explicitly checks for this
      and just returns an error if this is not the case so we can't
      just pretend this isn't in the spec. */
-  _cogl_framebuffer_flush_state (COGL_FRAMEBUFFER (onscreen),
-                                 COGL_FRAMEBUFFER (onscreen),
-                                 COGL_FRAMEBUFFER_STATE_BIND);
+  transient_onscreen_bind (onscreen);
 
 #ifdef EGL_EXT_swap_buffers_with_damage
   if (egl_renderer->pf_eglSwapBuffersWithDamage)
@@ -673,6 +726,8 @@ static CoglWinsysVtable _cogl_winsys_vtable =
     .onscreen_init = _cogl_winsys_onscreen_init,
     .onscreen_deinit = _cogl_winsys_onscreen_deinit,
     .onscreen_bind = _cogl_winsys_onscreen_bind,
+    .onscreen_start_frame =
+      _cogl_winsys_onscreen_start_frame,
     .onscreen_swap_buffers = _cogl_winsys_onscreen_swap_buffers,
     .onscreen_swap_buffers_with_damage =
       _cogl_winsys_onscreen_swap_buffers_with_damage,

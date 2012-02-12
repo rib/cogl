@@ -203,6 +203,12 @@ cogl_is_context (void *object);
  * @COGL_FEATURE_ID_SWAP_BUFFERS_EVENT:
  *     Available if the window system supports reporting an event
  *     for swap buffer completions.
+ * @COGL_FEATURE_ID_START_FRAME: Whether cogl_onscreen_start_frame()
+ *     can be used to explicitly start a frame without drawing
+ *     anything. For example this allows applications to check the
+ *     geometry of the buffers before starting to render and also
+ *     check the age of the buffer contents so the contents can be
+ *     updated incrementally.
  *
  * All the capabilities that can vary between different GPUs supported
  * by Cogl. Applications that depend on any of these features should explicitly
@@ -230,6 +236,7 @@ typedef enum _CoglFeatureID
   COGL_FEATURE_ID_MAP_BUFFER_FOR_WRITE,
   COGL_FEATURE_ID_MIRRORED_REPEAT,
   COGL_FEATURE_ID_SWAP_BUFFERS_EVENT,
+  COGL_FEATURE_ID_START_FRAME,
 
   /*< private > */
   _COGL_N_FEATURE_IDS

@@ -437,6 +437,30 @@ cogl_onscreen_remove_swap_buffers_callback (CoglOnscreen *onscreen,
 gboolean
 cogl_is_onscreen (void *object);
 
+/**
+ * cogl_onscreen_start_frame:
+ * @onscreen: A #CoglOnscreen framebuffer
+ *
+ * Explicitly starts the next frame without rendering anything. This will
+ * ensure that all ancillary buffers associated with the given @onscreen
+ * framebuffer are allocated ready for rendering.
+ *
+ * It can be useful to explicitly start a frame without rendering anything if
+ * you want to check the geometry of the buffers before you start drawing or
+ * check other properties of the framebuffer that might be affected by starting
+ * a new frame.
+ *
+ * You should check for the %COGL_FEATURE_ID_START_FRAME feature before using
+ * this api. If the feature is not currently available this function simply
+ * does nothing, but it won't cause warnings or abort so you may find it
+ * convenient sometimes to use this api without checking for the feature.
+ *
+ * Since: 1.10
+ * Stability: unstable
+ */
+void
+cogl_onscreen_start_frame (CoglOnscreen *onscreen);
+
 G_END_DECLS
 
 #endif /* __COGL_ONSCREEN_H */

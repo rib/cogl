@@ -115,4 +115,13 @@ COGL_WINSYS_FEATURE_FUNCTION (EGLBoolean, eglSwapBuffersWithDamage,
                                EGLint n_rects))
 COGL_WINSYS_FEATURE_END ()
 #endif
-
+#ifdef EGL_EXT_start_frame
+COGL_WINSYS_FEATURE_BEGIN (start_frame,
+                           "EXT\0",
+                           "start_frame\0",
+                           0)
+COGL_WINSYS_FEATURE_FUNCTION (EGLBoolean, eglStartFrame,
+                              (EGLDisplay dpy,
+                               EGLSurface surface))
+COGL_WINSYS_FEATURE_END ()
+#endif

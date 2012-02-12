@@ -97,6 +97,9 @@ typedef struct _CoglWinsysVtable
   (*onscreen_bind) (CoglOnscreen *onscreen);
 
   void
+  (*onscreen_start_frame) (CoglOnscreen *onscreen);
+
+  void
   (*onscreen_swap_buffers) (CoglOnscreen *onscreen);
 
   void

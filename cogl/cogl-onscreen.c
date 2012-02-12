@@ -389,3 +389,20 @@ _cogl_framebuffer_winsys_update_size (CoglFramebuffer *framebuffer,
     framebuffer->context->current_draw_buffer_changes |=
       COGL_FRAMEBUFFER_STATE_VIEWPORT;
 }
+
+void
+cogl_onscreen_start_frame (CoglOnscreen *onscreen)
+{
+  CoglFramebuffer *framebuffer = COGL_FRAMEBUFFER (onscreen);
+  const CoglWinsysVtable *winsys;
+
+  if (!framebuffer->allocated)
+    {
+      if (!cogl_framebuffer_allocate (framebuffer, NULL))
+        return;
+    }
+
+  winsys = _cogl_framebuffer_get_winsys (framebuffer);
+  if (winsys->onscreen_start_frame)
+    winsys->onscreen_start_frame (onscreen);
+}
