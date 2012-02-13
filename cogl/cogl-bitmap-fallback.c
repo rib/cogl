@@ -374,8 +374,7 @@ _cogl_bitmap_fallback_convert (CoglBitmap      *src_bmp,
   dst_rowstride = sizeof(guint8) * dst_bpp * width;
   /* Copy the premult bit if the new format has an alpha channel */
   if ((dst_format & COGL_A_BIT))
-    dst_format = ((src_format & COGL_PREMULT_BIT) |
-                  (dst_format & COGL_UNPREMULT_MASK));
+    dst_format |= (src_format & COGL_PREMULT_BIT);
 
   /* Allocate a new buffer to hold converted data */
   dst_data = g_malloc (height * dst_rowstride);
@@ -391,7 +390,7 @@ _cogl_bitmap_fallback_convert (CoglBitmap      *src_bmp,
 	  /* FIXME: Would be nice to at least remove this inner
            * branching, but not sure it can be done without
            * rewriting of the whole loop */
-          switch (src_format & COGL_UNPREMULT_MASK)
+          switch (src_format & ~COGL_PREMULT_BIT)
 	    {
 	    case COGL_PIXEL_FORMAT_G_8:
 	      _cogl_g_to_rgba (src, temp_rgba); break;
@@ -411,7 +410,7 @@ _cogl_bitmap_fallback_convert (CoglBitmap      *src_bmp,
 	      break;
 	    }
 
-	  switch (dst_format & COGL_UNPREMULT_MASK)
+	  switch (dst_format & ~COGL_PREMULT_BIT)
 	    {
 	    case COGL_PIXEL_FORMAT_G_8:
 	      _cogl_rgba_to_g (temp_rgba, dst); break;
