@@ -129,6 +129,11 @@ struct _CoglFramebuffer
 
   int                 samples_per_pixel;
 
+  /* How old the contents of the current back buffer are.
+   *  0 = Uninitialized / Unknown buffer contents
+   */
+  int                 back_buffer_age;
+
   /* We journal the textured rectangles we want to submit to OpenGL so
    * we have an oppertunity to batch them together into less draw
    * calls. */

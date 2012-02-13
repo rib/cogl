@@ -125,3 +125,10 @@ COGL_WINSYS_FEATURE_FUNCTION (EGLBoolean, eglStartFrame,
                                EGLSurface surface))
 COGL_WINSYS_FEATURE_END ()
 #endif
+#ifdef EGL_EXT_buffer_age
+COGL_WINSYS_FEATURE_BEGIN (buffer_age,
+                           "EXT\0",
+                           "buffer_age\0",
+                           COGL_EGL_WINSYS_FEATURE_BUFFER_AGE)
+COGL_WINSYS_FEATURE_END ()
+#endif

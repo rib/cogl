@@ -461,6 +461,46 @@ cogl_is_onscreen (void *object);
 void
 cogl_onscreen_start_frame (CoglOnscreen *onscreen);
 
+/**
+ * cogl_onscreen_get_back_buffer_age:
+ * @onscreen: A #CoglOnscreen framebuffer
+ *
+ * Queries how old the contents of the current back buffer are. If the back
+ * buffer has been newly allocated or otherwise has undefined contents then the
+ * age returned will be 0.
+ *
+ * For example if the @onscreen framebuffer is double buffered then you will
+ * typically see a buffer age of 2. If @onscreen is single buffered then you
+ * will typically see an age of 1. Since there can be system events such as
+ * power management events or the driver might have more complex ways of
+ * managing buffers than a simple ring you can't assume anything about the age
+ * based on previous values.
+ *
+ * The intention of providing this information is to help optimize applications
+ * that often update small regions of the screen. These applications can keep a
+ * running list of the regions they modify for the last 3 frames and at the
+ * start of each frame they can query the age of the back buffer and so long as
+ * the age is between 1 and 3 they can use the history of modified regions to
+ * determine how to repair the re-used back buffer instead of having to redraw
+ * everything.
+ *
+ * This mechanism can really help to improve application efficiency first by
+ * helping minimize redundant re-drawing of unchanging parts of a scene but
+ * also the final result can be presented by flipping the back and front buffer
+ * instead of having to copy the modified region.
+ *
+ * <note>Applications using this api should typically use
+ * cogl_onscreen_start_frame() to explicitly start a new frame without
+ * rendering before querying the age. The back buffer age is undefined after
+ * calling cogl_swap_buffers() (or similar apis) until a new frame has been
+ * started.</note>
+ *
+ * Since: 1.10
+ * Stability: unstable
+ */
+int
+cogl_onscreen_get_back_buffer_age (CoglOnscreen *onscreen);
+
 G_END_DECLS
 
 #endif /* __COGL_ONSCREEN_H */

@@ -582,6 +582,9 @@ _cogl_winsys_onscreen_start_frame (CoglOnscreen *onscreen)
   CoglRendererEGL *egl_renderer = renderer->winsys;
   CoglOnscreenEGL *egl_onscreen = onscreen->winsys;
   int width, height;
+#ifdef EGL_EXT_buffer_age
+  int age;
+#endif
 
   /* NB: cogl_onscreen_start_frame() is documented to be a NOP if
    * the COGL_FEATURE_ID_START_FRAME isn't available so we can't
@@ -605,6 +608,25 @@ _cogl_winsys_onscreen_start_frame (CoglOnscreen *onscreen)
     }
   else
     g_warning ("Error reported by eglQuerySurface");
+
+#ifdef EGL_EXT_buffer_age
+  if (egl_renderer->private_features & COGL_EGL_WINSYS_FEATURE_BUFFER_AGE)
+    {
+      if (eglQuerySurface (egl_renderer->edpy, egl_onscreen->egl_surface,
+                           EGL_BUFFER_AGE_EXT, &age) == EGL_TRUE)
+        {
+          fb->back_buffer_age = age;
+        }
+      else
+        {
+          g_warning ("Error reported by eglQuerySurface "
+                     "when querying EGL_BUFFER_AGE_EXT");
+          fb->back_buffer_age = 0;
+        }
+    }
+  else
+#endif
+    fb->back_buffer_age = 0;
 }
 
 static void

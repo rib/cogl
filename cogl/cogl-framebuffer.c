@@ -194,6 +194,8 @@ _cogl_framebuffer_init (CoglFramebuffer *framebuffer,
    */
   framebuffer->clear_clip_dirty = TRUE;
 
+  framebuffer->back_buffer_age = 0;
+
   /* XXX: We have to maintain a central list of all framebuffers
    * because at times we need to be able to flush all known journals.
    *

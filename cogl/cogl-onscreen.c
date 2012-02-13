@@ -142,6 +142,7 @@ cogl_onscreen_swap_buffers (CoglOnscreen *onscreen)
                                     COGL_BUFFER_BIT_COLOR |
                                     COGL_BUFFER_BIT_DEPTH |
                                     COGL_BUFFER_BIT_STENCIL);
+  framebuffer->back_buffer_age = 0;
 }
 
 void
@@ -167,6 +168,7 @@ cogl_onscreen_swap_buffers_with_damage (CoglOnscreen *onscreen,
                                     COGL_BUFFER_BIT_COLOR |
                                     COGL_BUFFER_BIT_DEPTH |
                                     COGL_BUFFER_BIT_STENCIL);
+  framebuffer->back_buffer_age = 0;
 }
 
 void
@@ -196,6 +198,7 @@ cogl_onscreen_swap_region (CoglOnscreen *onscreen,
                                     COGL_BUFFER_BIT_COLOR |
                                     COGL_BUFFER_BIT_DEPTH |
                                     COGL_BUFFER_BIT_STENCIL);
+  framebuffer->back_buffer_age = 0;
 }
 
 #ifdef COGL_HAS_X11_SUPPORT
@@ -405,4 +408,12 @@ cogl_onscreen_start_frame (CoglOnscreen *onscreen)
   winsys = _cogl_framebuffer_get_winsys (framebuffer);
   if (winsys->onscreen_start_frame)
     winsys->onscreen_start_frame (onscreen);
+}
+
+int
+cogl_onscreen_get_back_buffer_age (CoglOnscreen *onscreen)
+{
+  CoglFramebuffer *framebuffer = COGL_FRAMEBUFFER (onscreen);
+
+  return framebuffer->back_buffer_age;
 }
