@@ -75,6 +75,22 @@ _cogl_get_enable_legacy_state (void);
 int
 _cogl_pixel_format_get_bytes_per_pixel (CoglPixelFormat format);
 
+/*
+ * _cogl_pixel_format_has_aligned_components:
+ * @format: a #CoglPixelFormat
+ *
+ * Queries whether the ordering of the components for the given
+ * @format depend on the endianness of the host CPU or if the
+ * components can be accessed using bit shifting and bitmasking by
+ * loading a whole pixel into a word.
+ *
+ * Return value: %TRUE if you need to consider the host CPU
+ *               endianness when dealing with the given @format
+ *               else %FALSE.
+ */
+gboolean
+_cogl_pixel_format_is_endian_dependant (CoglPixelFormat format);
+
 G_END_DECLS
 
 #endif /* __COGL_PRIVATE_H__ */
