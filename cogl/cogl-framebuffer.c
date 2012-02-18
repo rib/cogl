@@ -2643,7 +2643,7 @@ draw_wireframe (CoglFramebuffer *framebuffer,
 
   if (!wire_pipeline)
     {
-      wire_pipeline = cogl_pipeline_new ();
+      wire_pipeline = cogl_pipeline_new (ctx);
       cogl_pipeline_set_color4ub (wire_pipeline,
                                   0x00, 0xff, 0x00, 0xff);
     }
