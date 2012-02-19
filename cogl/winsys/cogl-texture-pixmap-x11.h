@@ -24,6 +24,8 @@
 #ifndef __COGL_TEXTURE_PIXMAP_X11_H
 #define __COGL_TEXTURE_PIXMAP_X11_H
 
+#define __COGL_XLIB_H_INSIDE__
+
 #include <cogl/cogl-handle.h>
 
 #ifdef COGL_ENABLE_EXPERIMENTAL_API
