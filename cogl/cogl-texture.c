@@ -1377,6 +1377,7 @@ cogl_texture_get_data (CoglHandle       handle,
   int              y;
   int              tex_width;
   int              tex_height;
+  CoglPixelFormat  texture_format;
 
   CoglTextureGetData tg_data;
 
@@ -1387,9 +1388,11 @@ cogl_texture_get_data (CoglHandle       handle,
 
   tex = COGL_TEXTURE (handle);
 
+  texture_format = cogl_texture_get_format (tex);
+
   /* Default to internal format if none specified */
   if (format == COGL_PIXEL_FORMAT_ANY)
-    format = cogl_texture_get_format (handle);
+    format = texture_format;
 
   tex_width = cogl_texture_get_width (handle);
   tex_height = cogl_texture_get_height (handle);
@@ -1409,6 +1412,12 @@ cogl_texture_get_data (CoglHandle       handle,
                                                        &closest_gl_format,
                                                        &closest_gl_type);
   closest_bpp = _cogl_get_format_bpp (closest_format);
+
+  /* We can assume that whatever data GL gives us will have the
+     premult status of the original texture */
+  if ((closest_format & COGL_A_BIT))
+    closest_format = ((closest_format & ~COGL_PREMULT_BIT) |
+                      (texture_format & COGL_PREMULT_BIT));
 
   /* Is the requested format supported? */
   if (closest_format == format)
