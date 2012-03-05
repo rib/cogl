@@ -57,6 +57,7 @@ typedef struct _Data
   int hair_pos_locations[N_TEXTURES];
   int progress_locations[N_TEXTURES];
   int light_dir_locations[N_TEXTURES];
+  int slant_locations[N_TEXTURES];
 
   GTimer *timer;
 
@@ -249,6 +250,9 @@ paint (CoglFramebuffer *fb, Data *data)
   float rotation;
   int i;
   int group_count;
+  float slant[4] = { 1, 0.1, 1, 0.05};
+  float slant_scale = 0.2;
+  int slant_dir = 0;
 
   cogl_framebuffer_clear4f (fb, COGL_BUFFER_BIT_COLOR|COGL_BUFFER_BIT_DEPTH,
                             0, 0, 0, 1);
@@ -272,6 +276,7 @@ paint (CoglFramebuffer *fb, Data *data)
    * scaled and translated.
    */
   cogl_framebuffer_rotate (fb, rotation, 0, 0, 1);
+  //cogl_framebuffer_rotate (fb, 90, 0, 1, 0);
   cogl_framebuffer_rotate (fb, rotation, 0, 1, 0);
   cogl_framebuffer_rotate (fb, rotation, 1, 0, 0);
 
@@ -296,10 +301,54 @@ paint (CoglFramebuffer *fb, Data *data)
                                            4, /* n_components */
                                            1, /* count */
                                            light_dir);
+          cogl_pipeline_set_uniform_float (data->crate_pipelines[i],
+                                           data->slant_locations[i],
+                                           4, /* n_components */
+                                           1, /* count */
+                                           slant);
 
           /* Give Cogl some geometry to draw. */
           cogl_framebuffer_draw_primitive (fb, data->crate_pipelines[i],
                                            data->prim);
+
+#if 0
+          slant[0] =  1 - slant[0];
+          slant[1] = - slant[1];
+          slant[2] =  1 - slant[2];
+          slant[3] = - slant[3];
+#endif
+          slant_dir = (slant_dir + 1) % 4;
+          //slant_dir = 3;
+          switch (slant_dir)
+            {
+            case 0:
+              slant[0] = 1;
+              slant[1] = slant_scale;
+              slant[2] = 0;
+              slant[3] = 0;
+              break;
+            case 1:
+              slant[0] = 0;
+              slant[1] = -slant_scale;
+              slant[2] = 0;
+              slant[3] = 0;
+              break;
+            case 2:
+              slant[0] = 0;
+              slant[1] = 0;
+              slant[2] = 1;
+              slant[3] = slant_scale;
+              break;
+            case 3:
+              slant[0] = 0;
+              slant[1] = 0;
+              slant[2] = 0;
+              slant[3] = -slant_scale;
+              break;
+            default:
+              g_warn_if_reached ();
+            }
+
         }
     }
 
@@ -523,6 +572,7 @@ main (int argc, char **argv)
                               "uniform float hair_pos;\n" /* range [0,length] */
                               "uniform float progress;\n" /* range [0,1] */
                               "uniform vec4 light_dir;\n"
+                              "uniform vec4 slant;\n"
 
                               "float tip_flop = " TIP_FLOP_STR ";\n"
                               "vec4 normal4;\n"
@@ -534,10 +584,15 @@ main (int argc, char **argv)
 
   cogl_snippet_set_replace (snippet,
                             "  normal4 = vec4 (cogl_normal_in, 0.0);\n"
-                            "  cogl_position_out = cogl_position_in + normal4 * hair_pos;\n"
+                            "  cogl_position_out = cogl_position_in + normal4 * "
+                            "    (hair_pos + "
+                            "      ((slant.x - cogl_tex_coord0_in.s) * slant.y) +"
+                            "      ((slant.z - cogl_tex_coord0_in.t) * slant.w));\n"
                             "  cogl_position_out = cogl_modelview_projection_matrix * cogl_position_out;\n"
+#if 1
                             "  force_factor = pow (progress, 3.0) * tip_flop;\n"
                             "  cogl_position_out += hair_force_dir * force_factor;\n"
+#endif
                             "  world_normal = cogl_modelview_matrix * normal4;\n");
 
   cogl_pipeline_add_snippet (template_pipeline, snippet);
@@ -608,6 +663,8 @@ main (int argc, char **argv)
         cogl_pipeline_get_uniform_location (data.crate_pipelines[i], "progress");
       data.light_dir_locations[i] =
         cogl_pipeline_get_uniform_location (data.crate_pipelines[i], "light_dir");
+      data.slant_locations[i] =
+        cogl_pipeline_get_uniform_location (data.crate_pipelines[i], "slant");
     }
 
 
