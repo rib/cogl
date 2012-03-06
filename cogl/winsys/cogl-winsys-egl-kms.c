@@ -278,10 +278,10 @@ _cogl_winsys_egl_try_create_context (CoglDisplay *display,
       return FALSE;
     }
 
-  if (!eglMakeCurrent (egl_renderer->edpy,
-                       EGL_NO_SURFACE,
-                       EGL_NO_SURFACE,
-                       egl_display->egl_context))
+  if (!_cogl_winsys_egl_make_current (display,
+                                      EGL_NO_SURFACE,
+                                      EGL_NO_SURFACE,
+                                      egl_display->egl_context))
     {
       g_set_error (error, COGL_WINSYS_ERROR,
                    COGL_WINSYS_ERROR_CREATE_CONTEXT,
@@ -511,14 +511,13 @@ static void
 _cogl_winsys_onscreen_bind (CoglOnscreen *onscreen)
 {
   CoglContext *context = COGL_FRAMEBUFFER (onscreen)->context;
-  CoglDisplayEGL *egl_display = context->display->winsys;
-  CoglRenderer *renderer = context->display->renderer;
-  CoglRendererEGL *egl_renderer = renderer->winsys;
+  CoglDisplay *display = context->display;
+  CoglDisplayEGL *egl_display = display->winsys;
 
-  eglMakeCurrent (egl_renderer->edpy,
-                  EGL_NO_SURFACE,
-                  EGL_NO_SURFACE,
-                  egl_display->egl_context);
+  _cogl_winsys_egl_make_current (display,
+                                 EGL_NO_SURFACE,
+                                 EGL_NO_SURFACE,
+                                 egl_display->egl_context);
 }
 
 static void

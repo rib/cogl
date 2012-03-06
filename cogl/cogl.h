@@ -102,10 +102,11 @@
 #include <cogl/cogl-framebuffer.h>
 #include <cogl/cogl-onscreen.h>
 #include <cogl/cogl-poll.h>
+#include <cogl/cogl-gles2-context.h>
 #if defined (COGL_HAS_EGL_PLATFORM_KMS_SUPPORT)
 #include <cogl/cogl-kms-renderer.h>
 #endif
-#if COGL_HAS_WIN32_SUPPORT
+#ifdef COGL_HAS_WIN32_SUPPORT
 #include <cogl/cogl-win32-renderer.h>
 #endif
 #ifdef COGL_HAS_GLIB_SUPPORT
