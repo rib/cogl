@@ -925,6 +925,25 @@ AM_CONDITIONAL(X11_TESTS, [test "x$SUPPORT_X11" = "xyes"])
 AM_CONDITIONAL(SUPPORT_X11, [test "x$SUPPORT_X11" = "xyes"])
 AM_CONDITIONAL(SUPPORT_XLIB, [test "x$SUPPORT_XLIB" = "xyes"])
 
+dnl     ============================================================
+dnl     Check for v8 JavaScript bindings support
+dnl     ============================================================
+AC_ARG_ENABLE(
+  [v8-bindings],
+  [AC_HELP_STRING([--enable-v8-bindings=@<:@no/yes@:>@], [Enable support for v8 JavaScript bindings @<:@default=no@:>@])],
+  [],
+  enable_v8_bindings=no
+)
+V8_CPPFLAGS=""
+SUPPORT_V8_BINDINGS=no
+AS_IF([test "x$enable_v8_bindings" == "xyes"],
+      [
+        AX_LIB_V8(3.3.10)
+        AS_IF([test "$V8_CPPFLAGS" != ""],
+              [SUPPORT_V8_BINDINGS=yes])
+      ])
+AM_CONDITIONAL(SUPPORT_V8_BINDINGS, [test "x$SUPPORT_V8_BINDINGS" == "xyes"])
+
 
 dnl ================================================================
 dnl Compiler stuff.
@@ -1137,6 +1156,8 @@ tests/conform/Makefile
 tests/conform/config.env
 tests/conform/test-launcher.sh
 tests/data/Makefile
+bindings/Makefile
+bindings/v8/Makefile
 po/Makefile.in
 )
 
@@ -1177,6 +1198,11 @@ echo "        Cogl debug: ${enable_debug}"
 echo "        Enable deprecated symbols: ${enable_deprecated}"
 echo "        Compiler flags: ${CFLAGS} ${COGL_EXTRA_CFLAGS}"
 echo "        Linker flags: ${LDFLAGS} ${COGL_EXTRA_LDFLAGS}"
+
+# Bindings
+echo ""
+echo " • Bindings:"
+echo "        V8: ${SUPPORT_V8_BINDINGS}"
 
 # Miscellaneous
 echo ""

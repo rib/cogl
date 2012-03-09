@@ -1,0 +1,3 @@
+if SUPPORT_V8_BINDINGS
+SUBDIRS = v8
+endif

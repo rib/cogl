@@ -6,6 +6,10 @@ endif
 
 SUBDIRS += examples doc po build
 
+if SUPPORT_V8_BINDINGS
+SUBDIRS += bindings
+endif
+
 ACLOCAL_AMFLAGS = -I build/autotools ${ACLOCAL_FLAGS}
 
 EXTRA_DIST = \
