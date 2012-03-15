@@ -261,7 +261,7 @@ cogl_path_curve_to (float x_1,
   _COGL_GET_CONTEXT (ctx, NO_RETVAL);
 
   cogl2_path_curve_to (ctx->current_path,
-                       x_1, y_2, x_2, y_2, x_3, y_3);
+                       x_1, y_1, x_2, y_2, x_3, y_3);
 }
 
 #undef cogl_path_rel_curve_to
