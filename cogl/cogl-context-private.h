@@ -47,6 +47,7 @@
 #include "cogl-texture-2d.h"
 #include "cogl-texture-3d.h"
 #include "cogl-texture-rectangle.h"
+#include "cogl-gl-header.h"
 
 typedef struct
 {
