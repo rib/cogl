@@ -1,8 +1,7 @@
 
 #include <GLES2/gl2.h>
 
-#define __COGL_H_INSIDE__
-#include "cogl/cogl-gles2-context.h"
+#include <cogl/cogl-gles2.h>
 
 void
 glBindTexture (GLenum target, GLuint texture)

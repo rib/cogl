@@ -30,7 +30,7 @@
 #include "config.h"
 #endif
 
-#include "cogl-gles2-context.h"
+#include "cogl-gles2.h"
 #include "cogl-gles2-context-private.h"
 
 #include "cogl-context-private.h"
@@ -278,9 +278,9 @@ cogl_push_gles2_context (CoglContext *ctx,
 
   if (ctx->gles2_context_stack->length == 0)
     {
-      _cogl_journal_flush (read_buffer->journal, read_buffer);
+      _cogl_journal_flush (read_buffer->journal);
       if (write_buffer != read_buffer)
-        _cogl_journal_flush (write_buffer->journal, write_buffer);
+        _cogl_journal_flush (write_buffer->journal);
       winsys->save_context (ctx);
     }
   else

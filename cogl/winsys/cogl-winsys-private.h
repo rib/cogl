@@ -26,7 +26,7 @@
 
 #include "cogl-renderer.h"
 #include "cogl-onscreen.h"
-#include "cogl-gles2-context.h"
+#include "cogl-gles2.h"
 
 #ifdef COGL_HAS_XLIB_SUPPORT
 #include "cogl-texture-pixmap-x11-private.h"

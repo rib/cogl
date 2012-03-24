@@ -26,23 +26,33 @@
  *
  */
 
-#if !defined(__COGL_H_INSIDE__) && !defined(CLUTTER_COMPILATION)
-#error "Only <cogl/cogl.h> can be included directly."
-#endif
+#ifndef __COGL_GLES2_H__
+#define __COGL_GLES2_H__
 
-#ifndef __COGL_GLES2_CONTEXT_H__
-#define __COGL_GLES2_CONTEXT_H__
-
+#define __COGL_H_INSIDE__
 #include <cogl/cogl-defines.h>
 #include <cogl/cogl-context.h>
 #include <cogl/cogl-framebuffer.h>
 #include <cogl/cogl-texture.h>
 #include <cogl/cogl-texture-2d.h>
 
+/* CoglGLES2Vtable depends on GLES 2.0 typedefs being available but we
+ * want to be careful that the public api doesn't expose arbitrary
+ * system GL headers as part of the Cogl API so although when building
+ * internally we consistently refer to the system headers to avoid
+ * conflicts we only expose the minimal set of GLES 2.0 types and enums
+ * publicly.
+ */
+#ifdef CLUTTER_COMPILATION
+#include "cogl-gl-header.h"
+#else
+#include <cogl-gles2/GLES2/gl2nonfunctions.h>
+#endif
+
 G_BEGIN_DECLS
 
 /**
- * SECTION:cogl-gles2-context
+ * SECTION:cogl-gles2
  * @short_description: A portable api to access OpenGLES 2.0
  *
  * Cogl provides portable access to the OpenGLES api through a single
@@ -339,5 +349,5 @@ cogl_is_gles2_context (void *object);
 
 G_END_DECLS
 
-#endif /* __COGL_GLES2_CONTEXT_H__ */
+#endif /* __COGL_GLES2_H__ */
 

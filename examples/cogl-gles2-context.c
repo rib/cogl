@@ -1,4 +1,5 @@
 #include <cogl/cogl.h>
+#include <cogl/cogl-gles2.h>
 #include <glib.h>
 #include <stdio.h>
 
