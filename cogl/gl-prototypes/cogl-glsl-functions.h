@@ -62,7 +62,7 @@ COGL_EXT_FUNCTION (GLuint, glCreateShader,
 COGL_EXT_FUNCTION (void, glShaderSource,
                    (GLuint                shader,
                     GLsizei               count,
-                    const char          **string,
+                    const GLchar * const *string,
                     const GLint          *length))
 COGL_EXT_FUNCTION (void, glCompileShader,
                    (GLuint                shader))
