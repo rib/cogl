@@ -312,6 +312,12 @@ cogl_push_gles2_context (CoglContext *ctx,
   return TRUE;
 }
 
+CoglGLES2Vtable *
+cogl_gles2_get_current_vtable (void)
+{
+  return current_gles2_context ? current_gles2_context->vtable : NULL;
+}
+
 void
 cogl_pop_gles2_context (CoglContext *ctx)
 {
@@ -334,4 +340,29 @@ cogl_pop_gles2_context (CoglContext *ctx)
       winsys->restore_context (ctx);
       current_gles2_context = gles2_ctx;
     }
+}
+
+CoglTexture2D *
+cogl_gles2_texture_2d_new_from_handle (CoglContext *ctx,
+                                       CoglGLES2Context *gles2_ctx,
+                                       unsigned int handle,
+                                       int width,
+                                       int height,
+                                       CoglPixelFormat internal_format,
+                                       GError **error)
+{
+  return cogl_texture_2d_new_from_foreign (ctx,
+                                           handle,
+                                           width,
+                                           height,
+                                           internal_format,
+                                           error);
+}
+
+gboolean
+cogl_gles2_texture_get_handle (CoglTexture *texture,
+                               unsigned int *handle,
+                               unsigned int *target)
+{
+  return cogl_texture_get_gl_texture (texture, handle, target);
 }

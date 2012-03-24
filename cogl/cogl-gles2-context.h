@@ -36,6 +36,8 @@
 #include <cogl/cogl-defines.h>
 #include <cogl/cogl-context.h>
 #include <cogl/cogl-framebuffer.h>
+#include <cogl/cogl-texture.h>
+#include <cogl/cogl-texture-2d.h>
 
 G_BEGIN_DECLS
 
@@ -65,7 +67,7 @@ G_BEGIN_DECLS
  * Applications can check for OpenGLES 2.0 api support by checking for
  * %COGL_FEATURE_ID_GLES2_CONTEXT support with cogl_has_feature().
  *
- * Since: 1.10
+ * Since: 1.12
  * Stability: unstable
  */
 
@@ -76,7 +78,7 @@ G_BEGIN_DECLS
  * OpenGLES 2.0 state. This is comparable to an EGLContext for those
  * who have used OpenGLES 2.0 with EGL before.
  *
- * Since: 1.10
+ * Since: 1.12
  * Stability: unstable
  */
 typedef struct _CoglGLES2Context CoglGLES2Context;
@@ -88,7 +90,7 @@ typedef struct _CoglGLES2Context CoglGLES2Context;
  * api must be accessed this way and not by directly calling
  * symbols of any system OpenGLES 2.0 api.
  *
- * Since: 1.10
+ * Since: 1.12
  * Stability: unstable
  */
 typedef struct _CoglGLES2Vtable CoglGLES2Vtable;
@@ -121,7 +123,7 @@ _cogl_gles2_context_error_quark (void);
  * An error domain for runtime exceptions relating to the
  * cogl_gles2_context api.
  *
- * Since: 1.10
+ * Since: 1.12
  * Stability: unstable
  */
 #define COGL_GLES2_CONTEXT_ERROR (_cogl_gles2_context_error_quark ())
@@ -162,7 +164,7 @@ typedef enum { /*< prefix=COGL_GLES2_CONTEXT_ERROR >*/
  * return an %COGL_GLES2_CONTEXT_ERROR_UNSUPPORTED error if the
  * feature isn't available.</note>
  *
- * Since: 1.10
+ * Since: 1.12
  * Return value: A newly allocated #CoglGLES2Context or %NULL if there
  *               was an error and @error will be updated in that case.
  * Stability: unstable
@@ -181,7 +183,7 @@ cogl_gles2_context_new (CoglContext *ctx, GError **error);
  * <note>You should not try to directly link to and use the symbols
  * provided by any system OpenGLES 2.0 driver.</note>
  *
- * Since: 1.10
+ * Since: 1.12
  * Return value: A pointer to a #CoglGLES2Vtable providing pointers
  *               to functions for the full OpenGLES 2.0 api.
  * Stability: unstable
@@ -214,7 +216,7 @@ cogl_gles2_context_get_vtable (CoglGLES2Context *gles2_ctx);
  * @gles2_ctx then this function will return %FALSE and return
  * an error through @error.
  *
- * Since: 1.10
+ * Since: 1.12
  * Return value: %TRUE if operation was successfull or %FALSE
  *               otherwise and @error will be updated.
  * Stability: unstable
@@ -239,11 +241,87 @@ cogl_push_gles2_context (CoglContext *ctx,
  * are not balenced with the number of corresponding calls to
  * cogl_push_gles2_context().
  *
- * Since: 1.10
+ * Since: 1.12
  * Stability: unstable
  */
 void
 cogl_pop_gles2_context (CoglContext *ctx);
+
+/**
+ * cogl_gles2_get_current_vtable:
+ *
+ * Returns the OpenGL ES 2.0 api vtable for the currently pushed
+ * #CoglGLES2Context (last pushed with cogl_push_gles2_context()) or
+ * %NULL if no #CoglGLES2Context has been pushed.
+ *
+ * Return value: The #CoglGLES2Vtable for the currently pushed
+ *               #CoglGLES2Context or %NULL if none has been pushed.
+ * Since: 1.12
+ * Stability: unstable
+ */
+CoglGLES2Vtable *
+cogl_gles2_get_current_vtable (void);
+
+/**
+ * cogl_gles2_texture_2d_new_from_handle:
+ * @ctx: A #CoglContext
+ * @gles2_ctx: A #CoglGLES2Context allocated with
+ *             cogl_gles2_context_new()
+ * @handle: An OpenGL ES 2.0 texture handle created with
+ *          glGenTextures()
+ *
+ * Creates a #CoglTexture2D from an OpenGL ES 2.0 texture handle that
+ * was created within the given @gles2_ctx via glGenTextures(). The
+ * texture needs to have been associated with the GL_TEXTURE_2D target.
+ *
+ * <note>Applications should only pass this function handles that were
+ * created via a #CoglGLES2Vtable or via libcogl-gles2 and not pass
+ * handles created directly using the system's native libGLESv2
+ * api.</note>
+ *
+ * Since: 1.12
+ * Stability: unstable
+ */
+CoglTexture2D *
+cogl_gles2_texture_2d_new_from_handle (CoglContext *ctx,
+                                       CoglGLES2Context *gles2_ctx,
+                                       unsigned int handle,
+                                       int width,
+                                       int height,
+                                       CoglPixelFormat internal_format,
+                                       GError **error);
+
+/**
+ * cogl_gles2_texture_get_handle:
+ * @handle: A return location for an OpenGL ES 2.0 texture handle
+ * @target: A return location for an OpenGL ES 2.0 texture target
+ *
+ * Gets an OpenGL ES 2.0 texture handle for a #CoglTexture that can
+ * then be referenced by a #CoglGLES2Context. As well as returning
+ * a texture handle the texture's target (such as GL_TEXTURE_2D) is
+ * also returned.
+ *
+ * If the #CoglTexture can not be shared with a #CoglGLES2Context then
+ * this function will return %FALSE.
+ *
+ * <note>This function will only return %TRUE for low-level
+ * #CoglTexture<!-- -->s such as #CoglTexture2D or #CoglTexture3D but
+ * not for high level meta textures such as
+ * #CoglTexture2DSliced</note>
+ *
+ * <note>The handle returned should not be passed directly to a system
+ * OpenGL ES 2.0 library, the handle is only intended to be used via
+ * a #CoglGLES2Vtable or via libcogl-gles2.</note>
+ *
+ * Return value: %TRUE if a handle and target could be returned
+ *               otherwise %FALSE is returned.
+ * Since: 1.12
+ * Stability: unstable
+ */
+gboolean
+cogl_gles2_texture_get_handle (CoglTexture *texture,
+                               unsigned int *handle,
+                               unsigned int *target);
 
 /**
  * cogl_is_gles2_context:
@@ -253,7 +331,7 @@ cogl_pop_gles2_context (CoglContext *ctx);
  *
  * Return value: %TRUE if the object references a #CoglGLES2Context
  *   and %FALSE otherwise.
- * Since: 1.10
+ * Since: 1.12
  * Stability: unstable
  */
 gboolean
