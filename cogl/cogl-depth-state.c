@@ -35,6 +35,7 @@ cogl_depth_state_init (CoglDepthState *state)
 {
   state->magic = COGL_DEPTH_STATE_MAGIC;
 
+  /* The same as the GL defaults */
   state->test_enabled = FALSE;
   state->write_enabled = TRUE;
   state->test_function = COGL_DEPTH_TEST_FUNCTION_LESS;
