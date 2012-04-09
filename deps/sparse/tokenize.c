@@ -137,6 +137,9 @@ const char *show_token(const struct token *token)
 	case TOKEN_IDENT:
 		return show_ident(token->ident);
 
+	case TOKEN_COMMENT:
+		return show_string(token->comment);
+
 	case TOKEN_STRING:
 	case TOKEN_WIDE_STRING:
 		return show_string(token->string);
@@ -612,38 +615,102 @@ static int get_string_token(int next, stream_t *stream, enum token_type type)
 	return next;
 }
 
-static int drop_stream_eoln(stream_t *stream)
+static int get_oneline_comment_token(stream_t *stream)
 {
-	drop_token(stream);
+	static char buffer[MAX_COMMENT];
+	struct string *comment;
+	int len = 0;
+	int next;
+	struct token *token;
+
+	buffer[len++] = '/';
+	buffer[len++] = '/';
+
 	for (;;) {
-		switch (nextchar(stream)) {
+		next = nextchar(stream);
+		switch (next) {
 		case EOF:
-			return EOF;
+			goto done;
 		case '\n':
-			return nextchar(stream);
+			next = nextchar(stream);
+			goto done;
+		default:
+			if (len < MAX_COMMENT)
+				buffer[len] = next;
+			len++;
 		}
 	}
+done:
+
+	if (len > MAX_COMMENT) {
+		warning(stream_pos(stream), "string too long (%d bytes, %d bytes max)", len, MAX_COMMENT);
+		len = MAX_COMMENT;
+	}
+
+	comment = __alloc_string(len+1);
+	memcpy(comment->data, buffer, len);
+	comment->data[len] = '\0';
+	comment->length = len+1;
+
+	/* Pass it on.. */
+	token = stream->token;
+	token_type(token) = TOKEN_COMMENT;
+	token->comment = comment;
+	add_token(stream);
+
+	return next;
 }
 
-static int drop_stream_comment(stream_t *stream)
+static int get_comment_token(stream_t *stream)
 {
+	static char buffer[MAX_COMMENT];
+	struct string *comment;
 	int newline;
 	int next;
-	drop_token(stream);
+	struct token *token;
+	int len = 0;
+
+	buffer[len++] = '/';
+	buffer[len++] = '*';
+
 	newline = stream->newline;
 
 	next = nextchar(stream);
+	buffer[len++] = next;
 	for (;;) {
 		int curr = next;
 		if (curr == EOF) {
 			warning(stream_pos(stream), "End of file in the middle of a comment");
+			drop_token(stream);
 			return curr;
 		}
 		next = nextchar(stream);
+
+		if (len < MAX_COMMENT)
+			buffer[len] = next;
+		len++;
+
 		if (curr == '*' && next == '/')
 			break;
 	}
 	stream->newline = newline;
+
+	if (len > MAX_COMMENT) {
+		warning(stream_pos(stream), "comment too long (%d bytes, %d bytes max)", len, MAX_COMMENT);
+		len = MAX_COMMENT;
+	}
+
+	comment = __alloc_string(len+1);
+	memcpy(comment->data, buffer, len);
+	comment->data[len] = '\0';
+	comment->length = len+1;
+
+	/* Pass it on.. */
+	token = stream->token;
+	token_type(token) = TOKEN_COMMENT;
+	token->comment = comment;
+	add_token(stream);
+	
 	return nextchar(stream);
 }
 
@@ -730,9 +797,9 @@ static int get_one_special(int c, stream_t *stream)
 		return get_char_token(next, stream, TOKEN_CHAR);
 	case '/':
 		if (next == '/')
-			return drop_stream_eoln(stream);
+			return get_oneline_comment_token(stream);
 		if (next == '*')
-			return drop_stream_comment(stream);
+			return get_comment_token(stream);
 	}
 
 	/*

@@ -217,6 +217,7 @@ int dbg_entry = 0;
 int dbg_dead = 0;
 
 int preprocess_only;
+int keep_comment_tokens;
 
 static enum { STANDARD_C89,
               STANDARD_C94,

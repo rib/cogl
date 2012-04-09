@@ -93,6 +93,7 @@ extern void expression_error(struct expression *, const char *, ...) FORMAT_ATTR
 extern void add_pre_buffer(const char *fmt, ...) FORMAT_ATTR(1);
 
 extern int preprocess_only;
+extern int keep_comment_tokens;
 
 extern int Waddress_space;
 extern int Wbitwise;

@@ -84,6 +84,7 @@ enum token_type {
 	TOKEN_IF,
 	TOKEN_SKIP_GROUPS,
 	TOKEN_ELSE,
+	TOKEN_COMMENT,
 };
 
 /* Combination tokens */
@@ -165,6 +166,7 @@ struct token {
 		struct ident *ident;
 		unsigned int special;
 		struct string *string;
+		struct string *comment;
 		int character;
 		int argnum;
 		struct argcount count;
@@ -172,6 +174,7 @@ struct token {
 };
 
 #define MAX_STRING 4095
+#define MAX_COMMENT 8192
 
 static inline struct token *containing_token(struct token **p)
 {

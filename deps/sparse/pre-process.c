@@ -1300,6 +1300,11 @@ static int expression_value(struct token **where)
 	int state = 0;
 
 	while (!eof_token(p = scan_next(list))) {
+		if (token_type(p) == TOKEN_COMMENT) {
+			*list = p->next;
+			__free_token(p);
+			continue;
+		}
 		switch (state) {
 		case 0:
 			if (token_type(p) != TOKEN_IDENT)
@@ -1814,7 +1819,12 @@ static void do_preprocess(struct token **list)
 		case TOKEN_STREAMBEGIN:
 			*list = next->next;
 			continue;
-
+		case TOKEN_COMMENT:
+			if (!keep_comment_tokens) {
+				*list = next->next;
+				__free_token(next);
+				continue;
+			}
 		default:
 			dirty_stream(stream);
 			if (false_nesting) {
