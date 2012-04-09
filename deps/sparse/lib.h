@@ -127,6 +127,7 @@ extern struct symbol_list *sparse_initialize(int argc, char **argv, struct strin
 extern struct symbol_list *__sparse(char *filename);
 extern struct symbol_list *sparse_keep_tokens(char *filename);
 extern struct symbol_list *sparse(char *filename);
+struct token * tokenize_keep_tokens(char *filename);
 
 static inline int symbol_list_size(struct symbol_list *list)
 {

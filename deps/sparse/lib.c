@@ -862,7 +862,7 @@ static struct symbol_list *sparse_tokenstream(struct token *token)
 	return translation_unit_used_list;
 }
 
-static struct symbol_list *sparse_file(const char *filename)
+static struct token *tokenize_file(const char *filename)
 {
 	int fd;
 	struct token *token;
@@ -879,6 +879,13 @@ static struct symbol_list *sparse_file(const char *filename)
 	token = tokenize(filename, fd, NULL, includepath);
 	close(fd);
 
+	return token;
+}
+
+static struct symbol_list *sparse_file(const char *filename)
+{
+	struct token *token;
+	token = tokenize_file(filename);
 	return sparse_tokenstream(token);
 }
 
@@ -967,6 +974,14 @@ struct symbol_list * sparse_keep_tokens(char *filename)
 	return res;
 }
 
+struct token * tokenize_keep_tokens(char *filename)
+{
+	/* Clear previous symbol list */
+	translation_unit_used_list = NULL;
+
+	new_file_scope();
+	return tokenize_file(filename);
+}
 
 struct symbol_list * __sparse(char *filename)
 {
