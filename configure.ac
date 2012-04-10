@@ -925,6 +925,7 @@ AM_CONDITIONAL(X11_TESTS, [test "x$SUPPORT_X11" = "xyes"])
 AM_CONDITIONAL(SUPPORT_X11, [test "x$SUPPORT_X11" = "xyes"])
 AM_CONDITIONAL(SUPPORT_XLIB, [test "x$SUPPORT_XLIB" = "xyes"])
 
+NEED_SPARSE=no
 dnl     ============================================================
 dnl     Check for v8 JavaScript bindings support
 dnl     ============================================================
@@ -940,9 +941,23 @@ AS_IF([test "x$enable_v8_bindings" == "xyes"],
       [
         AX_LIB_V8(3.3.10)
         AS_IF([test "$V8_CPPFLAGS" != ""],
-              [SUPPORT_V8_BINDINGS=yes])
+              [
+                SUPPORT_V8_BINDINGS=yes
+                NEED_SPARSE=yes
+              ])
       ])
 AM_CONDITIONAL(SUPPORT_V8_BINDINGS, [test "x$SUPPORT_V8_BINDINGS" == "xyes"])
+
+
+dnl     ============================================================
+dnl     Check if internal deps/sparse project should be built
+dnl     ============================================================
+AS_IF([test "x$NEED_SPARSE" == "xyes"],
+      [
+        PKG_CHECK_MODULES(LIBXML, [libxml-2.0], [],
+                          [AC_MSG_ERROR([Can not find libxml-2.0 required at build time for deps/sparse/c2xml for bindings and documentation])])
+      ])
+AM_CONDITIONAL(BUILD_SPARSE, [test "x$NEED_SPARSE" == "xyes"])
 
 
 dnl ================================================================
@@ -1135,6 +1150,8 @@ build/Makefile
 build/win32/Makefile
 build/win32/vs9/Makefile
 build/win32/vs10/Makefile
+deps/Makefile
+deps/sparse/Makefile
 cogl/Makefile
 cogl/cogl-1.0.pc
 cogl/cogl-2.0-experimental.pc
