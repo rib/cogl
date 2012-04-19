@@ -6,10 +6,10 @@ INCLUDES = \
 AM_CFLAGS = \
 	$(COGL_DEP_CFLAGS) \
 	$(COGL_EXTRA_CFLAGS) \
-	-DCOGL_ENABLE_EXPERIMENTAL_2_0_API
+    -DCOGL_ENABLE_EXPERIMENTAL_2_0_API
 
 if INSTALL_EXAMPLES
-AM_CFLAGS += -DCOGL_EXAMPLES_DATA=\""$(pkgdatadir)/examples-data/"\"
+AM_CFLAGS += -DCOGL_EXAMPLES_DATA=\""$(pkgdatadir)/2.0/examples-data/"\"
 else
 AM_CFLAGS += -DCOGL_EXAMPLES_DATA=\""$(abs_top_srcdir)/examples/"\"
 endif
@@ -18,14 +18,18 @@ common_ldadd = \
 	$(COGL_DEP_LIBS) \
 	$(top_builddir)/cogl/libcogl.la
 
-programs = cogl-hello cogl-info cogl-msaa cogl-gles2-context
+programs = cogl-info
+
+cogl_info_SOURCES = cogl-info.c
+cogl_info_LDADD = $(common_ldadd)
+
+if USE_GLIB
+programs += cogl-hello cogl-msaa  cogl-gles2-context cogl-gles2-gears
 examples_datadir = $(pkgdatadir)/examples-data
 examples_data_DATA =
 
 cogl_hello_SOURCES = cogl-hello.c
 cogl_hello_LDADD = $(common_ldadd)
-cogl_info_SOURCES = cogl-info.c
-cogl_info_LDADD = $(common_ldadd)
 cogl_msaa_SOURCES = cogl-msaa.c
 cogl_msaa_LDADD = $(common_ldadd)
 
@@ -46,9 +50,9 @@ cogl_x11_tfp_LDADD = $(common_ldadd)
 endif
 
 if SUPPORT_WAYLAND_EGL_SERVER
-programs += cogland
-cogland_SOURCES = cogland.c
-cogland_LDADD = $(common_ldadd)
+programs += cogland2
+cogland2_SOURCES = cogland.c
+cogland2_LDADD = $(common_ldadd)
 endif
 
 if SUPPORT_SDL
@@ -59,6 +63,12 @@ endif
 
 cogl_gles2_context_SOURCES = cogl-gles2-context.c
 cogl_gles2_context_LDADD = $(common_ldadd)
+
+cogl_gles2_gears_SOURCES = cogl-gles2-gears.c
+cogl_gles2_gears_CFLAGS = -I$(top_srcdir)/cogl-gles2 $(AM_CFLAGS)
+cogl_gles2_gears_LDADD = $(common_ldadd) $(top_builddir)/cogl-gles2/libcogl-gles2.la
+
+endif #USE_GLIB
 
 if INSTALL_EXAMPLES
 bin_PROGRAMS = $(programs)
