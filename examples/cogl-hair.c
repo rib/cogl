@@ -183,7 +183,6 @@ init_shell_textures (Data *data)
   int i;
 
   cogl_pipeline_set_layer_texture (pipeline, 0, data->circle_texture);
-  cogl_set_source (pipeline);
 
   diameter = BASE_DIAMETER;
   hair_taper = (BASE_DIAMETER - TIP_DIAMETER) / N_TEXTURES;
@@ -200,7 +199,6 @@ init_shell_textures (Data *data)
       data->textures[i] = COGL_TEXTURE (tex2d);
 
       offscreen = cogl_offscreen_new_to_texture (data->textures[i]);
-      cogl_push_framebuffer (COGL_FRAMEBUFFER (offscreen));
 
       cogl_framebuffer_clear4f (COGL_FRAMEBUFFER (offscreen),
                                 COGL_BUFFER_BIT_COLOR, 0, 0, 0, 0);
@@ -216,7 +214,9 @@ init_shell_textures (Data *data)
           float x = ((rand() / (float)RAND_MAX) * 2) - 1;
           float y = ((rand() / (float)RAND_MAX) * 2) - 1;
 
-          cogl_rectangle (x, y, x + diameter, y + diameter);
+          cogl_framebuffer_draw_rectangle (COGL_FRAMEBUFFER (offscreen),
+                                           pipeline,
+                                           x, y, x + diameter, y + diameter);
         }
 
 #ifdef USE_COLOR_TEXTURE
@@ -234,10 +234,11 @@ init_shell_textures (Data *data)
           x += shadow_offset;
           y += shadow_offset;
 
-          cogl_rectangle (x, y, x + diameter, y + diameter);
+          cogl_framebuffer_draw_rectangle (COGL_FRAMEBUFFER (offscreen),
+                                           pipeline,
+                                           x, y, x + diameter, y + diameter);
         }
 
-      cogl_pop_framebuffer ();
       cogl_object_unref (offscreen);
 
       diameter -= hair_taper;
@@ -355,7 +356,7 @@ paint (CoglFramebuffer *fb, Data *data)
   cogl_framebuffer_pop_matrix (fb);
 }
 
-CoglPrimitive *
+static CoglPrimitive *
 primitive_new_p3t2t2n3 (CoglContext *ctx,
                         CoglVerticesMode mode,
                         int n_vertices,
