@@ -820,6 +820,88 @@ _cogl_offscreen_free (CoglOffscreen *offscreen)
   g_free (offscreen);
 }
 
+static CoglTexture *
+create_depth_texture (CoglContext *ctx,
+                      int width,
+                      int height)
+{
+  CoglPixelFormat format;
+  CoglTexture2D *depth_texture;
+
+  /* We really have two cases that we support right now:
+   *   - we have the depth_texture extension and then create a depth_stencil
+   *     texture
+   *   - we create a 16+ bits depth texture
+   */
+  if (ctx->private_feature_flags &
+       COGL_PRIVATE_FEATURE_EXT_PACKED_DEPTH_STENCIL)
+    {
+      format = COGL_PIXEL_FORMAT_DEPTH_24_STENCIL_8;
+    }
+  else if (ctx->private_feature_flags &
+        COGL_PRIVATE_FEATURE_OES_PACKED_DEPTH_STENCIL)
+    {
+      format = COGL_PIXEL_FORMAT_DEPTH_24_STENCIL_8;
+    }
+  else
+    {
+      format = COGL_PIXEL_FORMAT_DEPTH_16;
+    }
+
+  depth_texture =  cogl_texture_2d_new_with_size (ctx,
+                                                  width, height,
+                                                  format,
+                                                  NULL);
+
+  return COGL_TEXTURE (depth_texture);
+}
+
+static CoglTexture *
+attach_depth_texture (CoglContext *ctx,
+                       CoglTexture *depth_texture,
+                       CoglOffscreenAllocateFlags flags)
+{
+  GLuint tex_gl_handle;
+  GLenum tex_gl_target;
+
+  if (flags & COGL_OFFSCREEN_ALLOCATE_FLAG_DEPTH24_STENCIL8)
+    {
+      /* attach a GL_DEPTH24_STENCIL8 texture to the GL_DEPTH_ATTACHMENT and
+       * GL_STENCIL_ATTACHMENT attachement points */
+      g_assert (cogl_texture_get_format (depth_texture) ==
+                COGL_PIXEL_FORMAT_DEPTH_24_STENCIL_8);
+
+      cogl_texture_get_gl_texture (depth_texture,
+                                   &tex_gl_handle, &tex_gl_target);
+
+      GE (ctx, glFramebufferTexture2D (GL_FRAMEBUFFER,
+                                       GL_DEPTH_ATTACHMENT,
+                                       tex_gl_target, tex_gl_handle,
+                                       0));
+      GE (ctx, glFramebufferTexture2D (GL_FRAMEBUFFER,
+                                       GL_STENCIL_ATTACHMENT,
+                                       tex_gl_target, tex_gl_handle,
+                                       0));
+    }
+  else if (flags & COGL_OFFSCREEN_ALLOCATE_FLAG_DEPTH)
+    {
+      /* attach a newly created GL_DEPTH_COMPONENT16 texture to the
+       * GL_DEPTH_ATTACHMENT attachement point */
+      g_assert (cogl_texture_get_format (depth_texture) ==
+                COGL_PIXEL_FORMAT_DEPTH_16);
+
+      cogl_texture_get_gl_texture (COGL_TEXTURE (depth_texture),
+                                   &tex_gl_handle, &tex_gl_target);
+
+      GE (ctx, glFramebufferTexture2D (GL_FRAMEBUFFER,
+                                       GL_DEPTH_ATTACHMENT,
+                                       tex_gl_target, tex_gl_handle,
+                                       0));
+    }
+
+  return COGL_TEXTURE (depth_texture);
+}
+
 static GList *
 try_creating_renderbuffers (CoglContext *ctx,
                             int width,
@@ -918,6 +1000,7 @@ try_creating_fbo (CoglContext *ctx,
                   int texture_level,
                   int texture_level_width,
                   int texture_level_height,
+                  CoglTexture *depth_texture,
                   CoglFramebufferConfig *config,
                   CoglOffscreenAllocateFlags flags,
                   CoglGLFramebuffer *gl_framebuffer)
@@ -968,12 +1051,31 @@ try_creating_fbo (CoglContext *ctx,
                                      tex_gl_target, tex_gl_handle,
                                      texture_level));
 
-  gl_framebuffer->renderbuffers =
-    try_creating_renderbuffers (ctx,
-                                texture_level_width,
-                                texture_level_height,
-                                flags,
-                                n_samples);
+  /* attach either a depth/stencil texture, a depth texture or render buffers
+   * depending on what we've been asked to provide */
+
+  if (depth_texture &&
+      flags & (COGL_OFFSCREEN_ALLOCATE_FLAG_DEPTH24_STENCIL8 |
+               COGL_OFFSCREEN_ALLOCATE_FLAG_DEPTH))
+    {
+      attach_depth_texture (ctx, depth_texture, flags);
+
+      /* Let's clear the flags that are now fulfilled as we might need to
+       * create renderbuffers (for the ALLOCATE_FLAG_DEPTH |
+       * ALLOCATE_FLAG_STENCIL case) */
+      flags &= ~(COGL_OFFSCREEN_ALLOCATE_FLAG_DEPTH24_STENCIL8 |
+                 COGL_OFFSCREEN_ALLOCATE_FLAG_DEPTH);
+    }
+
+  if (flags)
+    {
+      gl_framebuffer->renderbuffers =
+        try_creating_renderbuffers (ctx,
+                                    texture_level_width,
+                                    texture_level_height,
+                                    flags,
+                                    n_samples);
+    }
 
   /* Make sure it's complete */
   status = ctx->glCheckFramebufferStatus (GL_FRAMEBUFFER);
@@ -1012,6 +1114,7 @@ _cogl_framebuffer_try_creating_gl_fbo (CoglContext *ctx,
                                        int texture_level,
                                        int texture_level_width,
                                        int texture_level_height,
+                                       CoglTexture *depth_texture,
                                        CoglFramebufferConfig *config,
                                        CoglOffscreenAllocateFlags flags,
                                        CoglGLFramebuffer *gl_framebuffer)
@@ -1021,6 +1124,7 @@ _cogl_framebuffer_try_creating_gl_fbo (CoglContext *ctx,
                            texture_level,
                            texture_level_width,
                            texture_level_height,
+                           depth_texture,
                            config,
                            flags,
                            gl_framebuffer);
@@ -1053,6 +1157,7 @@ _cogl_offscreen_allocate (CoglOffscreen *offscreen,
                          offscreen->texture_level,
                          offscreen->texture_level_width,
                          offscreen->texture_level_height,
+                         offscreen->depth_texture,
                          &fb->config,
                          flags = 0,
                          gl_framebuffer)) ||
@@ -1063,6 +1168,7 @@ _cogl_offscreen_allocate (CoglOffscreen *offscreen,
                          offscreen->texture_level,
                          offscreen->texture_level_width,
                          offscreen->texture_level_height,
+                         offscreen->depth_texture,
                          &fb->config,
                          flags = ctx->last_offscreen_allocate_flags,
                          gl_framebuffer)) ||
@@ -1074,6 +1180,7 @@ _cogl_offscreen_allocate (CoglOffscreen *offscreen,
                          offscreen->texture_level,
                          offscreen->texture_level_width,
                          offscreen->texture_level_height,
+                         offscreen->depth_texture,
                          &fb->config,
                          flags = COGL_OFFSCREEN_ALLOCATE_FLAG_DEPTH24_STENCIL8,
                          gl_framebuffer)) ||
@@ -1085,6 +1192,7 @@ _cogl_offscreen_allocate (CoglOffscreen *offscreen,
                          offscreen->texture_level,
                          offscreen->texture_level_width,
                          offscreen->texture_level_height,
+                         offscreen->depth_texture,
                          &fb->config,
                          flags = COGL_OFFSCREEN_ALLOCATE_FLAG_DEPTH24_STENCIL8,
                          gl_framebuffer)) ||
@@ -1094,6 +1202,7 @@ _cogl_offscreen_allocate (CoglOffscreen *offscreen,
                         offscreen->texture_level,
                         offscreen->texture_level_width,
                         offscreen->texture_level_height,
+                        offscreen->depth_texture,
                         &fb->config,
                         flags = COGL_OFFSCREEN_ALLOCATE_FLAG_DEPTH |
                         COGL_OFFSCREEN_ALLOCATE_FLAG_STENCIL,
@@ -1104,6 +1213,7 @@ _cogl_offscreen_allocate (CoglOffscreen *offscreen,
                         offscreen->texture_level,
                         offscreen->texture_level_width,
                         offscreen->texture_level_height,
+                        offscreen->depth_texture,
                         &fb->config,
                         flags = COGL_OFFSCREEN_ALLOCATE_FLAG_STENCIL,
                         gl_framebuffer) ||
@@ -1113,6 +1223,7 @@ _cogl_offscreen_allocate (CoglOffscreen *offscreen,
                         offscreen->texture_level,
                         offscreen->texture_level_width,
                         offscreen->texture_level_height,
+                        offscreen->depth_texture,
                         &fb->config,
                         flags = COGL_OFFSCREEN_ALLOCATE_FLAG_DEPTH,
                         gl_framebuffer) ||
@@ -1122,6 +1233,7 @@ _cogl_offscreen_allocate (CoglOffscreen *offscreen,
                         offscreen->texture_level,
                         offscreen->texture_level_width,
                         offscreen->texture_level_height,
+                        offscreen->depth_texture,
                         &fb->config,
                         flags = 0,
                         gl_framebuffer))
@@ -1902,6 +2014,38 @@ CoglPixelFormat
 cogl_framebuffer_get_color_format (CoglFramebuffer *framebuffer)
 {
   return framebuffer->format;
+}
+
+void
+cogl_framebuffer_enable_depth_texture (CoglFramebuffer *framebuffer,
+                                       CoglBool         enabled)
+{
+  CoglOffscreen *offscreen;
+
+  _COGL_GET_CONTEXT (ctx, NO_RETVAL);
+
+  _COGL_RETURN_IF_FAIL (!framebuffer->allocated);
+  _COGL_RETURN_IF_FAIL (cogl_is_offscreen (framebuffer));
+
+  offscreen = COGL_OFFSCREEN (framebuffer);
+  if (offscreen->depth_texture != NULL)
+    return;
+
+  offscreen->depth_texture =
+    create_depth_texture (ctx,
+                          offscreen->texture_level_width,
+                          offscreen->texture_level_height);
+
+  if (offscreen->depth_texture)
+    _cogl_texture_associate_framebuffer (offscreen->depth_texture, framebuffer);
+}
+
+CoglTexture *
+cogl_framebuffer_get_depth_texture (CoglFramebuffer *framebuffer)
+{
+  _COGL_RETURN_VAL_IF_FAIL (cogl_is_offscreen (framebuffer), NULL);
+
+  return COGL_OFFSCREEN(framebuffer)->depth_texture;
 }
 
 int

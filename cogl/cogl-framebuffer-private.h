@@ -190,6 +190,8 @@ struct _CoglOffscreen
   int             texture_level_width;
   int             texture_level_height;
 
+  CoglTexture *depth_texture;
+
   CoglOffscreenAllocateFlags allocation_flags;
 
   /* FIXME: _cogl_offscreen_new_to_texture_full should be made to use
@@ -421,6 +423,7 @@ _cogl_framebuffer_try_creating_gl_fbo (CoglContext *ctx,
                                        int texture_level,
                                        int texture_level_width,
                                        int texture_level_height,
+                                       CoglTexture *depth_texture,
                                        CoglFramebufferConfig *config,
                                        CoglOffscreenAllocateFlags flags,
                                        CoglGLFramebuffer *gl_framebuffer);
