@@ -830,22 +830,18 @@ try_creating_renderbuffers (CoglContext *ctx,
   GList *renderbuffers = NULL;
   GLuint gl_depth_stencil_handle;
 
-  if (flags & (COGL_OFFSCREEN_ALLOCATE_FLAG_DEPTH_STENCIL |
-               COGL_OFFSCREEN_ALLOCATE_FLAG_DEPTH24_STENCIL8))
+  if (flags & COGL_OFFSCREEN_ALLOCATE_FLAG_DEPTH24_STENCIL8)
     {
-      GLenum format = ((flags & COGL_OFFSCREEN_ALLOCATE_FLAG_DEPTH_STENCIL) ?
-                       GL_DEPTH_STENCIL : GL_DEPTH24_STENCIL8);
-
       /* Create a renderbuffer for depth and stenciling */
       GE (ctx, glGenRenderbuffers (1, &gl_depth_stencil_handle));
       GE (ctx, glBindRenderbuffer (GL_RENDERBUFFER, gl_depth_stencil_handle));
       if (n_samples)
         GE (ctx, glRenderbufferStorageMultisampleIMG (GL_RENDERBUFFER,
                                                       n_samples,
-                                                      format,
+                                                      GL_DEPTH24_STENCIL8,
                                                       width, height));
       else
-        GE (ctx, glRenderbufferStorage (GL_RENDERBUFFER, format,
+        GE (ctx, glRenderbufferStorage (GL_RENDERBUFFER, GL_DEPTH24_STENCIL8,
                                         width, height));
       GE (ctx, glBindRenderbuffer (GL_RENDERBUFFER, 0));
       GE (ctx, glFramebufferRenderbuffer (GL_FRAMEBUFFER,
@@ -1079,7 +1075,7 @@ _cogl_offscreen_allocate (CoglOffscreen *offscreen,
                          offscreen->texture_level_width,
                          offscreen->texture_level_height,
                          &fb->config,
-                         flags = COGL_OFFSCREEN_ALLOCATE_FLAG_DEPTH_STENCIL,
+                         flags = COGL_OFFSCREEN_ALLOCATE_FLAG_DEPTH24_STENCIL8,
                          gl_framebuffer)) ||
 
       ((ctx->private_feature_flags &
