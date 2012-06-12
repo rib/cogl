@@ -113,6 +113,16 @@ cogl_experimental_h = \
 	$(srcdir)/cogl-pixel-buffer.h		\
 	$(srcdir)/cogl2-experimental.h		\
 	$(srcdir)/cogl2-compatibility.h		\
+	$(srcdir)/cogl-gles2.h			\
+	$(srcdir)/cogl-gles2-types.h		\
+	$(NULL)
+
+cogl_gl_prototypes_h = \
+	$(srcdir)/gl-prototypes/cogl-gles2-functions.h		\
+	$(srcdir)/gl-prototypes/cogl-core-functions.h		\
+	$(srcdir)/gl-prototypes/cogl-in-gles-core-functions.h	\
+	$(srcdir)/gl-prototypes/cogl-in-gles2-core-functions.h	\
+	$(srcdir)/gl-prototypes/cogl-glsl-functions.h		\
 	$(NULL)
 
 # driver sources
@@ -343,6 +353,7 @@ cogl_sources_c = \
 	$(srcdir)/cogl-snippet-private.h		\
 	$(srcdir)/cogl-snippet.c			\
 	$(srcdir)/cogl-poll.c				\
+	$(srcdir)/cogl-gles2-context.c			\
 	$(srcdir)/gl-prototypes/cogl-all-functions.h	\
 	$(srcdir)/gl-prototypes/cogl-gles1-functions.h	\
 	$(srcdir)/gl-prototypes/cogl-gles2-functions.h	\
@@ -483,6 +494,9 @@ cogl_headers = \
 coglincludedir = $(includedir)/cogl/cogl
 coglinclude_HEADERS = $(cogl_headers) $(cogl_experimental_h)
 nodist_coglinclude_HEADERS = cogl-defines.h cogl-enum-types.h
+
+cogl_proto_includedir = $(includedir)/cogl2/cogl/gl-prototypes
+cogl_proto_include_HEADERS = $(cogl_gl_prototypes_h)
 
 dist-hook: ../build/win32/vs9/cogl.vcproj ../build/win32/vs10/cogl.vcxproj ../build/win32/vs10/cogl.vcxproj.filters ../build/win32/gen-enums.bat
 
