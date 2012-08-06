@@ -32,6 +32,7 @@
 #include "cogl-attribute.h"
 #include "cogl-framebuffer.h"
 #include "cogl-pipeline-private.h"
+#include "cogl-boxed-value.h"
 
 typedef enum
 {
@@ -48,20 +49,31 @@ typedef struct _CoglAttributeNameState
   CoglAttributeNameID name_id;
   int name_index;
   CoglBool normalized_default;
-  int texture_unit;
+  int layer_number;
 } CoglAttributeNameState;
 
 struct _CoglAttribute
 {
   CoglObject _parent;
 
-  CoglAttributeBuffer *attribute_buffer;
   const CoglAttributeNameState *name_state;
-  size_t stride;
-  size_t offset;
-  int n_components;
-  CoglAttributeType type;
   CoglBool normalized;
+
+  CoglBool is_buffered;
+
+  union {
+    struct {
+      CoglAttributeBuffer *attribute_buffer;
+      size_t stride;
+      size_t offset;
+      int n_components;
+      CoglAttributeType type;
+    } buffered;
+    struct {
+      CoglContext *context;
+      CoglBoxedValue boxed;
+    } constant;
+  } d;
 
   int immutable_ref;
 };
