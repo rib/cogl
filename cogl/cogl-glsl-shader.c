@@ -56,16 +56,8 @@ _cogl_glsl_shader_set_source_with_boilerplate (CoglContext *ctx,
   int count = 0;
   char *tex_coord_declarations = NULL;
 
-  if (ctx->driver == COGL_DRIVER_GLES2)
-    {
-      vertex_boilerplate = _COGL_VERTEX_SHADER_BOILERPLATE_GLES2;
-      fragment_boilerplate = _COGL_FRAGMENT_SHADER_BOILERPLATE_GLES2;
-    }
-  else
-    {
-      vertex_boilerplate = _COGL_VERTEX_SHADER_BOILERPLATE_GL;
-      fragment_boilerplate = _COGL_FRAGMENT_SHADER_BOILERPLATE_GL;
-    }
+  vertex_boilerplate = _COGL_VERTEX_SHADER_BOILERPLATE;
+  fragment_boilerplate = _COGL_FRAGMENT_SHADER_BOILERPLATE;
 
   if (ctx->driver == COGL_DRIVER_GLES2 &&
       cogl_has_feature (ctx, COGL_FEATURE_ID_TEXTURE_3D))
@@ -87,8 +79,7 @@ _cogl_glsl_shader_set_source_with_boilerplate (CoglContext *ctx,
       lengths[count++] = strlen (fragment_boilerplate);
     }
 
-  if (ctx->driver == COGL_DRIVER_GLES2 &&
-      n_tex_coord_attribs)
+  if (n_tex_coord_attribs)
     {
       GString *declarations = g_string_new (NULL);
 

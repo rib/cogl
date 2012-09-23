@@ -98,8 +98,7 @@ typedef struct
   LayerDataList layers;
 
   /* The number of tex coord attributes that the shader was generated
-     for. If this changes on GLES2 then we need to regenerate the
-     shader */
+   * for. If this changes then we need to regenerate the shader */
   int n_tex_coord_attribs;
 } CoglPipelineShaderState;
 
@@ -284,11 +283,10 @@ _cogl_pipeline_fragend_glsl_start (CoglPipeline *pipeline,
   if (shader_state->gl_shader)
     {
       /* If we already have a valid GLSL shader then we don't need to
-         generate a new one. However if the number of tex coord
-         attribs changes on GLES2 then we need to regenerate the
-         shader with a different boiler plate */
-      if ((ctx->driver != COGL_DRIVER_GLES2 ||
-          shader_state->n_tex_coord_attribs == n_tex_coord_attribs))
+       * generate a new one. However if the number of tex coord
+       * attribs changes then we need to regenerate the shader with a
+       * different boiler plate */
+      if (shader_state->n_tex_coord_attribs == n_tex_coord_attribs)
         return;
 
       /* We need to recreate the shader so destroy the existing one */
