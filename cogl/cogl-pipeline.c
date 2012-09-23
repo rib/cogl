@@ -1107,6 +1107,7 @@ _cogl_pipeline_pre_change_notify (CoglPipeline     *pipeline,
         _cogl_pipeline_vertends[progend->vertend];
       const CoglPipelineFragend *fragend =
         _cogl_pipeline_fragends[progend->fragend];
+      int i;
 
       if (vertend->pipeline_pre_change_notify)
         vertend->pipeline_pre_change_notify (pipeline, change, new_color);
@@ -1114,12 +1115,11 @@ _cogl_pipeline_pre_change_notify (CoglPipeline     *pipeline,
       if (fragend->pipeline_pre_change_notify)
         fragend->pipeline_pre_change_notify (pipeline, change, new_color);
 
-      /* XXX: we used to loop all progends here so check if we used to
-       * free resources in the progend->pipeline_pre_change_notify
-       * code. */
-#warning "FIXME"
-      if (progend->pipeline_pre_change_notify)
-        progend->pipeline_pre_change_notify (pipeline, change, new_color);
+      for (i = 0; i < COGL_PIPELINE_N_PROGENDS; i++)
+        if (_cogl_pipeline_progends[i]->pipeline_pre_change_notify)
+          _cogl_pipeline_progends[i]->pipeline_pre_change_notify (pipeline,
+                                                                  change,
+                                                                  new_color);
     }
 
   /* There may be an arbitrary tree of descendants of this pipeline;
@@ -1470,11 +1470,13 @@ _cogl_pipeline_progend_layer_change_notify (CoglPipeline *owner,
                                             CoglPipelineLayer *layer,
                                             CoglPipelineLayerState change)
 {
-  const CoglPipelineProgend *progend =
-    _cogl_pipeline_progends[owner->progend];
+  int i;
 
-  if (progend->layer_pre_change_notify)
-    progend->layer_pre_change_notify (owner, layer, change);
+  for (i = 0; i < COGL_PIPELINE_N_PROGENDS; i++)
+    if (_cogl_pipeline_progends[i]->layer_pre_change_notify)
+      _cogl_pipeline_progends[i]->layer_pre_change_notify (owner,
+                                                           layer,
+                                                           change);
 }
 
 typedef struct
