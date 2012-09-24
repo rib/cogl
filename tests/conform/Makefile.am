@@ -27,43 +27,11 @@ unported_test_sources = \
 
 test_sources = \
 	test-atlas-migration.c \
-	test-bitmask.c \
 	test-blend-strings.c \
 	test-depth-test.c \
 	test-color-mask.c \
 	test-backface-culling.c \
 	test-just-vertex-shader.c \
-	test-path.c \
-	test-pipeline-uniforms.c \
-	test-pixel-buffer.c \
-	test-premult.c \
-	test-snippets.c \
-	test-wrap-modes.c \
-	test-sub-texture.c \
-	test-custom-attributes.c \
-	test-offscreen.c \
-	test-primitive.c \
-	test-texture-3d.c \
-	test-sparse-pipeline.c \
-	test-read-texture-formats.c \
-	test-write-texture-formats.c \
-	test-point-size.c \
-	test-point-sprite.c \
-	test-no-gl-header.c \
-	test-version.c \
-	test-gles2-context.c \
-	test-euler-quaternion.c \
-	test-layer-remove.c \
-	test-alpha-test.c \
-	test-map-buffer-range.c \
-	test-npot-texture.c \
-	test-alpha-textures.c \
-	test-wrap-rectangle-textures.c \
-	test-texture-get-set-data.c \
-	test-texture-mipmap-get-set.c \
-	test-framebuffer-get-bits.c \
-	test-primitive-and-journal.c \
-	test-copy-replace-texture.c \
 	$(NULL)
 
 test_conformance_SOURCES = $(common_sources) $(test_sources)

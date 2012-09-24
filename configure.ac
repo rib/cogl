@@ -191,6 +191,29 @@ dnl ================================================================
 dnl Handle extra configure options
 dnl ================================================================
 
+
+dnl     ============================================================
+dnl     Emscripten support
+dnl     ============================================================
+
+AC_ARG_ENABLE(
+  [emscripten],
+  [AC_HELP_STRING([--enable-emscripten=@<:@no/yes@:>@], [Support building for emscripten])],
+  [],
+  enable_emscripten=no
+)
+AS_IF([test "x$enable_emscripten" = "xyes"],
+      [
+        enable_standalone=yes
+        enable_sdl=yes
+        enable_gles2=yes
+        enable_gl=no
+        AC_DEFINE([USING_EMSCRIPTEN], 1, [Cogl is being compiled with emscripten])
+      ]
+)
+AM_CONDITIONAL(USING_EMSCRIPTEN, [test "$enable_emscripten" = "yes"])
+
+
 dnl     ============================================================
 dnl     Standalone cogl
 dnl     ============================================================
@@ -637,24 +660,32 @@ AS_IF([test "x$enable_gles2" = "xyes"],
         COGL_DEFINES_SYMBOLS="$COGL_DEFINES_SYMBOLS COGL_HAS_GLES2"
         HAVE_GLES2=1
 
-        PKG_CHECK_EXISTS([glesv2],
-          [COGL_PKG_REQUIRES_GL="$COGL_PKG_REQUIRES_GL glesv2"
-           COGL_GLES2_LIBNAME="libGLESv2.so"
-          ],
-          [
-            # We have to check the two headers independently as GLES2/gl2ext.h
-            # needs to include GLES2/gl2.h to have the GL types defined (eg.
-            # GLenum).
-            AC_CHECK_HEADER([GLES2/gl2.h],
-                            [],
-                            [AC_MSG_ERROR([Unable to locate GLES2/gl2.h])])
-            AC_CHECK_HEADER([GLES2/gl2ext.h],
-                            [],
-                            [AC_MSG_ERROR([Unable to locate GLES2/gl2ext.h])],
-                            [#include <GLES2/gl2.h>])
+        AS_IF([test "x$enable_emscripten" = "xyes"],
+              [
+                GL_LIBRARY_DIRECTLY_LINKED=yes
+                COGL_GLES2_LIBNAME=""
+              ],
 
-            COGL_GLES2_LIBNAME="libGLESv2.so"
-          ])
+              [
+                PKG_CHECK_EXISTS([glesv2],
+                  [COGL_PKG_REQUIRES_GL="$COGL_PKG_REQUIRES_GL glesv2"
+                   COGL_GLES2_LIBNAME="libGLESv2.so"
+                  ],
+                  [
+                    # We have to check the two headers independently as GLES2/gl2ext.h
+                    # needs to include GLES2/gl2.h to have the GL types defined (eg.
+                    # GLenum).
+                    AC_CHECK_HEADER([GLES2/gl2.h],
+                                    [],
+                                    [AC_MSG_ERROR([Unable to locate GLES2/gl2.h])])
+                    AC_CHECK_HEADER([GLES2/gl2ext.h],
+                                    [],
+                                    [AC_MSG_ERROR([Unable to locate GLES2/gl2ext.h])],
+                                    [#include <GLES2/gl2.h>])
+
+                    COGL_GLES2_LIBNAME="libGLESv2.so"
+                  ])
+              ])
       ])
 
 HAVE_GL=0
@@ -822,32 +853,48 @@ AC_ARG_ENABLE(
   [enable_sdl=no])
 AS_IF([test "x$enable_sdl" = "xyes"],
       [
-        PKG_CHECK_MODULES([SDL],
-                          [sdl],
-                          [],
-                          [AC_MSG_ERROR([SDL support requested but SDL not found])])
+        AS_IF([test "x$enable_emscripten" = "xno"],
+              [
+                PKG_CHECK_MODULES([SDL],
+                                  [sdl],
+                                  [
+                                   COGL_PKG_REQUIRES="$COGL_PKG_REQUIRES sdl"
+                                  ],
+                                  [
+                                   AC_CHECK_HEADER([SDL/SDL.h],
+                                                   [],
+                                                   [AC_MSG_ERROR([SDL support requested but SDL not found])])
+                                  ])
+              ])
 
         SUPPORT_SDL=yes
         GL_WINSYS_APIS="$GL_WINSYS_APIS sdl"
-        COGL_PKG_REQUIRES="$COGL_PKG_REQUIRES sdl"
 
         COGL_DEFINES_SYMBOLS="$COGL_DEFINES_SYMBOLS COGL_HAS_SDL_SUPPORT"
 
-        dnl WebOS has a specially patched version of SDL to add
-        dnl support for creating a GLES1/2 context. This tries to
-        dnl detect that patch so we can use it if the GLES2 driver is
-        dnl selected.
-        cogl_save_CPPFLAGS="$CPPFLAGS"
-        CPPFLAGS="$CPPFLAGS $SDL_CFLAGS"
-        AC_CHECK_DECL([SDL_OPENGLES],
-                      [SUPPORT_SDL_GLES=yes],
-                      [SUPPORT_SDL_GLES=no],
-                      [#include <SDL.h>])
-        AC_CHECK_DECL([SDL_GL_CONTEXT_MAJOR_VERSION], [], [SUPPORT_SDL_GLES=no],
-                      [#include <SDL.h>])
-        AC_CHECK_DECL([SDL_GL_CONTEXT_MINOR_VERSION], [], [SUPPORT_SDL_GLES=no],
-                      [#include <SDL.h>])
-        CPPFLAGS="$cogl_save_CPPFLAGS"
+        dnl If we are building with emscripten then that simply implies we are
+        dnl using SDL in conjunction with WebGL (GLES2)
+        AS_IF([test "x$enable_emscripten" = "xyes"],
+              [
+                SUPPORT_SDL_GLES=yes
+              ],
+              [
+                dnl WebOS has a specially patched version of SDL to add
+                dnl support for creating a GLES1/2 context. This tries to
+                dnl detect that patch so we can use it if the GLES2 driver is
+                dnl selected.
+                cogl_save_CPPFLAGS="$CPPFLAGS"
+                CPPFLAGS="$CPPFLAGS $SDL_CFLAGS"
+                AC_CHECK_DECL([SDL_OPENGLES],
+                              [SUPPORT_SDL_GLES=yes],
+                              [SUPPORT_SDL_GLES=no],
+                              [#include <SDL.h>])
+                AC_CHECK_DECL([SDL_GL_CONTEXT_MAJOR_VERSION], [], [SUPPORT_SDL_GLES=no],
+                              [#include <SDL.h>])
+                AC_CHECK_DECL([SDL_GL_CONTEXT_MINOR_VERSION], [], [SUPPORT_SDL_GLES=no],
+                              [#include <SDL.h>])
+                CPPFLAGS="$cogl_save_CPPFLAGS"
+              ])
 
         AS_IF([test "x$SUPPORT_SDL_GLES" = "xyes"],
               COGL_DEFINES_SYMBOLS="$COGL_DEFINES_SYMBOLS COGL_HAS_SDL_GLES_SUPPORT")
@@ -1135,22 +1182,25 @@ AS_ALL_LINGUAS
 
 
 AC_SUBST(COGL_PKG_REQUIRES)
-PKG_CHECK_MODULES(COGL_DEP, [$COGL_PKG_REQUIRES])
-if test -n "$COGL_PKG_REQUIRES_GL"; then
-  PKG_CHECK_MODULES(COGL_DEP_GL, [$COGL_PKG_REQUIRES_GL])
+if test -n "$COGL_PKG_REQUIRES"; then
+  PKG_CHECK_MODULES(COGL_DEP, [$COGL_PKG_REQUIRES])
 
-  dnl Strip out the GL libraries from the GL pkg-config files so we can
-  dnl dynamically load them instead
-  gl_libs=""
-  for x in $COGL_DEP_GL_LIBS; do
-    AS_CASE([$x],
-            [-lGL], [],
-            [-lGLESv2], [],
-            [-lGLESv1_CM], [],
-            [*], [gl_libs="$gl_libs $x"])
-  done
-  COGL_DEP_CFLAGS="$COGL_DEP_CFLAGS $COGL_DEP_CFLAGS_GL"
-  COGL_DEP_LIBS="$COGL_DEP_LIBS $gl_libs"
+  if test -n "$COGL_PKG_REQUIRES_GL"; then
+    PKG_CHECK_MODULES(COGL_DEP_GL, [$COGL_PKG_REQUIRES_GL])
+
+    dnl Strip out the GL libraries from the GL pkg-config files so we can
+    dnl dynamically load them instead
+    gl_libs=""
+    for x in $COGL_DEP_GL_LIBS; do
+      AS_CASE([$x],
+              [-lGL], [],
+              [-lGLESv2], [],
+              [-lGLESv1_CM], [],
+              [*], [gl_libs="$gl_libs $x"])
+    done
+    COGL_DEP_CFLAGS="$COGL_DEP_CFLAGS $COGL_DEP_CFLAGS_GL"
+    COGL_DEP_LIBS="$COGL_DEP_LIBS $gl_libs"
+  fi
 fi
 AC_SUBST(COGL_PANGO_PKG_REQUIRES)
 
@@ -1215,8 +1265,6 @@ AC_CHECK_HEADER(poll.h,
         [
          AC_COMPUTE_INT(COGL_SYSDEF_POLLIN, POLLIN, [#include <poll.h>],
                         AC_MSG_ERROR([Unable to get value of POLLIN]))
-         AC_COMPUTE_INT(COGL_SYSDEF_POLLPRI, POLLPRI, [#include <poll.h>],
-                        AC_MSG_ERROR([Unable to get value of POLLPRI]))
          AC_COMPUTE_INT(COGL_SYSDEF_POLLOUT, POLLOUT, [#include <poll.h>],
                         AC_MSG_ERROR([Unable to get value of POLLOUT]))
          AC_COMPUTE_INT(COGL_SYSDEF_POLLERR, POLLERR, [#include <poll.h>],
@@ -1284,6 +1332,8 @@ AC_SUBST(COGL_EXTRA_LDFLAGS)
 # just for compatability with the clutter build...
 MAINTAINER_CFLAGS=
 AC_SUBST(MAINTAINER_CFLAGS)
+
+AM_CONDITIONAL(USE_NLS, [test "$USE_NLS" = "yes"])
 
 AC_OUTPUT(
 Makefile
@@ -1358,6 +1408,7 @@ fi
 if test "x$SUPPORT_SDL" = "xyes"; then
 echo "        Support GLES under SDL: ${SUPPORT_SDL_GLES}"
 fi
+echo "        Building for emscripten environment: $enable_emscripten"
 echo "        Build libcogl-gles2 GLES 2.0 frontend api: ${enable_cogl_gles2}"
 echo "        Image backend: ${COGL_IMAGE_BACKEND}"
 echo "        Cogl Pango: ${enable_cogl_pango}"

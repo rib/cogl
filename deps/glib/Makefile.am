@@ -71,5 +71,5 @@ libglib_la_SOURCES =		\
 	gutils.c		\
 	gutils.h		\
 	$(NULL)
-	
+
 EXTRA_DIST = README

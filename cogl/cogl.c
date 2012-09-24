@@ -28,7 +28,7 @@
 #include <string.h>
 #include <math.h>
 #include <stdlib.h>
-#include <glib/gi18n-lib.h>
+//#include <glib/gi18n-lib.h>
 
 #include "cogl-debug.h"
 #include "cogl-util.h"
@@ -161,8 +161,10 @@ _cogl_init (void)
 
   if (initialized == FALSE)
     {
+#ifdef USE_NLS
       bindtextdomain (GETTEXT_PACKAGE, COGL_LOCALEDIR);
       bind_textdomain_codeset (GETTEXT_PACKAGE, "UTF-8");
+#endif
 
 #ifdef COGL_HAS_GTYPE_SUPPORT
       g_type_init ();

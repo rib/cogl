@@ -222,7 +222,7 @@ main (int argc, char **argv)
   const char *winsys_name;
   OutputState output_state;
 
-  ctx = cogl_context_new (NULL, &error);
+  ctx = cogl_sdl_context_new (SDL_USEREVENT, &error);
   if (!ctx) {
       fprintf (stderr, "Failed to create context: %s\n", error->message);
       return 1;

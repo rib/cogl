@@ -1,6 +1,7 @@
 #include <cogl/cogl.h>
 #include <stdio.h>
 #include <SDL.h>
+#include <emscripten.h>
 
 /* This short example is just to demonstrate mixing SDL with Cogl as a
    simple way to get portable support for events */
@@ -15,6 +16,9 @@ typedef struct Data
   CoglBool redraw_queued;
   CoglBool ready_to_draw;
 } Data;
+
+static Data data;
+static CoglContext *ctx;
 
 static void
 redraw (Data *data)
@@ -73,10 +77,29 @@ frame_cb (CoglOnscreen *onscreen,
     data->ready_to_draw = TRUE;
 }
 
+static void
+mainloop (void)
+{
+  SDL_Event event;
+  while (SDL_PollEvent (&event) && !data.quit)
+    {
+      handle_event (&data, &event);
+      cogl_sdl_handle_event (ctx, &event);
+    }
+
+  if (data.quit)
+    emscripten_cancel_main_loop ();
+
+  redraw (&data);
+  data.redraw_queued = FALSE;
+  data.ready_to_draw = FALSE;
+
+  cogl_sdl_idle (ctx);
+}
+
 int
 main (int argc, char **argv)
 {
-  CoglContext *ctx;
   CoglOnscreen *onscreen;
   CoglError *error = NULL;
   CoglVertexP2C4 triangle_vertices[] = {
@@ -84,8 +107,6 @@ main (int argc, char **argv)
     {-0.7, -0.7, 0x00, 0xff, 0x00, 0xff},
     {0.7, -0.7, 0x00, 0x00, 0xff, 0xff}
   };
-  Data data;
-  SDL_Event event;
 
   ctx = cogl_sdl_context_new (SDL_USEREVENT, &error);
   if (!ctx)
@@ -115,29 +136,7 @@ main (int argc, char **argv)
   data.redraw_queued = TRUE;
   data.ready_to_draw = TRUE;
 
-  while (!data.quit)
-    {
-      if (!SDL_PollEvent (&event))
-        {
-          if (data.redraw_queued && data.ready_to_draw)
-            {
-              redraw (&data);
-              data.redraw_queued = FALSE;
-              data.ready_to_draw = FALSE;
-              continue;
-            }
-
-          cogl_sdl_idle (ctx);
-          if (!SDL_WaitEvent (&event))
-            {
-              fprintf (stderr, "Error waiting for SDL events");
-              return 1;
-            }
-        }
-
-      handle_event (&data, &event);
-      cogl_sdl_handle_event (ctx, &event);
-    }
+  emscripten_set_main_loop (mainloop, -1, TRUE);
 
   cogl_object_unref (ctx);
 

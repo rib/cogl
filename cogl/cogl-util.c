@@ -61,7 +61,7 @@ _cogl_util_one_at_a_time_mix (unsigned int hash)
 }
 
 /* The 'ffs' function is part of C99 so it isn't always available */
-#ifndef HAVE_FFS
+#if !defined (HAVE_FFS) || defined (USING_EMSCRIPTEN)
 
 int
 _cogl_util_ffs (int num)

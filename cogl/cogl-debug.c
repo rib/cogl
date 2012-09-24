@@ -26,7 +26,9 @@
 #endif
 
 #include <stdlib.h>
-#include <glib/gi18n-lib.h>
+//#include <glib/gi18n-lib.h>
+#define _(X) X
+#define N_(X) X
 
 #include "cogl-private.h"
 #include "cogl-debug.h"
