@@ -1214,6 +1214,11 @@ AS_IF([test "x$enable_cogl_sharp" = "xyes" -a "x$have_mcs" != "xyes"],
 AM_CONDITIONAL(BUILD_COGL_SHARP, [test "$enable_cogl_sharp" = "yes"])
 AC_SUBST(MCS)
 
+PKG_CHECK_MODULES(MONO_NUNIT, [mono-nunit], [have_nunit=yes], [have_nunit=no])
+AS_IF([test "$enable_cogl_sharp" = "yes" -a "$have_nunit" = "yes"],
+      [enable_nunit=yes], [enable_nunit=no])
+AM_CONDITIONAL(BUILD_NUNIT_TESTS, [test "$enable_nunit" = "yes"])
+
 dnl ================================================================
 dnl What needs to be substituted in other files
 dnl ================================================================
@@ -1347,7 +1352,7 @@ echo " • Extra:"
 echo "        Build API reference: ${enable_gtk_doc}"
 echo "        Build introspection data: ${enable_introspection}"
 echo "        Enable internationalization: ${USE_NLS}"
-echo "        Build C# binding: ${enable_cogl_sharp}"
+echo "        Build C# binding: ${enable_cogl_sharp} (unit tests: ${enable_nunit})"
 
 echo ""
 

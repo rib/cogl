@@ -55,7 +55,7 @@ namespace Cogl
         [DllImport("cogl2.dll")]
         private static extern void cogl_color_premultiply(ref Color color);
 
-        public void Premuliply()
+        public void Premultiply()
         {
             cogl_color_premultiply(ref this);
         }

@@ -1,4 +1,3 @@
-
 assemblydir = $(libdir)/cogl
 assembly_DATA = cogl2-sharp.dll cogl2-sharp.dll.config cogl2-sharp.dll.mdb
 
@@ -29,3 +28,21 @@ CLEANFILES =			\
 DISTCLEANFILES =		\
 	AssemblyInfo.cs		\
 	$(NULL)
+
+if BUILD_NUNIT_TESTS
+noinst_DATA = CoglTests.dll
+
+TESTS = launch-tests
+
+launch-tests: CoglTests.dll
+
+tests_sources =			\
+	tests/TestColor.cs	\
+	$(NULL)
+
+CoglTests.dll: $(tests_sources)
+	$(MCS) $(CSFLAGS) @$(srcdir)/CoglTests.rsp -lib:$(top_builddir)/cogl-sharp -r:cogl2-sharp.dll $(MONO_NUNIT_LIBS) $(tests_sources)
+
+EXTRA_DIST += $(tests_sources)
+CLEANFILES += CoglTests.dll
+endif

@@ -32,6 +32,7 @@ stamp-marshal
 *.typelib
 /cogl-pango/cogl-pango.rc
 /cogl-sharp/AssemblyInfo.cs
+/cogl-sharp/TestResult.xml
 /cogl/cogl.rc
 /cogl/cogl-defines.h
 /cogl/cogl-defines.h.win32
