@@ -36,6 +36,22 @@ namespace Cogl
         public float blue;
         public float alpha;
 
+        public Color(float r, float g, float b, float a)
+        {
+            red = r;
+            green = g;
+            blue = b;
+            alpha = a;
+        }
+
+        public Color(byte r, byte g, byte b, byte a)
+        {
+            red = r / 255.0f;
+            green = g / 255.0f;
+            blue = b / 255.0f;
+            alpha = a / 255.0f;
+        }
+
         [DllImport("cogl2.dll")]
         private static extern void cogl_color_premultiply(ref Color color);
 
