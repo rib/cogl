@@ -1197,6 +1197,24 @@ COGL_DEFINES_EXTRA="$COGL_DEFINES_EXTRA
 "
 
 dnl ================================================================
+dnl C# bindings
+dnl ================================================================
+AC_PATH_PROG(MCS, [mcs], [no])
+AS_IF([test "x$MCS" != "xno"], [have_mcs=yes])
+
+AC_ARG_ENABLE(
+  [cogl-sharp],
+  [AC_HELP_STRING([--enable-cogl-sharp=@<:@no/yes@:>@], [Build C sharp bindings @<:@default=auto@:>@])],
+  [],
+  [enable_cogl_sharp=$have_mcs]
+)
+AS_IF([test "x$enable_cogl_sharp" = "xyes" -a "x$have_mcs" != "xyes"],
+      [AC_MSG_ERROR([Could not find a C sharp compiler])])
+
+AM_CONDITIONAL(BUILD_COGL_SHARP, [test "$enable_cogl_sharp" = "yes"])
+AC_SUBST(MCS)
+
+dnl ================================================================
 dnl What needs to be substituted in other files
 dnl ================================================================
 COGL_DEFINES="$COGL_DEFINES_EXTRA"
@@ -1261,6 +1279,9 @@ cogl-pango/cogl-pango2.pc
 cogl-pango/cogl-pango.rc
 cogl-gles2/Makefile
 cogl-gles2/cogl-gles2-experimental.pc
+cogl-sharp/Makefile
+cogl-sharp/AssemblyInfo.cs
+cogl-sharp/cogl2-sharp.pc
 doc/Makefile
 doc/reference/Makefile
 doc/reference/cogl2/Makefile
@@ -1326,6 +1347,7 @@ echo " • Extra:"
 echo "        Build API reference: ${enable_gtk_doc}"
 echo "        Build introspection data: ${enable_introspection}"
 echo "        Enable internationalization: ${USE_NLS}"
+echo "        Build C# binding: ${enable_cogl_sharp}"
 
 echo ""
 

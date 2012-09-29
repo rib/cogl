@@ -8,6 +8,10 @@ if BUILD_COGL_GLES2
 SUBDIRS += cogl-gles2
 endif
 
+if BUILD_COGL_SHARP
+SUBDIRS += cogl-sharp
+endif
+
 SUBDIRS += examples doc po build
 
 ACLOCAL_AMFLAGS = -I build/autotools ${ACLOCAL_FLAGS}

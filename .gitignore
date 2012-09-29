@@ -13,6 +13,8 @@ compile
 *.la
 *.gcov
 *.exe
+*.dll
+*.mdb
 /README
 stamp-enum-types
 stamp-marshal
@@ -29,6 +31,7 @@ stamp-marshal
 *.gir
 *.typelib
 /cogl-pango/cogl-pango.rc
+/cogl-sharp/AssemblyInfo.cs
 /cogl/cogl.rc
 /cogl/cogl-defines.h
 /cogl/cogl-defines.h.win32

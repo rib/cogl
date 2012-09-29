@@ -1,0 +1,8 @@
+prefix=@prefix@
+assemblies_dir=${prefix}/lib/cogl
+Librairies=${assemblies_dir}/cogl2-sharp.dll
+
+Name: Cogl2 C# binding
+Description: An object oriented GL/GLES Abstraction/Utility Layer
+Version: @COGL_VERSION@
+Libs: -r:cogl2-sharp.dll

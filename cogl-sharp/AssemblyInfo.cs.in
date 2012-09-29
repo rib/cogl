@@ -1,0 +1,4 @@
+using System.Reflection;
+using System.Runtime.CompilerServices;
+
+[assembly:AssemblyVersion ("@COGL_MAJOR_VERSION@.@COGL_MINOR_VERSION@.*")]
