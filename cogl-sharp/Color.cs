@@ -51,5 +51,10 @@ namespace Cogl
         {
             cogl_color_unpremultiply(ref this);
         }
+
+        public override String ToString()
+        {
+            return String.Format("({0},{1},{2},{3})", Red, Green, Blue, Alpha);
+        }
     }
 }
