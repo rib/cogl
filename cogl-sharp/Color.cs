@@ -31,10 +31,10 @@ namespace Cogl
     [StructLayout(LayoutKind.Sequential)]
     public struct Color
     {
-        public float Red { get; set; }
-        public float Green { get; set; }
-        public float Blue { get; set; }
-        public float Alpha { get; set; }
+        public float red;
+        public float green;
+        public float blue;
+        public float alpha;
 
         [DllImport("cogl2.dll")]
         private static extern void cogl_color_premultiply(ref Color color);
@@ -54,7 +54,7 @@ namespace Cogl
 
         public override String ToString()
         {
-            return String.Format("({0},{1},{2},{3})", Red, Green, Blue, Alpha);
+            return String.Format("({0},{1},{2},{3})", red, green, blue, alpha);
         }
     }
 }
