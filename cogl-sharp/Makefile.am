@@ -6,6 +6,7 @@ pkgconfig_DATA = cogl2-sharp.pc
 
 sources =		\
 	Color.cs	\
+	Matrix.cs	\
 	AssemblyInfo.cs	\
 	$(NULL)
 
@@ -38,6 +39,7 @@ launch-tests: CoglTests.dll
 
 tests_sources =			\
 	tests/TestColor.cs	\
+	tests/TestMatrix.cs	\
 	$(NULL)
 
 CoglTests.dll: $(tests_sources)
