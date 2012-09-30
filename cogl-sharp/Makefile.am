@@ -1,3 +1,7 @@
+V_MCS = $(v_MCS_$(V))
+v_MCS_ = $(v_MCS_$(AM_DEFAULT_VERBOSITY))
+v_MCS_0 = @echo "  MCS   " $@;
+
 assemblydir = $(libdir)/cogl
 assembly_DATA = cogl2-sharp.dll cogl2-sharp.dll.config cogl2-sharp.dll.mdb
 
@@ -12,7 +16,7 @@ sources =		\
 
 cogl2-sharp.dll: $(sources)
 	@rm -f cogl2-sharp.dll.mdb
-	$(MCS) $(CSFLAGS) @$(srcdir)/cogl2-sharp.rsp -debug $(sources)
+	$(V_MCS)$(MCS) $(CSFLAGS) @$(srcdir)/cogl2-sharp.rsp -debug $(sources)
 
 cogl2-sharp.dll.mdb: cogl2-sharp.dll
 
@@ -43,7 +47,7 @@ tests_sources =			\
 	$(NULL)
 
 CoglTests.dll: $(tests_sources)
-	$(MCS) $(CSFLAGS) @$(srcdir)/CoglTests.rsp -lib:$(top_builddir)/cogl-sharp -r:cogl2-sharp.dll $(MONO_NUNIT_LIBS) $(tests_sources)
+	$(V_MCS)$(MCS) $(CSFLAGS) @$(srcdir)/CoglTests.rsp -lib:$(top_builddir)/cogl-sharp -r:cogl2-sharp.dll $(MONO_NUNIT_LIBS) $(tests_sources)
 
 EXTRA_DIST += $(tests_sources)
 CLEANFILES += CoglTests.dll
