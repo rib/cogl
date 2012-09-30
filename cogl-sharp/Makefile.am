@@ -9,8 +9,13 @@ pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = cogl2-sharp.pc
 
 sources =		\
+	BufferBit.cs	\
 	Color.cs	\
+	Context.cs	\
+	FrameBuffer.cs	\
 	Matrix.cs	\
+	Object.cs	\
+	OnScreen.cs	\
 	AssemblyInfo.cs	\
 	$(NULL)
 
