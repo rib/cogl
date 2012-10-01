@@ -8,20 +8,21 @@ assembly_DATA = cogl2-sharp.dll cogl2-sharp.dll.config cogl2-sharp.dll.mdb
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = cogl2-sharp.pc
 
-sources =		\
-	BufferBit.cs	\
-	Color.cs	\
-	ColorMask.cs	\
-	Context.cs	\
-	FrameBuffer.cs	\
-	_FrameBuffer.cs	\
-	Matrix.cs	\
-	Object.cs	\
-	OnScreen.cs	\
-	Pipeline.cs	\
-	_Pipeline.cs	\
-	PixelFormat.cs	\
-	AssemblyInfo.cs	\
+sources =			\
+	BufferBit.cs		\
+	Color.cs		\
+	ColorMask.cs		\
+	Context.cs		\
+	FrameBuffer.cs		\
+	_FrameBuffer.cs		\
+	Matrix.cs		\
+	Object.cs		\
+	OnScreen.cs		\
+	Pipeline.cs		\
+	_Pipeline.cs		\
+	PipelineWrapMode.cs	\
+	PixelFormat.cs		\
+	AssemblyInfo.cs		\
 	$(NULL)
 
 cogl2-sharp.dll: $(sources)

@@ -40,6 +40,30 @@ namespace Cogl
         }
 
         [DllImport("cogl2.dll")]
+        public static extern PipelineWrapMode cogl_pipeline_get_layer_wrap_mode_p(IntPtr o, int layer_index);
+
+        public PipelineWrapMode GetLayerWrapModeP(int layer_index)
+        {
+            return cogl_pipeline_get_layer_wrap_mode_p(handle, layer_index);
+        }
+
+        [DllImport("cogl2.dll")]
+        public static extern PipelineWrapMode cogl_pipeline_get_layer_wrap_mode_s(IntPtr o, int layer_index);
+
+        public PipelineWrapMode GetLayerWrapModeS(int layer_index)
+        {
+            return cogl_pipeline_get_layer_wrap_mode_s(handle, layer_index);
+        }
+
+        [DllImport("cogl2.dll")]
+        public static extern PipelineWrapMode cogl_pipeline_get_layer_wrap_mode_t(IntPtr o, int layer_index);
+
+        public PipelineWrapMode GetLayerWrapModeT(int layer_index)
+        {
+            return cogl_pipeline_get_layer_wrap_mode_t(handle, layer_index);
+        }
+
+        [DllImport("cogl2.dll")]
         public static extern int cogl_pipeline_get_n_layers(IntPtr o);
 
         public int GetNLayers()
@@ -109,6 +133,38 @@ namespace Cogl
         public void SetLayerMatrix(int layer_index, ref Matrix matrix)
         {
             cogl_pipeline_set_layer_matrix(handle, layer_index, ref matrix);
+        }
+
+        [DllImport("cogl2.dll")]
+        public static extern void cogl_pipeline_set_layer_wrap_mode(IntPtr o, int layer_index, PipelineWrapMode mode);
+
+        public void SetLayerWrapMode(int layer_index, PipelineWrapMode mode)
+        {
+            cogl_pipeline_set_layer_wrap_mode(handle, layer_index, mode);
+        }
+
+        [DllImport("cogl2.dll")]
+        public static extern void cogl_pipeline_set_layer_wrap_mode_p(IntPtr o, int layer_index, PipelineWrapMode mode);
+
+        public void SetLayerWrapModeP(int layer_index, PipelineWrapMode mode)
+        {
+            cogl_pipeline_set_layer_wrap_mode_p(handle, layer_index, mode);
+        }
+
+        [DllImport("cogl2.dll")]
+        public static extern void cogl_pipeline_set_layer_wrap_mode_s(IntPtr o, int layer_index, PipelineWrapMode mode);
+
+        public void SetLayerWrapModeS(int layer_index, PipelineWrapMode mode)
+        {
+            cogl_pipeline_set_layer_wrap_mode_s(handle, layer_index, mode);
+        }
+
+        [DllImport("cogl2.dll")]
+        public static extern void cogl_pipeline_set_layer_wrap_mode_t(IntPtr o, int layer_index, PipelineWrapMode mode);
+
+        public void SetLayerWrapModeT(int layer_index, PipelineWrapMode mode)
+        {
+            cogl_pipeline_set_layer_wrap_mode_t(handle, layer_index, mode);
         }
 
         [DllImport("cogl2.dll")]

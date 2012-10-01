@@ -9,6 +9,7 @@ C_NS = "http://www.gtk.org/introspection/c/1.0"
 enum_types = (
     "BufferBit",
     "ColorMask",
+    "PipelineWrapMode",
     "PixelFormat"
 )
 
@@ -70,7 +71,8 @@ def make_enum_name(enum_name, member_name):
     if uppercase and member_name != 'any':
         return member_name.upper()
 
-    return member_name.capitalize()
+    words = member_name.split('_')
+    return "".join(map(lambda x: x.capitalize(), words))
 
 def do_generate_enum(node, is_flags):
         type_name = node.getAttribute("name")
