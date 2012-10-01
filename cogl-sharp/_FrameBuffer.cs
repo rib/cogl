@@ -71,6 +71,14 @@ namespace Cogl
         }
 
         [DllImport("cogl2.dll")]
+        public static extern PixelFormat cogl_framebuffer_get_color_format(IntPtr o);
+
+        public PixelFormat GetColorFormat()
+        {
+            return cogl_framebuffer_get_color_format(handle);
+        }
+
+        [DllImport("cogl2.dll")]
         public static extern int cogl_framebuffer_get_green_bits(IntPtr o);
 
         public int GetGreenBits()
