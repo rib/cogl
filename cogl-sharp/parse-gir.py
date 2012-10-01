@@ -14,6 +14,7 @@ enum_types = (
     "PipelineFilter",
     "PipelineWrapMode",
     "PixelFormat",
+    "VerticesMode",
     "Winding"
 )
 
@@ -35,7 +36,10 @@ name_overrides = {
         'class': 'FrameBuffer',
         'methods': {
             'clear4f', 'clear'
-        }
+        },
+        'blacklist': (
+            'vdraw_attributes',
+        )
     },
     'Onscreen': {
         'class': 'OnScreen'

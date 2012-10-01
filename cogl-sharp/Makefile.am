@@ -25,6 +25,7 @@ sources =			\
 	PipelineFilter.cs	\
 	PipelineWrapMode.cs	\
 	PixelFormat.cs		\
+	VerticesMode.cs		\
 	Winding.cs		\
 	AssemblyInfo.cs		\
 	$(NULL)
