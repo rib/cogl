@@ -40,6 +40,22 @@ namespace Cogl
         }
 
         [DllImport("cogl2.dll")]
+        public static extern PipelineFilter cogl_pipeline_get_layer_mag_filter(IntPtr o, int layer_index);
+
+        public PipelineFilter GetLayerMagFilter(int layer_index)
+        {
+            return cogl_pipeline_get_layer_mag_filter(handle, layer_index);
+        }
+
+        [DllImport("cogl2.dll")]
+        public static extern PipelineFilter cogl_pipeline_get_layer_min_filter(IntPtr o, int layer_index);
+
+        public PipelineFilter GetLayerMinFilter(int layer_index)
+        {
+            return cogl_pipeline_get_layer_min_filter(handle, layer_index);
+        }
+
+        [DllImport("cogl2.dll")]
         public static extern PipelineWrapMode cogl_pipeline_get_layer_wrap_mode_p(IntPtr o, int layer_index);
 
         public PipelineWrapMode GetLayerWrapModeP(int layer_index)
@@ -125,6 +141,14 @@ namespace Cogl
         public void SetLayerCombineConstant(int layer_index, ref Color constant)
         {
             cogl_pipeline_set_layer_combine_constant(handle, layer_index, ref constant);
+        }
+
+        [DllImport("cogl2.dll")]
+        public static extern void cogl_pipeline_set_layer_filters(IntPtr o, int layer_index, PipelineFilter min_filter, PipelineFilter mag_filter);
+
+        public void SetLayerFilters(int layer_index, PipelineFilter min_filter, PipelineFilter mag_filter)
+        {
+            cogl_pipeline_set_layer_filters(handle, layer_index, min_filter, mag_filter);
         }
 
         [DllImport("cogl2.dll")]
