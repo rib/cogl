@@ -18,6 +18,8 @@ sources =		\
 	Matrix.cs	\
 	Object.cs	\
 	OnScreen.cs	\
+	Pipeline.cs	\
+	_Pipeline.cs	\
 	PixelFormat.cs	\
 	AssemblyInfo.cs	\
 	$(NULL)

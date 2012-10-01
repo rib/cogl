@@ -14,7 +14,8 @@ enum_types = (
 
 # object types to dump (.gir names)
 object_types = (
-    "Framebuffer"
+    "Framebuffer",
+    "Pipeline",
 )
 
 # The struct types (value types) are written by hand
@@ -36,6 +37,11 @@ name_overrides = {
     },
     'Offscreen': {
         'class': 'OffScreen'
+    },
+    'Pipeline': {
+        'blacklist': (
+            'set_uniform_float', 'set_uniform_int'
+        )
     },
     'PixelFormat': {
         'uppercase': 1
@@ -159,15 +165,29 @@ def derive_cs_type(gir_type, c_type):
 
     return gir_type
 
+def is_blacklisted(gir_name, overrides):
+    if not overrides:
+        return False
+
+    if not 'blacklist' in overrides:
+        return False
+
+    return gir_name in overrides['blacklist']
+
 def generate_method(node, overrides, fo):
+    gir_name = node.getAttribute("name")
 
     native_method_name = node.getAttributeNS(C_NS, "identifier")
     native_return_value = "void"
     native_params = ['IntPtr o']
-    cs_method_name = make_method_name(node.getAttribute("name"))
+    cs_method_name = make_method_name(gir_name)
     cs_return_value = "void"
     cs_params = []
     call_params = ['handle']
+
+    if is_blacklisted(gir_name, overrides):
+        print("  Skipping %s, blacklisted" % cs_method_name)
+        return
 
     # Let's figure out if we can generate that method (ie if we know how to
     # handle the types of the return value and of the parameters).
@@ -189,6 +209,8 @@ def generate_method(node, overrides, fo):
 
     native_return_value = derive_native_type(return_type_name, return_c_type)
     cs_return_value = derive_cs_type(return_type_name, return_c_type)
+
+    return_object = return_type_name in object_types
 
     # ... then the parameters
     params_list = node.getElementsByTagName("parameters")
@@ -224,7 +246,8 @@ def generate_method(node, overrides, fo):
             t = derive_cs_type(gir_type, c_type)
             cs_params.append(ref + t + ' ' + param_name)
 
-            call_params.append(ref + param_name)
+            handle = '.Handle' if gir_type in object_types else ''
+            call_params.append(ref + param_name + handle)
 
     if not generatable:
         return
@@ -238,8 +261,13 @@ def generate_method(node, overrides, fo):
     fo.write("        public %s %s(%s)\n" %
              (cs_return_value, cs_method_name, ", ".join(cs_params)))
     fo.write("        {\n")
-    fo.write("            %s%s(%s);\n" %
-             (return_str, native_method_name, ", ".join(call_params)))
+    if not return_object:
+        fo.write("            %s%s(%s);\n" %
+                 (return_str, native_method_name, ", ".join(call_params)))
+    else:
+        fo.write("            IntPtr p = %s(%s);\n" %
+                 (native_method_name, ", ".join(call_params)))
+        fo.write("            return new %s(p);\n" % cs_return_value)
     fo.write("        }\n\n")
 
 def generate_classes(doc):
@@ -251,7 +279,7 @@ def generate_classes(doc):
         overrides = None
         if type_name in name_overrides:
             overrides = name_overrides[type_name]
-        if 'class' in overrides:
+        if overrides and 'class' in overrides:
             type_name = overrides['class']
 
         print("Generate _%s" % type_name + ".cs")

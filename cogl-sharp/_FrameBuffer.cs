@@ -31,6 +31,30 @@ namespace Cogl
         }
 
         [DllImport("cogl2.dll")]
+        public static extern void cogl_framebuffer_draw_multitextured_rectangle(IntPtr o, IntPtr pipeline, float x_1, float y_1, float x_2, float y_2, float tex_coords, int tex_coords_len);
+
+        public void DrawMultitexturedRectangle(Pipeline pipeline, float x_1, float y_1, float x_2, float y_2, float tex_coords, int tex_coords_len)
+        {
+            cogl_framebuffer_draw_multitextured_rectangle(handle, pipeline.Handle, x_1, y_1, x_2, y_2, tex_coords, tex_coords_len);
+        }
+
+        [DllImport("cogl2.dll")]
+        public static extern void cogl_framebuffer_draw_rectangle(IntPtr o, IntPtr pipeline, float x_1, float y_1, float x_2, float y_2);
+
+        public void DrawRectangle(Pipeline pipeline, float x_1, float y_1, float x_2, float y_2)
+        {
+            cogl_framebuffer_draw_rectangle(handle, pipeline.Handle, x_1, y_1, x_2, y_2);
+        }
+
+        [DllImport("cogl2.dll")]
+        public static extern void cogl_framebuffer_draw_textured_rectangle(IntPtr o, IntPtr pipeline, float x_1, float y_1, float x_2, float y_2, float s_1, float t_1, float s_2, float t_2);
+
+        public void DrawTexturedRectangle(Pipeline pipeline, float x_1, float y_1, float x_2, float y_2, float s_1, float t_1, float s_2, float t_2)
+        {
+            cogl_framebuffer_draw_textured_rectangle(handle, pipeline.Handle, x_1, y_1, x_2, y_2, s_1, t_1, s_2, t_2);
+        }
+
+        [DllImport("cogl2.dll")]
         public static extern void cogl_framebuffer_finish(IntPtr o);
 
         public void Finish()
