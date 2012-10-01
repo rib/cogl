@@ -16,6 +16,14 @@ namespace Cogl
         }
 
         [DllImport("cogl2.dll")]
+        public static extern PipelineAlphaFunc cogl_pipeline_get_alpha_test_function(IntPtr o);
+
+        public PipelineAlphaFunc GetAlphaTestFunction()
+        {
+            return cogl_pipeline_get_alpha_test_function(handle);
+        }
+
+        [DllImport("cogl2.dll")]
         public static extern float cogl_pipeline_get_alpha_test_reference(IntPtr o);
 
         public float GetAlphaTestReference()
@@ -117,6 +125,14 @@ namespace Cogl
         public void RemoveLayer(int layer_index)
         {
             cogl_pipeline_remove_layer(handle, layer_index);
+        }
+
+        [DllImport("cogl2.dll")]
+        public static extern void cogl_pipeline_set_alpha_test_function(IntPtr o, PipelineAlphaFunc alpha_func, float alpha_reference);
+
+        public void SetAlphaTestFunction(PipelineAlphaFunc alpha_func, float alpha_reference)
+        {
+            cogl_pipeline_set_alpha_test_function(handle, alpha_func, alpha_reference);
         }
 
         [DllImport("cogl2.dll")]

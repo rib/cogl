@@ -20,6 +20,7 @@ sources =			\
 	OnScreen.cs		\
 	Pipeline.cs		\
 	_Pipeline.cs		\
+	PipelineAlphaFunc.cs	\
 	PipelineCullFaceMode.cs	\
 	PipelineFilter.cs	\
 	PipelineWrapMode.cs	\
