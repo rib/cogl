@@ -7,7 +7,8 @@ C_NS = "http://www.gtk.org/introspection/c/1.0"
 
 # enum types to dump (.gir names)
 enum_types = (
-    "BufferBit"
+    "BufferBit",
+    "ColorMask"
 )
 
 # object types to dump (.gir names)

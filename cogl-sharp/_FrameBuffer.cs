@@ -63,6 +63,14 @@ namespace Cogl
         }
 
         [DllImport("cogl2.dll")]
+        public static extern ColorMask cogl_framebuffer_get_color_mask(IntPtr o);
+
+        public ColorMask GetColorMask()
+        {
+            return cogl_framebuffer_get_color_mask(handle);
+        }
+
+        [DllImport("cogl2.dll")]
         public static extern int cogl_framebuffer_get_green_bits(IntPtr o);
 
         public int GetGreenBits()
@@ -252,6 +260,14 @@ namespace Cogl
         public void Scale(float x, float y, float z)
         {
             cogl_framebuffer_scale(handle, x, y, z);
+        }
+
+        [DllImport("cogl2.dll")]
+        public static extern void cogl_framebuffer_set_color_mask(IntPtr o, ColorMask color_mask);
+
+        public void SetColorMask(ColorMask color_mask)
+        {
+            cogl_framebuffer_set_color_mask(handle, color_mask);
         }
 
         [DllImport("cogl2.dll")]

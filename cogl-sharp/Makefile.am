@@ -11,6 +11,7 @@ pkgconfig_DATA = cogl2-sharp.pc
 sources =		\
 	BufferBit.cs	\
 	Color.cs	\
+	ColorMask.cs	\
 	Context.cs	\
 	FrameBuffer.cs	\
 	_FrameBuffer.cs	\
