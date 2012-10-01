@@ -28,20 +28,9 @@ using System.Runtime.InteropServices;
 
 namespace Cogl
 {
-    public class FrameBuffer : Cogl.Object
+    public partial class FrameBuffer : Cogl.Object
     {
         public FrameBuffer(IntPtr h) : base(h) {}
         public FrameBuffer() {}
-
-        [DllImport("cogl2.dll")]
-        private static extern void cogl_framebuffer_clear(IntPtr fb,
-                                                          BufferBit buffers,
-                                                          ref Color color);
-
-        public void Clear(BufferBit buffers, ref Color color)
-        {
-            cogl_framebuffer_clear(handle, buffers, ref color);
-        }
     }
-
 }

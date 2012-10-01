@@ -13,6 +13,7 @@ sources =		\
 	Color.cs	\
 	Context.cs	\
 	FrameBuffer.cs	\
+	_FrameBuffer.cs	\
 	Matrix.cs	\
 	Object.cs	\
 	OnScreen.cs	\
