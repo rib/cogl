@@ -11,7 +11,8 @@ enum_types = (
     "ColorMask",
     "PipelineFilter",
     "PipelineWrapMode",
-    "PixelFormat"
+    "PixelFormat",
+    "Winding"
 )
 
 # object types to dump (.gir names)
