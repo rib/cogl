@@ -40,6 +40,14 @@ namespace Cogl
         }
 
         [DllImport("cogl2.dll")]
+        public static extern PipelineCullFaceMode cogl_pipeline_get_cull_face_mode(IntPtr o);
+
+        public PipelineCullFaceMode GetCullFaceMode()
+        {
+            return cogl_pipeline_get_cull_face_mode(handle);
+        }
+
+        [DllImport("cogl2.dll")]
         public static extern Winding cogl_pipeline_get_front_face_winding(IntPtr o);
 
         public Winding GetFrontFaceWinding()
@@ -141,6 +149,14 @@ namespace Cogl
         public void SetColorMask(ColorMask color_mask)
         {
             cogl_pipeline_set_color_mask(handle, color_mask);
+        }
+
+        [DllImport("cogl2.dll")]
+        public static extern void cogl_pipeline_set_cull_face_mode(IntPtr o, PipelineCullFaceMode cull_face_mode);
+
+        public void SetCullFaceMode(PipelineCullFaceMode cull_face_mode)
+        {
+            cogl_pipeline_set_cull_face_mode(handle, cull_face_mode);
         }
 
         [DllImport("cogl2.dll")]
