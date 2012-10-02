@@ -39,7 +39,7 @@ name_overrides = {
             'clear4f', 'clear'
         },
         'blacklist': (
-            'vdraw_attributes',
+            'vdraw_attributes', 'draw_rectangles'
         )
     },
     'Onscreen': {
@@ -61,6 +61,7 @@ name_overrides = {
 basic_types_map = {
     'gfloat': 'float',
     'gint': 'int',
+    'guint': 'uint',
     'Bool': 'bool', # CoglBool is 4 bytes, which the the default marshalling
                     # for C#'s bool (which itself is 1 byte).
 }

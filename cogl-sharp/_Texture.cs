@@ -23,11 +23,27 @@ namespace Cogl
         }
 
         [DllImport("cogl2.dll")]
+        public static extern uint cogl_texture_get_height(IntPtr o);
+
+        public uint GetHeight()
+        {
+            return cogl_texture_get_height(handle);
+        }
+
+        [DllImport("cogl2.dll")]
         public static extern int cogl_texture_get_max_waste(IntPtr o);
 
         public int GetMaxWaste()
         {
             return cogl_texture_get_max_waste(handle);
+        }
+
+        [DllImport("cogl2.dll")]
+        public static extern uint cogl_texture_get_width(IntPtr o);
+
+        public uint GetWidth()
+        {
+            return cogl_texture_get_width(handle);
         }
 
         [DllImport("cogl2.dll")]
