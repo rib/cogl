@@ -22,6 +22,7 @@ enum_types = (
 object_types = (
     "Framebuffer",
     "Pipeline",
+    "Texture",
 )
 
 # The struct types (value types) are written by hand

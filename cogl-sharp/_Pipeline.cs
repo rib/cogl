@@ -80,6 +80,15 @@ namespace Cogl
         }
 
         [DllImport("cogl2.dll")]
+        public static extern IntPtr cogl_pipeline_get_layer_texture(IntPtr o, int layer_index);
+
+        public Texture GetLayerTexture(int layer_index)
+        {
+            IntPtr p = cogl_pipeline_get_layer_texture(handle, layer_index);
+            return new Texture(p);
+        }
+
+        [DllImport("cogl2.dll")]
         public static extern PipelineWrapMode cogl_pipeline_get_layer_wrap_mode_p(IntPtr o, int layer_index);
 
         public PipelineWrapMode GetLayerWrapModeP(int layer_index)
@@ -205,6 +214,14 @@ namespace Cogl
         public void SetLayerMatrix(int layer_index, ref Matrix matrix)
         {
             cogl_pipeline_set_layer_matrix(handle, layer_index, ref matrix);
+        }
+
+        [DllImport("cogl2.dll")]
+        public static extern void cogl_pipeline_set_layer_texture(IntPtr o, int layer_index, IntPtr texture);
+
+        public void SetLayerTexture(int layer_index, Texture texture)
+        {
+            cogl_pipeline_set_layer_texture(handle, layer_index, texture.Handle);
         }
 
         [DllImport("cogl2.dll")]

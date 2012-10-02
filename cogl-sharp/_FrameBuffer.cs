@@ -95,6 +95,15 @@ namespace Cogl
         }
 
         [DllImport("cogl2.dll")]
+        public static extern IntPtr cogl_framebuffer_get_depth_texture(IntPtr o);
+
+        public Texture GetDepthTexture()
+        {
+            IntPtr p = cogl_framebuffer_get_depth_texture(handle);
+            return new Texture(p);
+        }
+
+        [DllImport("cogl2.dll")]
         public static extern PixelFormat cogl_framebuffer_get_color_format(IntPtr o);
 
         public PixelFormat GetColorFormat()

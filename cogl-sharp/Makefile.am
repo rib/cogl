@@ -25,6 +25,8 @@ sources =			\
 	PipelineFilter.cs	\
 	PipelineWrapMode.cs	\
 	PixelFormat.cs		\
+	Texture.cs		\
+	_Texture.cs		\
 	VerticesMode.cs		\
 	Winding.cs		\
 	AssemblyInfo.cs		\
