@@ -104,6 +104,22 @@ namespace Cogl
         }
 
         [DllImport("cogl2.dll")]
+        public static extern bool cogl_framebuffer_get_depth_texture_enabled(IntPtr o);
+
+        public bool GetDepthTextureEnabled()
+        {
+            return cogl_framebuffer_get_depth_texture_enabled(handle);
+        }
+
+        [DllImport("cogl2.dll")]
+        public static extern bool cogl_framebuffer_get_dither_enabled(IntPtr o);
+
+        public bool GetDitherEnabled()
+        {
+            return cogl_framebuffer_get_dither_enabled(handle);
+        }
+
+        [DllImport("cogl2.dll")]
         public static extern PixelFormat cogl_framebuffer_get_color_format(IntPtr o);
 
         public PixelFormat GetColorFormat()
@@ -309,6 +325,22 @@ namespace Cogl
         public void SetColorMask(ColorMask color_mask)
         {
             cogl_framebuffer_set_color_mask(handle, color_mask);
+        }
+
+        [DllImport("cogl2.dll")]
+        public static extern void cogl_framebuffer_set_depth_texture_enabled(IntPtr o, bool enabled);
+
+        public void SetDepthTextureEnabled(bool enabled)
+        {
+            cogl_framebuffer_set_depth_texture_enabled(handle, enabled);
+        }
+
+        [DllImport("cogl2.dll")]
+        public static extern void cogl_framebuffer_set_dither_enabled(IntPtr o, bool dither_enabled);
+
+        public void SetDitherEnabled(bool dither_enabled)
+        {
+            cogl_framebuffer_set_dither_enabled(handle, dither_enabled);
         }
 
         [DllImport("cogl2.dll")]

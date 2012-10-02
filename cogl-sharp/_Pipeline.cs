@@ -80,6 +80,14 @@ namespace Cogl
         }
 
         [DllImport("cogl2.dll")]
+        public static extern bool cogl_pipeline_get_layer_point_sprite_coords_enabled(IntPtr o, int layer_index);
+
+        public bool GetLayerPointSpriteCoordsEnabled(int layer_index)
+        {
+            return cogl_pipeline_get_layer_point_sprite_coords_enabled(handle, layer_index);
+        }
+
+        [DllImport("cogl2.dll")]
         public static extern IntPtr cogl_pipeline_get_layer_texture(IntPtr o, int layer_index);
 
         public Texture GetLayerTexture(int layer_index)

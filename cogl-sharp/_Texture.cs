@@ -15,11 +15,27 @@ namespace Cogl
         }
 
         [DllImport("cogl2.dll")]
+        public static extern bool cogl_texture_get_gl_texture(IntPtr o);
+
+        public bool GetGlTexture()
+        {
+            return cogl_texture_get_gl_texture(handle);
+        }
+
+        [DllImport("cogl2.dll")]
         public static extern int cogl_texture_get_max_waste(IntPtr o);
 
         public int GetMaxWaste()
         {
             return cogl_texture_get_max_waste(handle);
+        }
+
+        [DllImport("cogl2.dll")]
+        public static extern bool cogl_texture_is_sliced(IntPtr o);
+
+        public bool IsSliced()
+        {
+            return cogl_texture_is_sliced(handle);
         }
 
     }
