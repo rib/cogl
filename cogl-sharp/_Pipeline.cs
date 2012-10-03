@@ -225,6 +225,14 @@ namespace Cogl
         }
 
         [DllImport("cogl2.dll")]
+        public static extern void cogl_pipeline_set_layer_null_texture(IntPtr o, int layer_index, TextureType texure_type);
+
+        public void SetLayerNullTexture(int layer_index, TextureType texure_type)
+        {
+            cogl_pipeline_set_layer_null_texture(handle, layer_index, texure_type);
+        }
+
+        [DllImport("cogl2.dll")]
         public static extern void cogl_pipeline_set_layer_texture(IntPtr o, int layer_index, IntPtr texture);
 
         public void SetLayerTexture(int layer_index, Texture texture)

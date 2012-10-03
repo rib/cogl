@@ -27,6 +27,7 @@ sources =			\
 	PixelFormat.cs		\
 	Texture.cs		\
 	_Texture.cs		\
+	TextureType.cs		\
 	VerticesMode.cs		\
 	Winding.cs		\
 	AssemblyInfo.cs		\

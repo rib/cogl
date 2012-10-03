@@ -31,6 +31,10 @@ struct_types = (
     'Matrix'
 )
 
+hand_written_types = (
+    'TextureType'
+)
+
 # maps from .gir names to cogl-sharp types/methods
 name_overrides = {
     'Framebuffer': {
@@ -146,7 +150,8 @@ def known_type(gir_name):
     return (gir_name in enum_types or
             gir_name in object_types or
             gir_name in basic_types_map or
-            gir_name in struct_types)
+            gir_name in struct_types or
+            gir_name in hand_written_types)
 
 def is_pointer_type(c_type):
     return c_type.endswith("*")
@@ -162,6 +167,9 @@ def derive_native_type(gir_type, c_type):
         return 'IntPtr'
 
     if gir_type in enum_types:
+        return gir_type
+
+    if gir_type in hand_written_types:
         return gir_type
 
     if gir_type in basic_types_map:
