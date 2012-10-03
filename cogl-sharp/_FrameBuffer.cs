@@ -17,7 +17,7 @@ namespace Cogl
         [DllImport("cogl2.dll")]
         public static extern void cogl_framebuffer_clear4f(IntPtr o, BufferBit buffers, float red, float green, float blue, float alpha);
 
-        public void Clear4f(BufferBit buffers, float red, float green, float blue, float alpha)
+        public void Clear(BufferBit buffers, float red, float green, float blue, float alpha)
         {
             cogl_framebuffer_clear4f(handle, buffers, red, green, blue, alpha);
         }

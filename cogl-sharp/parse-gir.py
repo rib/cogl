@@ -40,7 +40,7 @@ name_overrides = {
     'Framebuffer': {
         'class': 'FrameBuffer',
         'methods': {
-            'clear4f', 'clear'
+            'clear4f': 'clear'
         },
         'blacklist': (
             'vdraw_attributes', 'draw_rectangles'
@@ -187,6 +187,15 @@ def derive_cs_type(gir_type, c_type):
 
     return gir_type
 
+def apply_name_override(gir_name, overrides):
+    if not overrides or not 'methods' in overrides:
+        return gir_name
+
+    if not gir_name in overrides['methods']:
+        return gir_name
+
+    return overrides['methods'][gir_name]
+
 def is_blacklisted(gir_name, overrides):
     if not overrides:
         return False
@@ -198,6 +207,8 @@ def is_blacklisted(gir_name, overrides):
 
 def generate_method(node, overrides, fo):
     gir_name = node.getAttribute("name")
+
+    gir_name = apply_name_override(gir_name, overrides)
 
     native_method_name = node.getAttributeNS(C_NS, "identifier")
     native_return_value = "void"
