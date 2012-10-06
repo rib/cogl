@@ -95,6 +95,14 @@ namespace Cogl
         }
 
         [DllImport("cogl2.dll")]
+        public static extern PixelFormat cogl_framebuffer_get_color_format(IntPtr o);
+
+        public PixelFormat GetColorFormat()
+        {
+            return cogl_framebuffer_get_color_format(handle);
+        }
+
+        [DllImport("cogl2.dll")]
         public static extern ColorMask cogl_framebuffer_get_color_mask(IntPtr o);
 
         public ColorMask GetColorMask()
@@ -125,14 +133,6 @@ namespace Cogl
         public bool GetDitherEnabled()
         {
             return cogl_framebuffer_get_dither_enabled(handle);
-        }
-
-        [DllImport("cogl2.dll")]
-        public static extern PixelFormat cogl_framebuffer_get_color_format(IntPtr o);
-
-        public PixelFormat GetColorFormat()
-        {
-            return cogl_framebuffer_get_color_format(handle);
         }
 
         [DllImport("cogl2.dll")]
