@@ -32,5 +32,27 @@ namespace Cogl
     {
         public Texture(IntPtr h) : base(h) {}
         public Texture() {}
+
+        [DllImport("cogl2.dll")]
+        public static extern IntPtr
+        cogl_texture_new_from_file(IntPtr s,
+                                   TextureFlags flags,
+                                   PixelFormat internal_format,
+                                   out IntPtr error);
+
+        public Texture(string filename,
+                       TextureFlags flags = TextureFlags.None,
+                       PixelFormat internal_format = PixelFormat.Any)
+        {
+            IntPtr filename_utf8, error;
+
+            filename_utf8 = Marshaller.StringToUtf8Ptr(filename);
+            handle = cogl_texture_new_from_file(filename_utf8, flags,
+                                           internal_format, out error);
+            Marshal.FreeHGlobal(filename_utf8);
+
+            if (error != IntPtr.Zero)
+                throw new Cogl.Exception(error);
+        }
     }
 }
