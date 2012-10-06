@@ -64,12 +64,20 @@ TESTS = launch-tests
 launch-tests: CoglTests.dll
 
 tests_sources =			\
+	tests/Config.cs		\
 	tests/TestColor.cs	\
 	tests/TestMatrix.cs	\
+	tests/TestTexture.cs	\
 	$(NULL)
 
 CoglTests.dll: $(tests_sources)
 	$(V_MCS)$(MCS) $(CSFLAGS) @$(srcdir)/CoglTests.rsp -lib:$(top_builddir)/cogl-sharp -r:cogl2-sharp.dll $(MONO_NUNIT_LIBS) $(tests_sources)
+
+REWRITE = sed -e "s|\@testsdir\@|$(srcdir)/tests|g"
+
+tests/Config.cs: tests/Config.cs.in Makefile
+	$(AM_V_GEN)$(REWRITE) $@.in > $@.tmp
+	@mv $@.tmp $@
 
 EXTRA_DIST += $(tests_sources)
 CLEANFILES += CoglTests.dll

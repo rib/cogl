@@ -1,0 +1,7 @@
+namespace Cogl.Test
+{
+	internal static class Config
+	{
+	    internal const string TESTSDIR = "@testsdir@";
+	}
+}
