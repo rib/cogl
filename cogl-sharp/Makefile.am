@@ -27,6 +27,7 @@ sources =			\
 	PipelineFilter.cs	\
 	PipelineWrapMode.cs	\
 	PixelFormat.cs		\
+	Quaternion.cs		\
 	Texture.cs		\
 	_Texture.cs		\
 	TextureFlags.cs		\

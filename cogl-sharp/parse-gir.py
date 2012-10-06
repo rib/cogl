@@ -29,7 +29,8 @@ object_types = (
 # The struct types (value types) are written by hand
 struct_types = (
     'Color',
-    'Matrix'
+    'Matrix',
+    'Quaternion',
 )
 
 hand_written_types = (

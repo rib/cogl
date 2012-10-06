@@ -320,6 +320,14 @@ namespace Cogl
         }
 
         [DllImport("cogl2.dll")]
+        public static extern void cogl_framebuffer_rotate_quaternion(IntPtr o, ref Quaternion quaternion);
+
+        public void RotateQuaternion(ref Quaternion quaternion)
+        {
+            cogl_framebuffer_rotate_quaternion(handle, ref quaternion);
+        }
+
+        [DllImport("cogl2.dll")]
         public static extern void cogl_framebuffer_scale(IntPtr o, float x, float y, float z);
 
         public void Scale(float x, float y, float z)
