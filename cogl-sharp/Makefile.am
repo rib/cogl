@@ -20,6 +20,7 @@ sources =			\
 	Matrix.cs		\
 	Object.cs		\
 	OnScreen.cs		\
+	_OnScreen.cs		\
 	Pipeline.cs		\
 	_Pipeline.cs		\
 	PipelineAlphaFunc.cs	\

@@ -28,7 +28,7 @@ using System.Runtime.InteropServices;
 
 namespace Cogl
 {
-    public sealed class OnScreen : FrameBuffer
+    public sealed partial class OnScreen : FrameBuffer
     {
         public OnScreen(IntPtr h) : base(h) {}
 
@@ -39,22 +39,6 @@ namespace Cogl
         public OnScreen(Context ctx, int width, int height)
         {
             handle = cogl_onscreen_new(ctx.Handle, width, height);
-        }
-
-        [DllImport("cogl2.dll")]
-        private static extern IntPtr cogl_onscreen_show(IntPtr p);
-
-        public void Show()
-        {
-            cogl_onscreen_show(handle);
-        }
-
-        [DllImport("cogl2.dll")]
-        private static extern IntPtr cogl_onscreen_swap_buffers(IntPtr p);
-
-        public void SwapBuffers()
-        {
-            cogl_onscreen_swap_buffers(handle);
         }
     }
 }

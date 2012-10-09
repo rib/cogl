@@ -22,6 +22,7 @@ enum_types = (
 # object types to dump (.gir names)
 object_types = (
     "Framebuffer",
+    "Onscreen",
     "Pipeline",
     "Texture",
 )
@@ -49,7 +50,10 @@ name_overrides = {
         )
     },
     'Onscreen': {
-        'class': 'OnScreen'
+        'class': 'OnScreen',
+        'blacklist': (
+            'swap_region',
+        )
     },
     'Offscreen': {
         'class': 'OffScreen'
