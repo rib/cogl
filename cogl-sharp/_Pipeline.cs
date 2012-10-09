@@ -171,7 +171,7 @@ namespace Cogl
         [DllImport("cogl2.dll")]
         public static extern void cogl_pipeline_set_color4f(IntPtr o, float red, float green, float blue, float alpha);
 
-        public void SetColor4f(float red, float green, float blue, float alpha)
+        public void SetColor(float red, float green, float blue, float alpha)
         {
             cogl_pipeline_set_color4f(handle, red, green, blue, alpha);
         }

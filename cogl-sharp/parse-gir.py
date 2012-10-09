@@ -55,6 +55,9 @@ name_overrides = {
         'class': 'OffScreen'
     },
     'Pipeline': {
+        'methods': {
+            'set_color4f': 'set_color'
+        },
         'blacklist': (
             'set_uniform_float', 'set_uniform_int', 'set_uniform_matrix'
         )
