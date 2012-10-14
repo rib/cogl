@@ -169,5 +169,14 @@ namespace Cogl
         {
            return  cogl_matrix_get_inverse(ref this, ref inverse) == 0 ? false : true;
         }
+
+        public override string ToString()
+        {
+            return String.Format("{0} {1} {2} {3}\n{4} {5} {6} {7}\n" +
+                                 "{8} {9} {10} {11}\n{12} {13} {14} {15}\n",
+                                xx, xy, xz, xw, yx, yy, yz, yw, zx, zy, zz, zw,
+                                wx, wy, wz, ww);
+
+        }
     }
 }
