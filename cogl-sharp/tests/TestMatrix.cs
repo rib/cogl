@@ -40,5 +40,33 @@ namespace Cogl.Test
             Expect(i.zw, EqualTo(0.0f));
             Expect(i.ww, EqualTo(1.0f));
         }
+
+        [Test]
+        public void InitTranslation()
+        {
+            Matrix i;
+
+            i.InitTranslation(1.0f, 2.0f, 3.0f);
+
+            Expect(i.xx, EqualTo(1.0f));
+            Expect(i.yx, EqualTo(0.0f));
+            Expect(i.zx, EqualTo(0.0f));
+            Expect(i.wx, EqualTo(0.0f));
+
+            Expect(i.xy, EqualTo(0.0f));
+            Expect(i.yy, EqualTo(1.0f));
+            Expect(i.zy, EqualTo(0.0f));
+            Expect(i.wy, EqualTo(0.0f));
+
+            Expect(i.xz, EqualTo(0.0f));
+            Expect(i.yz, EqualTo(0.0f));
+            Expect(i.zz, EqualTo(1.0f));
+            Expect(i.wz, EqualTo(0.0f));
+
+            Expect(i.xw, EqualTo(1.0f));
+            Expect(i.yw, EqualTo(2.0f));
+            Expect(i.zw, EqualTo(3.0f));
+            Expect(i.ww, EqualTo(1.0f));
+        }
     }
 }

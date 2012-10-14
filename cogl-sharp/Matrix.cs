@@ -84,7 +84,7 @@ namespace Cogl
 
         public void InitTranslation(float tx, float ty, float tz)
         {
-            cogl_matrix_init_translation(ref this, tz, ty, tz);
+            cogl_matrix_init_translation(ref this, tx, ty, tz);
         }
 
         [DllImport("cogl2.dll")]
