@@ -32,5 +32,22 @@ namespace Cogl
     {
         public FrameBuffer(IntPtr h) : base(h) {}
         public FrameBuffer() {}
+
+        [DllImport("cogl2.dll")]
+        public static extern void
+        cogl_framebuffer_draw_textured_rectangles(IntPtr o,
+                                                  IntPtr pipeline,
+                                                  [In] float[] coordinates,
+                                                  uint n_rectangles);
+
+        public void DrawTexturedRectangles(Pipeline pipeline,
+                                           float[] coordinates)
+        {
+            cogl_framebuffer_draw_textured_rectangles(handle,
+                                                      pipeline.Handle,
+                                                      coordinates,
+                                                      (uint)coordinates.Length / 8);
+        }
+
     }
 }

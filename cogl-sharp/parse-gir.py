@@ -45,6 +45,9 @@ name_overrides = {
         'methods': {
             'clear4f': 'clear'
         },
+        'handwritten': (
+            'draw_textured_rectangles',
+        ),
         'blacklist': (
             'vdraw_attributes', 'draw_rectangles'
         )
@@ -214,6 +217,15 @@ def is_blacklisted(gir_name, overrides):
 
     return gir_name in overrides['blacklist']
 
+def is_handwritten(gir_name, overrides):
+    if not overrides:
+        return False
+
+    if not 'handwritten' in overrides:
+        return False
+
+    return gir_name in overrides['handwritten']
+
 def generate_method(node, overrides, fo):
     gir_name = node.getAttribute("name")
 
@@ -226,6 +238,9 @@ def generate_method(node, overrides, fo):
     cs_return_value = "void"
     cs_params = []
     call_params = ['handle']
+
+    if is_handwritten(gir_name, overrides):
+        return
 
     if is_blacklisted(gir_name, overrides):
         print("  Skipping %s, blacklisted" % cs_method_name)

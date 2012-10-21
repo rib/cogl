@@ -55,14 +55,6 @@ namespace Cogl
         }
 
         [DllImport("cogl2.dll")]
-        public static extern void cogl_framebuffer_draw_textured_rectangles(IntPtr o, IntPtr pipeline, float coordinates, uint n_rectangles);
-
-        public void DrawTexturedRectangles(Pipeline pipeline, float coordinates, uint n_rectangles)
-        {
-            cogl_framebuffer_draw_textured_rectangles(handle, pipeline.Handle, coordinates, n_rectangles);
-        }
-
-        [DllImport("cogl2.dll")]
         public static extern void cogl_framebuffer_finish(IntPtr o);
 
         public void Finish()
