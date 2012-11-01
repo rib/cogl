@@ -72,7 +72,7 @@ tests_sources =			\
 	tests/TestTexture.cs	\
 	$(NULL)
 
-CoglTests.dll: $(tests_sources)
+CoglTests.dll: $(tests_sources) cogl2-sharp.dll
 	$(V_MCS)$(MCS) $(CSFLAGS) @$(srcdir)/CoglTests.rsp -lib:$(top_builddir)/cogl-sharp -r:cogl2-sharp.dll $(MONO_NUNIT_LIBS) $(tests_sources)
 
 REWRITE = sed -e "s|\@testsdir\@|$(srcdir)/tests|g"
