@@ -15,6 +15,7 @@ enum_types = (
     "PipelineFilter",
     "PipelineWrapMode",
     "PixelFormat",
+    "RendererConstraint",
     "TextureFlags",
     "VerticesMode",
     "Winding"

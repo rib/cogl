@@ -30,6 +30,7 @@ sources =			\
 	PipelineWrapMode.cs	\
 	PixelFormat.cs		\
 	Quaternion.cs		\
+	RendererConstraint.cs	\
 	Texture.cs		\
 	_Texture.cs		\
 	TextureFlags.cs		\
