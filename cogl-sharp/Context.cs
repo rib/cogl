@@ -45,5 +45,19 @@ namespace Cogl
             if (error != IntPtr.Zero)
                 throw new Cogl.Exception(error);
         }
+
+        public Context(Display renderer)
+        {
+            IntPtr r, error;
+
+            if (renderer == null)
+                r = IntPtr.Zero;
+            else
+                r = renderer.Handle;
+
+            handle = cogl_context_new(r, out error);
+            if (error != IntPtr.Zero)
+                throw new Cogl.Exception(error);
+        }
     }
 }
