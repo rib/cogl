@@ -25,6 +25,7 @@ enum_types = (
 # object types to dump (.gir names)
 object_types = (
     "Context",
+    "Display",
     "Framebuffer",
     "Onscreen",
     "OnscreenTemplate",
@@ -47,6 +48,11 @@ hand_written_types = (
 
 # maps from .gir names to cogl-sharp types/methods
 name_overrides = {
+    'Display': {
+        'handwritten': (
+            'setup'
+        ),
+    },
     'Framebuffer': {
         'class': 'FrameBuffer',
         'methods': {

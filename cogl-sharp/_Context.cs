@@ -6,5 +6,14 @@ namespace Cogl
 {
     public partial class Context
     {
+        [DllImport("cogl2.dll")]
+        public static extern IntPtr cogl_context_get_display(IntPtr o);
+
+        public Display GetDisplay()
+        {
+            IntPtr p = cogl_context_get_display(handle);
+            return new Display(p);
+        }
+
     }
 }

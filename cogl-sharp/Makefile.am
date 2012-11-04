@@ -14,6 +14,8 @@ sources =			\
 	ColorMask.cs		\
 	Context.cs		\
 	_Context.cs		\
+	Display.cs		\
+	_Display.cs		\
 	Driver.cs		\
 	Exception.cs		\
 	FrameBuffer.cs		\
