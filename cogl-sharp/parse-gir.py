@@ -9,6 +9,7 @@ C_NS = "http://www.gtk.org/introspection/c/1.0"
 enum_types = (
     "BufferBit",
     "ColorMask",
+    "DepthTestFunction",
     "Driver",
     "PipelineAlphaFunc",
     "PipelineCullFaceMode",

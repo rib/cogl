@@ -14,6 +14,7 @@ sources =			\
 	ColorMask.cs		\
 	Context.cs		\
 	_Context.cs		\
+	DepthTestFunction.cs	\
 	Display.cs		\
 	_Display.cs		\
 	Driver.cs		\
