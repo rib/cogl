@@ -27,6 +27,7 @@ object_types = (
     "Framebuffer",
     "Onscreen",
     "Pipeline",
+    "SwapChain",
     "Texture",
 )
 

@@ -31,6 +31,8 @@ sources =			\
 	PixelFormat.cs		\
 	Quaternion.cs		\
 	RendererConstraint.cs	\
+	SwapChain.cs		\
+	_SwapChain.cs		\
 	Texture.cs		\
 	_Texture.cs		\
 	TextureFlags.cs		\
