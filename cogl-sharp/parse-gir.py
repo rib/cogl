@@ -26,6 +26,7 @@ enum_types = (
 object_types = (
     "Framebuffer",
     "Onscreen",
+    "OnscreenTemplate",
     "Pipeline",
     "SwapChain",
     "Texture",
@@ -61,6 +62,9 @@ name_overrides = {
         'blacklist': (
             'swap_region',
         )
+    },
+    'OnscreenTemplate': {
+        'class': 'OnScreenTemplate',
     },
     'Offscreen': {
         'class': 'OffScreen'

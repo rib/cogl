@@ -22,6 +22,8 @@ sources =			\
 	Object.cs		\
 	OnScreen.cs		\
 	_OnScreen.cs		\
+	OnScreenTemplate.cs	\
+	_OnScreenTemplate.cs	\
 	Pipeline.cs		\
 	_Pipeline.cs		\
 	PipelineAlphaFunc.cs	\
