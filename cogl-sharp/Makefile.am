@@ -32,6 +32,8 @@ sources =			\
 	PipelineWrapMode.cs	\
 	PixelFormat.cs		\
 	Quaternion.cs		\
+	Renderer.cs		\
+	_Renderer.cs		\
 	RendererConstraint.cs	\
 	SwapChain.cs		\
 	_SwapChain.cs		\

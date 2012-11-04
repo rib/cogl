@@ -28,6 +28,7 @@ object_types = (
     "Onscreen",
     "OnscreenTemplate",
     "Pipeline",
+    "Renderer",
     "SwapChain",
     "Texture",
 )
@@ -79,7 +80,12 @@ name_overrides = {
     },
     'PixelFormat': {
         'uppercase': 1
-    }
+    },
+    'Renderer': {
+        'handwritten': (
+            'check_onscreen_template', 'connect'
+        )
+    },
 }
 
 basic_types_map = {
