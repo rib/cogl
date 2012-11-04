@@ -35,11 +35,15 @@ namespace Cogl
 
         [DllImport("cogl2.dll")]
         private static extern IntPtr cogl_context_new(IntPtr display,
-                                                      IntPtr error);
+                                                      out IntPtr error);
 
         public Context()
         {
-            handle = cogl_context_new(IntPtr.Zero, IntPtr.Zero);
+            IntPtr error;
+
+            handle = cogl_context_new(IntPtr.Zero, out error);
+            if (error != IntPtr.Zero)
+                throw new Cogl.Exception(error);
         }
     }
 }
