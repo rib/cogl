@@ -24,6 +24,7 @@ enum_types = (
 
 # object types to dump (.gir names)
 object_types = (
+    "Context",
     "Framebuffer",
     "Onscreen",
     "OnscreenTemplate",

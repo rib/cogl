@@ -28,7 +28,7 @@ using System.Runtime.InteropServices;
 
 namespace Cogl
 {
-    public sealed class Context : Cogl.Object
+    public sealed partial class Context : Cogl.Object
     {
 
         public Context(IntPtr h) : base(h) {}

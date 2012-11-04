@@ -13,6 +13,7 @@ sources =			\
 	Color.cs		\
 	ColorMask.cs		\
 	Context.cs		\
+	_Context.cs		\
 	Driver.cs		\
 	Exception.cs		\
 	FrameBuffer.cs		\
