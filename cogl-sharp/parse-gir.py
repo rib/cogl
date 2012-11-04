@@ -18,7 +18,8 @@ enum_types = (
     "RendererConstraint",
     "TextureFlags",
     "VerticesMode",
-    "Winding"
+    "Winding",
+    "WinsysID",
 )
 
 # object types to dump (.gir names)

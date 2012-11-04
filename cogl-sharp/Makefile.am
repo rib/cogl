@@ -37,6 +37,7 @@ sources =			\
 	TextureType.cs		\
 	VerticesMode.cs		\
 	Winding.cs		\
+	WinsysID.cs		\
 	AssemblyInfo.cs		\
 	$(NULL)
 
