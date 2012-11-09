@@ -130,6 +130,45 @@ cogl_driver_sources = \
 	$(srcdir)/driver/nop/cogl-texture-2d-nop.c \
 	$(NULL)
 
+if SUPPORT_DRM
+# drm driver
+INCLUDES += -I$(srcdir)/driver/drm/render_program
+cogl_driver_sources += \
+	$(srcdir)/driver/drm/cogl-driver-drm.c \
+	$(srcdir)/driver/drm/cogl-framebuffer-drm-private.h \
+	$(srcdir)/driver/drm/cogl-framebuffer-drm.c \
+	$(srcdir)/driver/drm/cogl-attribute-drm-private.h \
+	$(srcdir)/driver/drm/cogl-attribute-drm.c \
+	$(srcdir)/driver/drm/cogl-clip-stack-drm-private.h \
+	$(srcdir)/driver/drm/cogl-clip-stack-drm.c \
+	$(srcdir)/driver/drm/cogl-texture-2d-drm-private.h \
+	$(srcdir)/driver/drm/cogl-texture-2d-drm.c \
+	$(srcdir)/driver/drm/brw/brw_test.h \
+	$(srcdir)/driver/drm/brw/brw_test.c \
+	$(srcdir)/driver/drm/brw/brw_test_gen4.c \
+	$(srcdir)/driver/drm/brw/brw_test_gen5.c \
+	$(srcdir)/driver/drm/brw/brw_test_gen6.c \
+	$(srcdir)/driver/drm/brw/brw_test_gen7.c \
+	$(srcdir)/driver/drm/brw/brw.h \
+	$(srcdir)/driver/drm/brw/brw_disasm.c \
+	$(srcdir)/driver/drm/brw/brw_eu.h \
+	$(srcdir)/driver/drm/brw/brw_eu.c \
+	$(srcdir)/driver/drm/brw/brw_eu_emit.c \
+	$(srcdir)/driver/drm/brw/brw_sf.c \
+	$(srcdir)/driver/drm/brw/brw_wm.c \
+        $(srcdir)/driver/drm/kgem.c \
+        $(srcdir)/driver/drm/kgem.h \
+        $(srcdir)/driver/drm/kgem_debug.c \
+        $(srcdir)/driver/drm/kgem_debug.h \
+        $(srcdir)/driver/drm/kgem_debug_gen2.c \
+        $(srcdir)/driver/drm/kgem_debug_gen3.c \
+        $(srcdir)/driver/drm/kgem_debug_gen4.c \
+        $(srcdir)/driver/drm/kgem_debug_gen5.c \
+        $(srcdir)/driver/drm/kgem_debug_gen6.c \
+        $(srcdir)/driver/drm/kgem_debug_gen7.c \
+	$(NULL)
+endif
+
 # gl driver sources
 cogl_gl_prototypes_h = \
 	$(srcdir)/gl-prototypes/cogl-gles2-functions.h		\
@@ -501,6 +540,11 @@ cogl_sources_c += \
        $(srcdir)/winsys/cogl-winsys-sdl-private.h \
        $(srcdir)/winsys/cogl-winsys-sdl2.c \
        $(srcdir)/cogl-sdl.c
+endif
+if SUPPORT_DRM
+cogl_sources_c += \
+       $(srcdir)/winsys/cogl-winsys-drm-private.h \
+       $(srcdir)/winsys/cogl-winsys-drm.c
 endif
 
 EXTRA_DIST += stb_image.c

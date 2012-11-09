@@ -842,6 +842,24 @@ AM_CONDITIONAL(SUPPORT_SDL2, [test "x$SUPPORT_SDL2" = "xyes"])
 AS_IF([test "x$SUPPORT_SDL2" = "xyes" -a "x$SUPPORT_SDL" = "xyes"],
       [AC_MSG_ERROR([The SDL1 and SDL2 winsyses are currently mutually exclusive])])
 
+AC_ARG_ENABLE(
+  [drm],
+  [AC_HELP_STRING([--enable-drm=@<:@no/yes@:>@], [Enable DRM support @<:@default=no@:>@])],
+  [],
+  [enable_drm=no])
+AS_IF([test "x$enable_drm" = "xyes"],
+      [
+        SUPPORT_DRM=yes
+        GL_WINSYS_APIS="$GL_WINSYS_APIS drm"
+        COGL_PKG_REQUIRES="$COGL_PKG_REQUIRES libudev libdrm"
+
+        AC_DEFINE([HAVE_COGL_DRM], 1, [Have DRM support for rendering])
+        COGL_DEFINES_SYMBOLS="$COGL_DEFINES_SYMBOLS COGL_HAS_DRM_SUPPORT"
+      ],
+      [SUPPORT_DRM=no])
+AM_CONDITIONAL(SUPPORT_DRM, [test "x$SUPPORT_DRM" = "xyes"])
+
+
 EGL_PLATFORM_COUNT=0
 
 AC_ARG_ENABLE(

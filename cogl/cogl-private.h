@@ -137,6 +137,11 @@ _cogl_pixel_format_is_endian_dependant (CoglPixelFormat format);
 #define COGL_PIXEL_FORMAT_CAN_HAVE_PREMULT(format) \
   (((format) & COGL_A_BIT) && (format) != COGL_PIXEL_FORMAT_A_8)
 
+typedef struct
+{
+  short x0, y0, x1, y1;
+} BoxRec;
+
 COGL_END_DECLS
 
 #endif /* __COGL_PRIVATE_H__ */

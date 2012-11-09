@@ -144,7 +144,9 @@ get_winsys_name_for_id (CoglWinsysID winsys_id)
     case COGL_WINSYS_ID_WGL:
       return "EGL + Windows WGL platform";
     case COGL_WINSYS_ID_SDL:
-      return "EGL + SDL platform";
+      return "SDL";
+    case COGL_WINSYS_ID_DRM:
+      return "DRM";
     }
   g_return_val_if_reached ("Unknown");
 }

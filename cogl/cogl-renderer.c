@@ -72,6 +72,9 @@
 #ifdef COGL_HAS_SDL_SUPPORT
 #include "cogl-winsys-sdl-private.h"
 #endif
+#ifdef COGL_HAS_DRM_SUPPORT
+#include "cogl-winsys-drm-private.h"
+#endif
 
 #if COGL_HAS_XLIB_SUPPORT
 #include "cogl-xlib-renderer.h"
@@ -86,6 +89,9 @@ extern const CoglDriverVtable _cogl_driver_gl;
 #if defined (HAVE_COGL_GLES) || defined (HAVE_COGL_GLES2)
 extern const CoglTextureDriver _cogl_texture_driver_gles;
 extern const CoglDriverVtable _cogl_driver_gles;
+#endif
+#if defined (HAVE_COGL_DRM)
+extern const CoglDriverVtable _cogl_driver_drm;
 #endif
 
 extern const CoglDriverVtable _cogl_driver_nop;
@@ -118,6 +124,9 @@ static CoglWinsysVtableGetter _cogl_winsys_vtable_getters[] =
 #endif
 #ifdef COGL_HAS_SDL_SUPPORT
   _cogl_winsys_sdl_get_vtable,
+#endif
+#ifdef COGL_HAS_SDL_SUPPORT
+  _cogl_winsys_drm_get_vtable,
 #endif
   _cogl_winsys_stub_get_vtable,
 };
@@ -319,6 +328,17 @@ _cogl_renderer_choose_driver (CoglRenderer *renderer,
     }
 #endif
 
+#ifdef HAVE_COGL_DRM
+  if (renderer->driver_override == COGL_DRIVER_DRM ||
+      (renderer->driver_override == COGL_DRIVER_ANY &&
+       (driver_name == NULL || !g_ascii_strcasecmp (driver_name, "drm"))))
+    {
+      renderer->driver = COGL_DRIVER_DRM;
+      libgl_name = NULL;
+      goto found;
+    }
+#endif
+
   if (renderer->driver_override == COGL_DRIVER_NOP ||
       (renderer->driver_override == COGL_DRIVER_ANY &&
        (driver_name == NULL || !g_ascii_strcasecmp (driver_name, "nop"))))
@@ -383,6 +403,13 @@ found:
     case COGL_DRIVER_GLES2:
       renderer->driver_vtable = &_cogl_driver_gles;
       renderer->texture_driver = &_cogl_texture_driver_gles;
+      break;
+#endif
+
+#if defined (HAVE_COGL_DRM)
+    case COGL_DRIVER_DRM:
+      renderer->driver_vtable = &_cogl_driver_drm;
+      renderer->texture_driver = NULL;
       break;
 #endif
 

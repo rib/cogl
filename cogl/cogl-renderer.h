@@ -149,6 +149,7 @@ cogl_renderer_new (void);
  * @COGL_WINSYS_ID_EGL_ANDROID: Use EGL with the Android platform
  * @COGL_WINSYS_ID_WGL: Use the Microsoft Windows WGL binding API
  * @COGL_WINSYS_ID_SDL: Use the SDL window system
+ * @COGL_WINSYS_ID_DRM: Use the Linux DRM interfaces directly
  *
  * Identifies specific window system backends that Cogl supports.
  *
@@ -167,7 +168,8 @@ typedef enum
   COGL_WINSYS_ID_EGL_KMS,
   COGL_WINSYS_ID_EGL_ANDROID,
   COGL_WINSYS_ID_WGL,
-  COGL_WINSYS_ID_SDL
+  COGL_WINSYS_ID_SDL,
+  COGL_WINSYS_ID_DRM
 } CoglWinsysID;
 
 /**
@@ -264,6 +266,8 @@ cogl_renderer_connect (CoglRenderer *renderer, CoglError **error);
  *    renderer supports creating a #CoglGLES2Context via
  *    cogl_gles2_context_new(). This can be used to integrate GLES 2.0
  *    code into Cogl based applications.
+ * @COGL_RENDERER_CONSTRAINT_USES_GL: Required renderer depends
+ *    on OpenGL[ES]
  *
  * These constraint flags are hard-coded features of the different renderer
  * backends. Sometimes a platform may support multiple rendering options which
@@ -285,7 +289,8 @@ typedef enum
   COGL_RENDERER_CONSTRAINT_USES_X11 = (1 << 0),
   COGL_RENDERER_CONSTRAINT_USES_XLIB = (1 << 1),
   COGL_RENDERER_CONSTRAINT_USES_EGL = (1 << 2),
-  COGL_RENDERER_CONSTRAINT_SUPPORTS_COGL_GLES2 = (1 << 3)
+  COGL_RENDERER_CONSTRAINT_SUPPORTS_COGL_GLES2 = (1 << 3),
+  COGL_RENDERER_CONSTRAINT_USES_GL = (1 << 4)
 } CoglRendererConstraint;
 
 
@@ -331,6 +336,7 @@ cogl_renderer_remove_constraint (CoglRenderer *renderer,
  * @COGL_DRIVER_GL3: An OpenGL driver using the core GL 3.1 profile
  * @COGL_DRIVER_GLES1: An OpenGL ES 1.1 driver.
  * @COGL_DRIVER_GLES2: An OpenGL ES 2.0 driver.
+ * @COGL_DRIVER_DRM: An DRM driver.
  *
  * Identifiers for underlying hardware drivers that may be used by
  * Cogl for rendering.
@@ -345,7 +351,8 @@ typedef enum
   COGL_DRIVER_GL,
   COGL_DRIVER_GL3,
   COGL_DRIVER_GLES1,
-  COGL_DRIVER_GLES2
+  COGL_DRIVER_GLES2,
+  COGL_DRIVER_DRM
 } CoglDriver;
 
 /**
