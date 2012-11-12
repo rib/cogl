@@ -42,6 +42,7 @@
 #include "cogl-texture-2d-private.h"
 #include "cogl-texture-rectangle-private.h"
 #include "cogl-pipeline-opengl-private.h"
+#include "cogl-frame-timings-private.h"
 #include "cogl-framebuffer-private.h"
 #include "cogl-onscreen-private.h"
 #include "cogl-swap-chain-private.h"
@@ -53,6 +54,7 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <fcntl.h>
 
 #include <glib/gi18n-lib.h>
@@ -83,6 +85,7 @@ typedef struct _CoglOnscreenGLX
   uint32_t last_swap_vsync_counter;
   CoglBool pending_swap_notify;
   CoglBool pending_resize_notify;
+  CoglBool pending_frame_timings_notify;
 } CoglOnscreenGLX;
 
 typedef struct _CoglTexturePixmapGLX
@@ -171,16 +174,134 @@ find_onscreen_for_xid (CoglContext *context, uint32_t xid)
 }
 
 static void
-notify_swap_buffers (CoglContext *context, GLXDrawable drawable)
+ensure_ust_type (CoglRenderer *renderer,
+                 GLXDrawable   drawable)
 {
-  CoglOnscreen *onscreen = find_onscreen_for_xid (context, (uint32_t)drawable);
+  CoglGLXRenderer *glx_renderer =  renderer->winsys;
+  CoglXlibRenderer *xlib_renderer = _cogl_xlib_renderer_get_data (renderer);
+  int64_t ust;
+  int64_t msc;
+  int64_t sbc;
+  struct timeval tv;
+  gint64 current_system_time;
+  gint64 current_monotonic_time;
+
+  if (glx_renderer->ust_type != COGL_GLX_UST_IS_UNKNOWN)
+    return;
+
+  glx_renderer->ust_type = COGL_GLX_UST_IS_OTHER;
+
+  if (glx_renderer->glXGetSyncValues == NULL)
+    goto out;
+
+  if (!glx_renderer->glXGetSyncValues (xlib_renderer->xdpy, drawable,
+                                       &ust, &msc, &sbc))
+    goto out;
+
+  /* This is the method that Xorg uses currently */
+  gettimeofday(&tv, NULL);
+  current_system_time = (tv.tv_sec * G_GINT64_CONSTANT (1000000)) + tv.tv_usec;
+
+  if (current_system_time > ust - 1000000 && current_system_time < ust + 1000000)
+    {
+      glx_renderer->ust_type = COGL_GLX_UST_IS_GETTIMEOFDAY;
+      goto out;
+    }
+
+  /* This is the method that would make sense for a GL implementation to use -
+   * clock_gettime (CLOCK_MONOTONIC, &ts) */
+  current_monotonic_time = g_get_monotonic_time ();
+  if (current_monotonic_time > ust - 1000000 && current_monotonic_time < ust + 1000000)
+    {
+      glx_renderer->ust_type = COGL_GLX_UST_IS_MONOTONIC_TIME;
+      goto out;
+    }
+
+ out:
+  COGL_NOTE (WINSYS, "Classified OML system time as: %s",
+             glx_renderer->ust_type == COGL_GLX_UST_IS_GETTIMEOFDAY ? "gettimeofday" :
+             (glx_renderer->ust_type == COGL_GLX_UST_IS_MONOTONIC_TIME ? "monotonic" :
+              "other"));
+  return;
+}
+
+static gint64
+ust_to_monotonic_time (CoglRenderer *renderer,
+                       GLXDrawable   drawable,
+                       int64_t       ust)
+{
+  CoglGLXRenderer *glx_renderer =  renderer->winsys;
+  CoglXlibRenderer *xlib_renderer = _cogl_xlib_renderer_get_data (renderer);
+
+  ensure_ust_type (renderer, drawable);
+
+  switch (glx_renderer->ust_type)
+    {
+    case COGL_GLX_UST_IS_UNKNOWN:
+      g_assert_not_reached ();
+      break;
+    case COGL_GLX_UST_IS_GETTIMEOFDAY:
+      {
+        struct timeval tv;
+        gint64 current_system_time;
+        gint64 current_monotonic_time;
+
+        gettimeofday(&tv, NULL);
+        current_system_time = (tv.tv_sec * G_GINT64_CONSTANT (1000000)) + tv.tv_usec;
+        current_monotonic_time = g_get_monotonic_time ();
+
+        return ust + current_monotonic_time - current_system_time;
+      }
+    case COGL_GLX_UST_IS_MONOTONIC_TIME:
+      return ust;
+    case COGL_GLX_UST_IS_OTHER:
+      {
+        if (glx_renderer->glXGetSyncValues)
+          {
+            gint64 current_monotonic_time;
+            int64_t ust;
+            int64_t msc;
+            int64_t sbc;
+
+            glx_renderer->glXGetSyncValues (xlib_renderer->xdpy, drawable,
+                                            &ust, &msc, &sbc);
+
+            current_monotonic_time = g_get_monotonic_time ();
+            return ust + current_monotonic_time - ust;
+          }
+        break;
+      }
+    }
+
+  return 0;
+}
+
+static void
+set_timings_complete (CoglOnscreen *onscreen)
+{
+  CoglOnscreenGLX *glx_onscreen = onscreen->winsys;
+  CoglContext *context = COGL_FRAMEBUFFER (onscreen)->context;
+  CoglGLXDisplay *glx_display = context->display->winsys;
+  CoglFrameTimings *timings = cogl_onscreen_get_frame_timings (onscreen,
+                                                               cogl_onscreen_get_frame_counter (onscreen));
+
+  timings->complete = TRUE;
+
+  glx_display->pending_frame_timings_notify = TRUE;
+  glx_onscreen->pending_frame_timings_notify = TRUE;
+}
+
+static void
+notify_swap_buffers (CoglContext *context, GLXBufferSwapComplete *swap_event)
+{
+  CoglOnscreen *onscreen = find_onscreen_for_xid (context, (uint32_t)swap_event->drawable);
   CoglDisplay *display = context->display;
   CoglGLXDisplay *glx_display = display->winsys;
   CoglOnscreenGLX *glx_onscreen;
+  CoglFrameTimings *timings;
 
   if (!onscreen)
     return;
-
   glx_onscreen = onscreen->winsys;
 
   /* We only want to notify that the swap is complete when the
@@ -188,6 +309,15 @@ notify_swap_buffers (CoglContext *context, GLXDrawable drawable)
      notifying we'll set a flag to remember to notify later */
   glx_display->pending_swap_notify = TRUE;
   glx_onscreen->pending_swap_notify = TRUE;
+
+  timings = cogl_onscreen_get_frame_timings (onscreen,
+                                             cogl_onscreen_get_frame_counter (onscreen));
+  if (swap_event->ust != 0)
+    timings->presentation_time = ust_to_monotonic_time (context->display->renderer,
+                                                        glx_onscreen->glxwin,
+                                                        swap_event->ust);
+
+  set_timings_complete (onscreen);
 }
 
 static void
@@ -291,7 +421,7 @@ glx_event_filter_cb (XEvent *xevent, void *data)
     {
       GLXBufferSwapComplete *swap_event = (GLXBufferSwapComplete *) xevent;
 
-      notify_swap_buffers (context, swap_event->drawable);
+      notify_swap_buffers (context, swap_event);
 
       /* remove SwapComplete events from the queue */
       return COGL_FILTER_REMOVE;
@@ -428,8 +558,8 @@ update_base_winsys_features (CoglRenderer *renderer)
                   COGL_WINSYS_FEATURE_MULTIPLE_ONSCREEN,
                   TRUE);
 
-  if (glx_renderer->pf_glXWaitVideoSync ||
-      glx_renderer->pf_glXWaitForMsc)
+  if (glx_renderer->glXWaitVideoSync ||
+      glx_renderer->glXWaitForMsc)
     COGL_FLAGS_SET (glx_renderer->base_winsys_features,
                     COGL_WINSYS_FEATURE_VBLANK_WAIT,
                     TRUE);
@@ -1250,15 +1380,33 @@ _cogl_winsys_onscreen_bind (CoglOnscreen *onscreen)
 }
 
 static void
-_cogl_winsys_wait_for_vblank (CoglContext *ctx)
+_cogl_winsys_wait_for_gpu (CoglOnscreen *onscreen)
 {
+  CoglFramebuffer *framebuffer = COGL_FRAMEBUFFER (onscreen);
+  CoglContext *ctx = framebuffer->context;
+
+  ctx->glFinish ();
+}
+
+static void
+_cogl_winsys_wait_for_vblank (CoglOnscreen *onscreen)
+{
+  CoglFramebuffer *framebuffer = COGL_FRAMEBUFFER (onscreen);
+  CoglContext *ctx = framebuffer->context;
   CoglGLXRenderer *glx_renderer;
+  CoglXlibRenderer *xlib_renderer;
 
   glx_renderer = ctx->display->renderer->winsys;
+  xlib_renderer = _cogl_xlib_renderer_get_data (ctx->display->renderer);
 
   if (glx_renderer->glXWaitForMsc ||
       glx_renderer->glXGetVideoSync)
     {
+      CoglFrameTimings *timings;
+
+      timings = cogl_onscreen_get_frame_timings (onscreen,
+                                                 cogl_onscreen_get_frame_counter (onscreen));
+
       if (glx_renderer->glXWaitForMsc)
         {
           CoglOnscreenGLX *glx_onscreen = onscreen->winsys;
@@ -1272,6 +1420,9 @@ _cogl_winsys_wait_for_vblank (CoglContext *ctx)
           glx_renderer->glXWaitForMsc (xlib_renderer->xdpy, drawable,
                                        0, 2, (msc + 1) % 2,
                                        &ust, &msc, &sbc);
+          timings->presentation_time = ust_to_monotonic_time (ctx->display->renderer,
+                                                              drawable,
+                                                              ust);
         }
       else
         {
@@ -1281,6 +1432,7 @@ _cogl_winsys_wait_for_vblank (CoglContext *ctx)
           glx_renderer->glXWaitVideoSync (2,
                                           (current_count + 1) % 2,
                                           &current_count);
+          timings->presentation_time = g_get_monotonic_time ();
         }
     }
 }
@@ -1296,6 +1448,19 @@ _cogl_winsys_get_vsync_counter (CoglContext *ctx)
   glx_renderer->glXGetVideoSync (&video_sync_count);
 
   return video_sync_count;
+}
+
+static void
+set_refresh_interval_from_output (CoglOnscreen *onscreen,
+                                  CoglOutput   *output)
+{
+  float refresh_rate = cogl_output_get_refresh_rate (output);
+  if (refresh_rate != 0.0)
+    {
+      CoglFrameTimings *timings = cogl_onscreen_get_frame_timings (onscreen,
+                                                                   cogl_onscreen_get_frame_counter (onscreen));
+      timings->refresh_interval = (int)(0.5 + (1000000. / refresh_rate));
+    }
 }
 
 static void
@@ -1315,6 +1480,7 @@ _cogl_winsys_onscreen_swap_region (CoglOnscreen *onscreen,
   uint32_t end_frame_vsync_counter = 0;
   CoglBool have_counter;
   CoglBool can_wait;
+  int x_min = 0, x_max = 0, y_min = 0, y_max = 0;
 
   /*
    * We assume that glXCopySubBuffer is synchronized which means it won't prevent multiple
@@ -1325,6 +1491,7 @@ _cogl_winsys_onscreen_swap_region (CoglOnscreen *onscreen,
   CoglBool blit_sub_buffer_is_synchronized =
      _cogl_winsys_has_feature (COGL_WINSYS_FEATURE_SWAP_REGION_SYNCHRONIZED);
 
+  int framebuffer_width =  cogl_framebuffer_get_width (framebuffer);
   int framebuffer_height =  cogl_framebuffer_get_height (framebuffer);
   int *rectangles = g_alloca (sizeof (int) * n_rectangles * 4);
   int i;
@@ -1336,7 +1503,24 @@ _cogl_winsys_onscreen_swap_region (CoglOnscreen *onscreen,
   for (i = 0; i < n_rectangles; i++)
     {
       int *rect = &rectangles[4 * i];
+
+      if (i == 0)
+        {
+          x_min = rect[0];
+          x_max = rect[0] + rect[2];
+          y_min = rect[1];
+          y_max = rect[1] + rect[3];
+        }
+      else
+        {
+          x_min = MIN (x_min, rect[0]);
+          x_max = MAX (x_max, rect[0] + rect[2]);
+          y_min = MIN (y_min, rect[1]);
+          y_max = MAX (y_max, rect[1] + rect[3]);
+        }
+
       rect[1] = framebuffer_height - rect[1] - rect[3];
+
     }
 
   _cogl_framebuffer_flush_state (framebuffer,
@@ -1390,7 +1574,7 @@ _cogl_winsys_onscreen_swap_region (CoglOnscreen *onscreen,
    *   additional extension so we can report the limited region of
    *   the window damage to X/compositors.
    */
-  context->glFinish ();
+  _cogl_winsys_wait_for_gpu (onscreen);
 
   if (blit_sub_buffer_is_synchronized && have_counter && can_wait)
     {
@@ -1401,10 +1585,10 @@ _cogl_winsys_onscreen_swap_region (CoglOnscreen *onscreen,
        * any waits if we can see that the video sync count has
        * already progressed. */
       if (glx_onscreen->last_swap_vsync_counter == end_frame_vsync_counter)
-        _cogl_winsys_wait_for_vblank (context);
+        _cogl_winsys_wait_for_vblank (onscreen);
     }
   else if (can_wait)
-    _cogl_winsys_wait_for_vblank (context);
+    _cogl_winsys_wait_for_vblank (onscreen);
 
   if (glx_renderer->glXCopySubBuffer)
     {
@@ -1462,6 +1646,24 @@ _cogl_winsys_onscreen_swap_region (CoglOnscreen *onscreen,
    */
   if (have_counter)
     glx_onscreen->last_swap_vsync_counter = end_frame_vsync_counter;
+
+  if (!xlib_onscreen->is_foreign_xwin)
+    {
+      CoglOutput *output;
+
+      x_min = CLAMP (x_min, 0, framebuffer_width);
+      x_max = CLAMP (x_max, 0, framebuffer_width);
+      y_min = CLAMP (y_min, 0, framebuffer_width);
+      y_max = CLAMP (y_max, 0, framebuffer_height);
+
+      output = _cogl_xlib_renderer_output_for_rectangle (context->display->renderer,
+                                                         xlib_onscreen->x + x_min, xlib_onscreen->y + y_min,
+                                                         x_max - x_min, y_max - y_min);
+      if (output)
+        set_refresh_interval_from_output (onscreen, output);
+    }
+
+  set_timings_complete (onscreen);
 }
 
 static void
@@ -1521,16 +1723,16 @@ _cogl_winsys_onscreen_swap_buffers (CoglOnscreen *onscreen)
            * obviously does not happen when we use _GLX_SWAP and let
            * the driver do the right thing
            */
-          context->glFinish ();
+          _cogl_winsys_wait_for_gpu (onscreen);
 
           if (have_counter && can_wait)
             {
               if (glx_onscreen->last_swap_vsync_counter ==
                   end_frame_vsync_counter)
-                _cogl_winsys_wait_for_vblank (context);
+                _cogl_winsys_wait_for_vblank (onscreen);
             }
           else if (can_wait)
-            _cogl_winsys_wait_for_vblank (context);
+            _cogl_winsys_wait_for_vblank (onscreen);
         }
     }
   else
@@ -1541,6 +1743,13 @@ _cogl_winsys_onscreen_swap_buffers (CoglOnscreen *onscreen)
   if (have_counter)
     glx_onscreen->last_swap_vsync_counter =
       _cogl_winsys_get_vsync_counter (context);
+
+  if (xlib_onscreen->output)
+    set_refresh_interval_from_output (onscreen, xlib_onscreen->output);
+
+  if (!(glx_renderer->glXSwapInterval &&
+        _cogl_winsys_has_feature (COGL_WINSYS_FEATURE_VBLANK_WAIT)))
+    set_timings_complete (onscreen);
 }
 
 static uint32_t
@@ -2203,7 +2412,9 @@ _cogl_winsys_poll_get_info (CoglContext *context,
 
   /* If we've already got a pending swap notify then we'll dispatch
      immediately */
-  if (glx_display->pending_swap_notify || glx_display->pending_resize_notify)
+  if (glx_display->pending_swap_notify ||
+      glx_display->pending_resize_notify ||
+      glx_display->pending_frame_timings_notify)
     *timeout = 0;
 }
 
@@ -2229,6 +2440,12 @@ flush_pending_notifications_cb (void *data,
           _cogl_onscreen_notify_resize (onscreen);
           glx_onscreen->pending_resize_notify = FALSE;
         }
+
+      if (glx_onscreen->pending_frame_timings_notify)
+        {
+          _cogl_onscreen_notify_frame_timings (onscreen);
+          glx_onscreen->pending_frame_timings_notify = FALSE;
+        }
     }
 }
 
@@ -2244,13 +2461,16 @@ _cogl_winsys_poll_dispatch (CoglContext *context,
                                      poll_fds,
                                      n_poll_fds);
 
-  if (glx_display->pending_swap_notify || glx_display->pending_resize_notify)
+  if (glx_display->pending_swap_notify ||
+      glx_display->pending_resize_notify ||
+      glx_display->pending_frame_timings_notify)
     {
       g_list_foreach (context->framebuffers,
                       flush_pending_notifications_cb,
                       NULL);
       glx_display->pending_swap_notify = FALSE;
       glx_display->pending_resize_notify = FALSE;
+      glx_display->pending_frame_timings_notify = FALSE;
     }
 }
 

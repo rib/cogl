@@ -34,6 +34,7 @@
 
 #include <cogl/cogl-context.h>
 #include <cogl/cogl-framebuffer.h>
+#include <cogl/cogl-frame-timings.h>
 
 COGL_BEGIN_DECLS
 
@@ -531,6 +532,123 @@ cogl_onscreen_remove_resize_handler (CoglOnscreen *onscreen,
  */
 CoglBool
 cogl_is_onscreen (void *object);
+
+/**
+ * cogl_onscreen_get_frame_counter:
+ *
+ * Gets the value of the framebuffers frame counter. This is
+ * a counter that increases by one each time
+ * cogl_onscreen_swap_buffers() or cogl_onscreen_swap_region()
+ * is called.
+ *
+ * Return value: the current frame counter value
+ * Since: 2.0
+ */
+int64_t
+cogl_onscreen_get_frame_counter (CoglOnscreen *onscreen);
+
+/**
+ * cogl_onscreen_begin_frame:
+ * @onscreen: a #CoglOnscreen framebuffer
+ * @frame_time: the time that should be used for creating
+ *   content for this frame.
+ *
+ * Marks the beginning of a frame. This increases the frame
+ * counter value and creates a new #CoglFrameTimings objeect.
+ *
+ * Since: 2.0
+ */
+void
+cogl_onscreen_begin_frame (CoglOnscreen *onscreen,
+                           gint64        frame_time);
+
+/**
+ * cogl_onscreen_get_frame_history_start:
+ * @onscreen: a #CoglOnscreen framebuffer
+ *
+ * Gets the frame counter for the oldest #CoglFrameTiming that is
+ * being kept in the history. cogl_onscreen_get_frame_timings() will
+ * always return %NULl for any frame counter before this.
+ *
+ * Return value: the frame counter for the oldest #CoglFrameTimings
+ *  in the history.
+ * Since: 2.0
+ */
+int64_t
+cogl_onscreen_get_frame_history_start (CoglOnscreen *onscreen);
+
+
+/**
+ * cogl_onscreen_get_frame_timings:
+ * @onscreen: A #CoglOnscreen framebuffer
+ * @frame_counter: the value of cogl_onscreen_get_frame_counter()
+ *       when the frame finished drawing.
+ *
+ * Gets frame timing information for a particular frame.
+ *
+ * Return value: a #CoglFrameTiming object, or %NULL if frame timing
+ *   information is not available for the given frame.
+ * Since: 2.0
+ */
+CoglFrameTimings *
+cogl_onscreen_get_frame_timings (CoglOnscreen *onscreen,
+                                 int64_t       frame_counter);
+
+/**
+ * CoglFrameTimingsCallback:
+ * @onscreen: A #CoglOnscreen framebuffer that has updated timing information
+ * @user_data: The private passed to
+ *             cogl_onscreen_add_frame_timings_callback()
+ *
+ * Is a callback type used with the
+ * cogl_onscreen_add_frame_timings_callback() allowing applications to be
+ * notified whenever new frame timings information is available
+ * via cogl_onscreen_get_frame_timings().
+ *
+ * <note>A frame timings callback will only ever be called while dispatching
+ * Cogl events from the system mainloop; so for example during
+ * cogl_poll_dispatch(). This is so that callbacks shouldn't occur
+ * while an application might have arbitrary locks held for
+ * example.</note>
+ *
+ * Since: 2.0
+ */
+typedef void (*CoglFrameTimingsCallback) (CoglOnscreen *onscreen,
+                                          void         *user_data);
+
+/**
+ * cogl_onscreen_add_frame_timings_callback:
+ * @onscreen: A #CoglOnscreen framebuffer
+ * @callback: A callback function to call when new frame timings information is available
+ * @user_data: A private pointer to be passed to @callback
+ *
+ * Installs a @callback function that should be called whenever new data
+ * is available via cogl_onscreen_get_frame_timings().
+ *
+ * Return value: a unique identifier that can be used to remove to remove
+ *               the callback later.
+ * Since: 2.0
+ * Stability: unstable
+ */
+unsigned int
+cogl_onscreen_add_frame_timings_callback (CoglOnscreen            *onscreen,
+                                          CoglFrameTimingsCallback callback,
+                                          void                    *user_data);
+
+/**
+ * cogl_onscreen_remove_frame_timings_callback:
+ * @onscreen: A #CoglOnscreen framebuffer
+ * @id: An identifier returned from cogl_onscreen_add_frame_timings_callback()
+ *
+ * Removes a callback that was previously registered
+ * using cogl_onscreen_add_frame_timings_callback().
+ *
+ * Since: 1.10
+ * Stability: unstable
+ */
+void
+cogl_onscreen_remove_frame_timings_callback (CoglOnscreen *onscreen,
+                                             unsigned int  id);
 
 COGL_END_DECLS
 

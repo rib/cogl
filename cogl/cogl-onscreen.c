@@ -27,6 +27,7 @@
 
 #include "cogl-util.h"
 #include "cogl-onscreen-private.h"
+#include "cogl-frame-timings-private.h"
 #include "cogl-framebuffer-private.h"
 #include "cogl-onscreen-template-private.h"
 #include "cogl-context-private.h"
@@ -34,6 +35,8 @@
 #include "cogl1-context.h"
 
 static void _cogl_onscreen_free (CoglOnscreen *onscreen);
+
+static void cogl_onscreen_before_swap (CoglOnscreen *onscreen);
 
 COGL_OBJECT_DEFINE_WITH_CODE (Onscreen, onscreen,
                               _cogl_onscreen_class.virt_unref =
@@ -47,6 +50,7 @@ _cogl_onscreen_init_from_template (CoglOnscreen *onscreen,
 
   COGL_TAILQ_INIT (&onscreen->swap_callbacks);
   COGL_TAILQ_INIT (&onscreen->resize_callbacks);
+  COGL_TAILQ_INIT (&onscreen->frame_timings_callbacks);
 
   framebuffer->config = onscreen_template->config;
   cogl_object_ref (framebuffer->config.swap_chain);
@@ -74,6 +78,9 @@ _cogl_onscreen_new (void)
   _cogl_onscreen_init_from_template (onscreen, ctx->display->onscreen_template);
 
   COGL_FRAMEBUFFER (onscreen)->allocated = TRUE;
+
+  onscreen->frame_counter = -1;
+  onscreen->current_frame_timings = COGL_ONSCREEN_MAX_FRAME_TIMINGS - 1;
 
   /* XXX: Note we don't initialize onscreen->winsys in this case. */
 
@@ -149,6 +156,8 @@ cogl_onscreen_swap_buffers (CoglOnscreen *onscreen)
 
   _COGL_RETURN_IF_FAIL  (framebuffer->type == COGL_FRAMEBUFFER_TYPE_ONSCREEN);
 
+  cogl_onscreen_before_swap (onscreen);
+
   /* FIXME: we shouldn't need to flush *all* journals here! */
   cogl_flush ();
   winsys = _cogl_framebuffer_get_winsys (framebuffer);
@@ -168,6 +177,8 @@ cogl_onscreen_swap_region (CoglOnscreen *onscreen,
   const CoglWinsysVtable *winsys;
 
   _COGL_RETURN_IF_FAIL  (framebuffer->type == COGL_FRAMEBUFFER_TYPE_ONSCREEN);
+
+  cogl_onscreen_before_swap (onscreen);
 
   /* FIXME: we shouldn't need to flush *all* journals here! */
   cogl_flush ();
@@ -450,5 +461,108 @@ cogl_onscreen_remove_resize_handler (CoglOnscreen *onscreen,
           break;
         }
     }
+}
+
+int64_t
+cogl_onscreen_get_frame_counter (CoglOnscreen *onscreen)
+{
+  return onscreen->frame_counter;
+}
+
+void
+cogl_onscreen_begin_frame (CoglOnscreen *onscreen,
+                           gint64        frame_time)
+{
+  onscreen->frame_counter++;
+  onscreen->current_frame_timings = (onscreen->current_frame_timings + 1) % COGL_ONSCREEN_MAX_FRAME_TIMINGS;
+
+  if (onscreen->n_frame_timings < COGL_ONSCREEN_MAX_FRAME_TIMINGS)
+    onscreen->n_frame_timings++;
+  else
+    cogl_object_unref (onscreen->frame_timings[onscreen->current_frame_timings]);
+
+  onscreen->frame_timings[onscreen->current_frame_timings] = _cogl_frame_timings_new ();
+  onscreen->frame_timings[onscreen->current_frame_timings]->frame_counter = onscreen->frame_counter;
+  onscreen->frame_timings[onscreen->current_frame_timings]->frame_time = frame_time;
+}
+
+static void
+cogl_onscreen_before_swap (CoglOnscreen *onscreen)
+{
+  if (onscreen->swap_frame_counter == onscreen->frame_counter)
+    cogl_onscreen_begin_frame (onscreen, 0);
+
+  onscreen->swap_frame_counter = onscreen->frame_counter;
+}
+
+int64_t
+cogl_onscreen_get_frame_history_start (CoglOnscreen *onscreen)
+{
+  return onscreen->frame_counter - onscreen->n_frame_timings;
+}
+
+CoglFrameTimings *
+cogl_onscreen_get_frame_timings (CoglOnscreen *onscreen,
+                                 int64_t       frame_counter)
+{
+  int pos;
+
+  if (frame_counter > onscreen->frame_counter)
+    return NULL;
+
+  if (frame_counter <= onscreen->frame_counter - onscreen->n_frame_timings)
+    return NULL;
+
+  pos = ((onscreen->current_frame_timings -
+          (onscreen->frame_counter - frame_counter) + COGL_ONSCREEN_MAX_FRAME_TIMINGS)
+         % COGL_ONSCREEN_MAX_FRAME_TIMINGS);
+
+  return onscreen->frame_timings[pos];
+}
+
+unsigned int
+cogl_onscreen_add_frame_timings_callback (CoglOnscreen *onscreen,
+                                          CoglFrameTimingsCallback callback,
+                                          void *user_data)
+{
+  CoglFrameTimingsCallbackEntry *entry = g_slice_new (CoglFrameTimingsCallbackEntry);
+  static int next_resize_callback_id = 0;
+
+  entry->callback = callback;
+  entry->user_data = user_data;
+  entry->id = next_resize_callback_id++;
+
+  COGL_TAILQ_INSERT_TAIL (&onscreen->frame_timings_callbacks, entry, list_node);
+
+  return entry->id;
+}
+
+void
+cogl_onscreen_remove_frame_timings_callback (CoglOnscreen *onscreen,
+                                             unsigned int id)
+{
+  CoglFrameTimingsCallbackEntry *entry;
+
+  COGL_TAILQ_FOREACH (entry, &onscreen->frame_timings_callbacks, list_node)
+    {
+      if (entry->id == id)
+        {
+          COGL_TAILQ_REMOVE (&onscreen->frame_timings_callbacks, entry, list_node);
+          g_slice_free (CoglFrameTimingsCallbackEntry, entry);
+          break;
+        }
+    }
+}
+
+void
+_cogl_onscreen_notify_frame_timings (CoglOnscreen *onscreen)
+{
+  CoglFrameTimingsCallbackEntry *entry, *tmp;
+
+  COGL_TAILQ_FOREACH_SAFE (entry,
+                           &onscreen->frame_timings_callbacks,
+                           list_node,
+                           tmp)
+    entry->callback (onscreen, entry->user_data);
 }
 

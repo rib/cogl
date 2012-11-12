@@ -33,6 +33,8 @@
 #include <windows.h>
 #endif
 
+#define COGL_ONSCREEN_MAX_FRAME_TIMINGS 16
+
 typedef struct _CoglSwapBuffersNotifyEntry CoglSwapBuffersNotifyEntry;
 
 COGL_TAILQ_HEAD (CoglSwapBuffersNotifyList, CoglSwapBuffersNotifyEntry);
@@ -59,6 +61,19 @@ struct _CoglResizeNotifyEntry
   unsigned int id;
 };
 
+typedef struct _CoglFrameTimingsCallbackEntry CoglFrameTimingsCallbackEntry;
+
+COGL_TAILQ_HEAD (CoglFrameTimingsCallbackList, CoglFrameTimingsCallbackEntry);
+
+struct _CoglFrameTimingsCallbackEntry
+{
+  COGL_TAILQ_ENTRY (CoglFrameTimingsCallbackEntry) list_node;
+
+  CoglFrameTimingsCallback callback;
+  void *user_data;
+  unsigned int id;
+};
+
 struct _CoglOnscreen
 {
   CoglFramebuffer  _parent;
@@ -80,6 +95,16 @@ struct _CoglOnscreen
   CoglBool resizable;
   CoglResizeNotifyList resize_callbacks;
 
+  CoglFrameTimingsCallbackList frame_timings_callbacks;
+
+  int64_t frame_counter;
+  int64_t swap_frame_counter; /* frame counter at last all to
+                               * cogl_onscreen_swap_region() or
+                               * cogl_onscreen_swap_buffers() */
+  CoglFrameTimings *frame_timings[COGL_ONSCREEN_MAX_FRAME_TIMINGS];
+  int current_frame_timings;
+  int n_frame_timings;
+
   void *winsys;
 };
 
@@ -95,5 +120,8 @@ _cogl_onscreen_notify_swap_buffers (CoglOnscreen *onscreen);
 
 void
 _cogl_onscreen_notify_resize (CoglOnscreen *onscreen);
+
+void
+_cogl_onscreen_notify_frame_timings (CoglOnscreen *onscreen);
 
 #endif /* __COGL_ONSCREEN_PRIVATE_H */

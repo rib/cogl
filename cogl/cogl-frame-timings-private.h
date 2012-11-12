@@ -3,7 +3,7 @@
  *
  * An object oriented GL/GLES Abstraction/Utility Layer
  *
- * Copyright (C) 2011 Intel Corporation.
+ * Copyright (C) 2012 Red Hat, Inc.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -15,19 +15,30 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this library. If not, see <http://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see <http://www.gnu.org/licenses/>.
  *
  *
  */
 
-#ifndef __COGL_RENDERER_X11_PRIVATE_H
-#define __COGL_RENDERER_X11_PRIVATE_H
+#ifndef __COGL_FRAME_TIMINGS_PRIVATE_H
+#define __COGL_FRAME_TIMINGS_PRIVATE_H
 
-typedef struct _CoglX11Renderer
+#include "cogl-frame-timings.h"
+#include "cogl-object-private.h"
+
+struct _CoglFrameTimings
 {
-  int damage_base;
-  int randr_base;
-} CoglX11Renderer;
+  CoglObject _parent;
 
-#endif /* __COGL_RENDERER_X11_PRIVATE_H */
+  int64_t frame_counter;
+  int64_t frame_time;
+  int64_t presentation_time;
+  int64_t refresh_interval;
+
+  guint complete : 1;
+};
+
+CoglFrameTimings *_cogl_frame_timings_new (void);
+
+#endif /* __COGL_FRAME_TIMINGS_PRIVATE_H */
