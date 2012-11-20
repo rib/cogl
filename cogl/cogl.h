@@ -27,10 +27,6 @@
 
 #define __COGL_H_INSIDE__
 
-/*
- * API common to the 1.x and 2.0 api...
- */
-
 #include <cogl/cogl-defines.h>
 #include <cogl/cogl-error.h>
 
@@ -50,9 +46,6 @@
 #include <cogl/cogl-enum-types.h>
 #endif
 
-/*
- * 2.0 api that's compatible with the 1.x api...
- */
 #include <cogl/cogl-swap-chain.h>
 #include <cogl/cogl-renderer.h>
 #include <cogl/cogl-display.h>
@@ -104,7 +97,7 @@
  * SECTION:cogl
  * @short_description: General purpose API
  *
- * General utility functions for COGL.
+ * General utility functions for Cogl.
  */
 
 #undef __COGL_H_INSIDE__
