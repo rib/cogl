@@ -135,7 +135,7 @@ _cogl_texture_3d_create_base (CoglContext *ctx,
   tex_3d->gl_legacy_texobj_wrap_mode_t = GL_FALSE;
   tex_3d->gl_legacy_texobj_wrap_mode_p = GL_FALSE;
 
-  tex_3d->format = internal_format;
+  tex_3d->internal_format = internal_format;
 
   return _cogl_texture_3d_object_new (tex_3d);
 }
@@ -209,12 +209,6 @@ cogl_texture_3d_new_with_size (CoglContext *ctx,
                                CoglPixelFormat internal_format,
                                CoglError **error)
 {
-  CoglTexture3D *tex_3d;
-  GLenum gl_intformat;
-  GLenum gl_format;
-  GLenum gl_type;
-  GLenum gl_error;
-
   /* Since no data, we need some internal format */
   if (internal_format == COGL_PIXEL_FORMAT_ANY)
     internal_format = COGL_PIXEL_FORMAT_RGBA_8888_PRE;
@@ -225,18 +219,30 @@ cogl_texture_3d_new_with_size (CoglContext *ctx,
                                     error))
     return NULL;
 
-  internal_format = ctx->driver_vtable->pixel_format_to_gl (ctx,
-                                                            internal_format,
-                                                            &gl_intformat,
-                                                            &gl_format,
-                                                            &gl_type);
+  return _cogl_texture_3d_create_base (ctx,
+                                       width, height, depth,
+                                       internal_format);
+}
 
-  tex_3d = _cogl_texture_3d_create_base (ctx,
-                                         width, height, depth,
-                                         internal_format);
+static CoglBool
+_cogl_texture_3d_allocate (CoglTexture *tex,
+                           CoglError **error)
+{
+  CoglContext *ctx = tex->context;
+  CoglTexture3D *tex_3d = COGL_TEXTURE_3D (tex);
+  GLenum gl_intformat;
+  GLenum gl_format;
+  GLenum gl_type;
+  GLenum gl_error;
+
+  ctx->driver_vtable->pixel_format_to_gl (ctx,
+                                          tex_3d->internal_format,
+                                          &gl_intformat,
+                                          &gl_format,
+                                          &gl_type);
 
   tex_3d->gl_texture =
-    ctx->texture_driver->gen (ctx, GL_TEXTURE_3D, internal_format);
+    ctx->texture_driver->gen (ctx, GL_TEXTURE_3D, tex_3d->internal_format);
   _cogl_bind_gl_texture_transient (GL_TEXTURE_3D,
                                    tex_3d->gl_texture,
                                    FALSE);
@@ -245,15 +251,13 @@ cogl_texture_3d_new_with_size (CoglContext *ctx,
     ;
 
   ctx->glTexImage3D (GL_TEXTURE_3D, 0, gl_intformat,
-                     width, height, depth, 0, gl_format, gl_type, NULL);
+                     tex->width, tex->height, tex_3d->depth,
+                     0, gl_format, gl_type, NULL);
 
   if (_cogl_gl_util_catch_out_of_memory (ctx, error))
-    {
-      cogl_object_unref (tex_3d);
-      return NULL;
-    }
+    return FALSE;
 
-  return tex_3d;
+  return TRUE;
 }
 
 CoglTexture3D *
@@ -353,6 +357,8 @@ cogl_texture_3d_new_from_bitmap (CoglBitmap *bmp,
   tex_3d->gl_format = gl_intformat;
 
   cogl_object_unref (dst_bmp);
+
+  _cogl_texture_set_allocated (COGL_TEXTURE (tex_3d), TRUE);
 
   return tex_3d;
 }
@@ -628,7 +634,7 @@ _cogl_texture_3d_get_data (CoglTexture *tex,
 static CoglPixelFormat
 _cogl_texture_3d_get_format (CoglTexture *tex)
 {
-  return COGL_TEXTURE_3D (tex)->format;
+  return COGL_TEXTURE_3D (tex)->internal_format;
 }
 
 static GLenum
@@ -647,6 +653,7 @@ static const CoglTextureVtable
 cogl_texture_3d_vtable =
   {
     TRUE, /* primitive */
+    _cogl_texture_3d_allocate,
     _cogl_texture_3d_set_region,
     _cogl_texture_3d_get_data,
     NULL, /* foreach_sub_texture_in_region */

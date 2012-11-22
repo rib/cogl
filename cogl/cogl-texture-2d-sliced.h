@@ -91,8 +91,8 @@ typedef struct _CoglTexture2DSliced CoglTexture2DSliced;
  */
 CoglTexture2DSliced *
 cogl_texture_2d_sliced_new_with_size (CoglContext *ctx,
-                                      unsigned int width,
-                                      unsigned int height,
+                                      int width,
+                                      int height,
                                       int max_waste,
                                       CoglPixelFormat internal_format,
                                       CoglError **error);

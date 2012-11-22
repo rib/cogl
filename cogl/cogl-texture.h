@@ -525,6 +525,28 @@ cogl_texture_set_region_from_bitmap (CoglTexture *texture,
                                      int level,
                                      CoglError **error);
 
+/**
+ * cogl_texture_allocate:
+ * @texture: A #CoglTexture
+ * @error: A #CoglError to return exceptional errors or %NULL
+ *
+ * Explicitly allocates the storage for the given @texture which
+ * allows you to be sure that there is enough memory for the
+ * texture and if not then the error can be handled gracefully.
+ *
+ * <note>Normally applications don't need to use this api directly
+ * since the texture will be implicitly allocated when data is set on
+ * the texture, or if the texture is attached to a #CoglOffscreen
+ * framebuffer and rendered too.</note>
+ *
+ * Return value: %TRUE if the texture was successfully allocated,
+ *               otherwise %FALSE and @error will be updated if it
+ *               wasn't %NULL.
+ */
+CoglBool
+cogl_texture_allocate (CoglTexture *texture,
+                       CoglError **error);
+
 COGL_END_DECLS
 
 #endif /* __COGL_TEXTURE_H__ */
