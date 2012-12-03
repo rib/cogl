@@ -27,7 +27,7 @@
 
 #include "cogl-util.h"
 #include "cogl-onscreen-private.h"
-#include "cogl-frame-timings-private.h"
+#include "cogl-swap-info-private.h"
 #include "cogl-framebuffer-private.h"
 #include "cogl-onscreen-template-private.h"
 #include "cogl-context-private.h"
@@ -50,7 +50,7 @@ _cogl_onscreen_init_from_template (CoglOnscreen *onscreen,
 
   COGL_TAILQ_INIT (&onscreen->swap_callbacks);
   COGL_TAILQ_INIT (&onscreen->resize_callbacks);
-  COGL_TAILQ_INIT (&onscreen->frame_timings_callbacks);
+  COGL_TAILQ_INIT (&onscreen->swap_info_callbacks);
 
   framebuffer->config = onscreen_template->config;
   cogl_object_ref (framebuffer->config.swap_chain);
@@ -80,7 +80,7 @@ _cogl_onscreen_new (void)
   COGL_FRAMEBUFFER (onscreen)->allocated = TRUE;
 
   onscreen->frame_counter = -1;
-  onscreen->current_frame_timings = COGL_ONSCREEN_MAX_FRAME_TIMINGS - 1;
+  onscreen->current_swap_info = COGL_ONSCREEN_MAX_SWAP_INFOS - 1;
 
   /* XXX: Note we don't initialize onscreen->winsys in this case. */
 
@@ -474,16 +474,16 @@ cogl_onscreen_begin_frame (CoglOnscreen *onscreen,
                            gint64        frame_time)
 {
   onscreen->frame_counter++;
-  onscreen->current_frame_timings = (onscreen->current_frame_timings + 1) % COGL_ONSCREEN_MAX_FRAME_TIMINGS;
+  onscreen->current_swap_info = (onscreen->current_swap_info + 1) % COGL_ONSCREEN_MAX_SWAP_INFOS;
 
-  if (onscreen->n_frame_timings < COGL_ONSCREEN_MAX_FRAME_TIMINGS)
-    onscreen->n_frame_timings++;
+  if (onscreen->n_swap_infos < COGL_ONSCREEN_MAX_SWAP_INFOS)
+    onscreen->n_swap_infos++;
   else
-    cogl_object_unref (onscreen->frame_timings[onscreen->current_frame_timings]);
+    cogl_object_unref (onscreen->swap_info[onscreen->current_swap_info]);
 
-  onscreen->frame_timings[onscreen->current_frame_timings] = _cogl_frame_timings_new ();
-  onscreen->frame_timings[onscreen->current_frame_timings]->frame_counter = onscreen->frame_counter;
-  onscreen->frame_timings[onscreen->current_frame_timings]->frame_time = frame_time;
+  onscreen->swap_info[onscreen->current_swap_info] = _cogl_swap_info_new ();
+  onscreen->swap_info[onscreen->current_swap_info]->frame_counter = onscreen->frame_counter;
+  onscreen->swap_info[onscreen->current_swap_info]->frame_time = frame_time;
 }
 
 static void
@@ -498,11 +498,11 @@ cogl_onscreen_before_swap (CoglOnscreen *onscreen)
 int64_t
 cogl_onscreen_get_frame_history_start (CoglOnscreen *onscreen)
 {
-  return onscreen->frame_counter - onscreen->n_frame_timings;
+  return onscreen->frame_counter - onscreen->n_swap_infos;
 }
 
-CoglFrameTimings *
-cogl_onscreen_get_frame_timings (CoglOnscreen *onscreen,
+CoglSwapInfo *
+cogl_onscreen_get_swap_info (CoglOnscreen *onscreen,
                                  int64_t       frame_counter)
 {
   int pos;
@@ -510,57 +510,57 @@ cogl_onscreen_get_frame_timings (CoglOnscreen *onscreen,
   if (frame_counter > onscreen->frame_counter)
     return NULL;
 
-  if (frame_counter <= onscreen->frame_counter - onscreen->n_frame_timings)
+  if (frame_counter <= onscreen->frame_counter - onscreen->n_swap_infos)
     return NULL;
 
-  pos = ((onscreen->current_frame_timings -
-          (onscreen->frame_counter - frame_counter) + COGL_ONSCREEN_MAX_FRAME_TIMINGS)
-         % COGL_ONSCREEN_MAX_FRAME_TIMINGS);
+  pos = ((onscreen->current_swap_info -
+          (onscreen->frame_counter - frame_counter) + COGL_ONSCREEN_MAX_SWAP_INFOS)
+         % COGL_ONSCREEN_MAX_SWAP_INFOS);
 
-  return onscreen->frame_timings[pos];
+  return onscreen->swap_info[pos];
 }
 
 unsigned int
-cogl_onscreen_add_frame_timings_callback (CoglOnscreen *onscreen,
-                                          CoglFrameTimingsCallback callback,
+cogl_onscreen_add_swap_info_callback (CoglOnscreen *onscreen,
+                                          CoglSwapInfoCallback callback,
                                           void *user_data)
 {
-  CoglFrameTimingsCallbackEntry *entry = g_slice_new (CoglFrameTimingsCallbackEntry);
+  CoglSwapInfoCallbackEntry *entry = g_slice_new (CoglSwapInfoCallbackEntry);
   static int next_resize_callback_id = 0;
 
   entry->callback = callback;
   entry->user_data = user_data;
   entry->id = next_resize_callback_id++;
 
-  COGL_TAILQ_INSERT_TAIL (&onscreen->frame_timings_callbacks, entry, list_node);
+  COGL_TAILQ_INSERT_TAIL (&onscreen->swap_info_callbacks, entry, list_node);
 
   return entry->id;
 }
 
 void
-cogl_onscreen_remove_frame_timings_callback (CoglOnscreen *onscreen,
+cogl_onscreen_remove_swap_info_callback (CoglOnscreen *onscreen,
                                              unsigned int id)
 {
-  CoglFrameTimingsCallbackEntry *entry;
+  CoglSwapInfoCallbackEntry *entry;
 
-  COGL_TAILQ_FOREACH (entry, &onscreen->frame_timings_callbacks, list_node)
+  COGL_TAILQ_FOREACH (entry, &onscreen->swap_info_callbacks, list_node)
     {
       if (entry->id == id)
         {
-          COGL_TAILQ_REMOVE (&onscreen->frame_timings_callbacks, entry, list_node);
-          g_slice_free (CoglFrameTimingsCallbackEntry, entry);
+          COGL_TAILQ_REMOVE (&onscreen->swap_info_callbacks, entry, list_node);
+          g_slice_free (CoglSwapInfoCallbackEntry, entry);
           break;
         }
     }
 }
 
 void
-_cogl_onscreen_notify_frame_timings (CoglOnscreen *onscreen)
+_cogl_onscreen_notify_swap_info (CoglOnscreen *onscreen)
 {
-  CoglFrameTimingsCallbackEntry *entry, *tmp;
+  CoglSwapInfoCallbackEntry *entry, *tmp;
 
   COGL_TAILQ_FOREACH_SAFE (entry,
-                           &onscreen->frame_timings_callbacks,
+                           &onscreen->swap_info_callbacks,
                            list_node,
                            tmp)
     entry->callback (onscreen, entry->user_data);

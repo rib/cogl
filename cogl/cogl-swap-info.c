@@ -25,54 +25,54 @@
 #include "config.h"
 #endif
 
-#include "cogl-frame-timings-private.h"
+#include "cogl-swap-info-private.h"
 
-static void _cogl_frame_timings_free (CoglFrameTimings *frame_timings);
+static void _cogl_swap_info_free (CoglSwapInfo *info);
 
-COGL_OBJECT_DEFINE (FrameTimings, frame_timings);
+COGL_OBJECT_DEFINE (SwapInfo, swap_info);
 
-CoglFrameTimings *
-_cogl_frame_timings_new (void)
+CoglSwapInfo *
+_cogl_swap_info_new (void)
 {
-  CoglFrameTimings *timings;
+  CoglSwapInfo *info;
 
-  timings = g_slice_new0 (CoglFrameTimings);
+  info = g_slice_new0 (CoglSwapInfo);
 
-  return _cogl_frame_timings_object_new (timings);
+  return _cogl_swap_info_object_new (info);
 }
 
 static void
-_cogl_frame_timings_free (CoglFrameTimings *timings)
+_cogl_swap_info_free (CoglSwapInfo *info)
 {
-  g_slice_free (CoglFrameTimings, timings);
+  g_slice_free (CoglSwapInfo, info);
 }
 
 CoglBool
-cogl_frame_timings_get_complete (CoglFrameTimings *timings)
+cogl_swap_info_get_complete (CoglSwapInfo *info)
 {
-  return timings->complete;
+  return info->complete;
 }
 
 gint64
-cogl_frame_timings_get_frame_counter (CoglFrameTimings *timings)
+cogl_swap_info_get_frame_counter (CoglSwapInfo *info)
 {
-  return timings->frame_counter;
+  return info->frame_counter;
 }
 
 gint64
-cogl_frame_timings_get_frame_time (CoglFrameTimings *timings)
+cogl_swap_info_get_frame_time (CoglSwapInfo *info)
 {
-  return timings->frame_time;
+  return info->frame_time;
 }
 
 gint64
-cogl_frame_timings_get_presentation_time (CoglFrameTimings *timings)
+cogl_swap_info_get_presentation_time (CoglSwapInfo *info)
 {
-  return timings->presentation_time;
+  return info->presentation_time;
 }
 
 gint64
-cogl_frame_timings_get_refresh_interval (CoglFrameTimings *timings)
+cogl_swap_info_get_refresh_interval (CoglSwapInfo *info)
 {
-  return timings->refresh_interval;
+  return info->refresh_interval;
 }

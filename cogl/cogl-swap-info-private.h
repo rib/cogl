@@ -21,13 +21,13 @@
  *
  */
 
-#ifndef __COGL_FRAME_TIMINGS_PRIVATE_H
-#define __COGL_FRAME_TIMINGS_PRIVATE_H
+#ifndef __COGL_SWAP_INFO_PRIVATE_H
+#define __COGL_SWAP_INFO_PRIVATE_H
 
-#include "cogl-frame-timings.h"
+#include "cogl-swap-info.h"
 #include "cogl-object-private.h"
 
-struct _CoglFrameTimings
+struct _CoglSwapInfo
 {
   CoglObject _parent;
 
@@ -39,6 +39,6 @@ struct _CoglFrameTimings
   guint complete : 1;
 };
 
-CoglFrameTimings *_cogl_frame_timings_new (void);
+CoglSwapInfo *_cogl_swap_info_new (void);
 
-#endif /* __COGL_FRAME_TIMINGS_PRIVATE_H */
+#endif /* __COGL_SWAP_INFO_PRIVATE_H */
