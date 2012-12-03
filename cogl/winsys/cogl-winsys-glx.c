@@ -448,7 +448,7 @@ _cogl_winsys_renderer_disconnect (CoglRenderer *renderer)
   g_slice_free (CoglGLXRenderer, renderer->winsys);
 }
 
-static gboolean
+static CoglBool
 update_all_outputs (CoglRenderer *renderer)
 {
   GList *l;
