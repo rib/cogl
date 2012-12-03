@@ -44,7 +44,6 @@ typedef struct _CoglXlibRenderer
   CoglPollFD poll_fd;
 
   unsigned long outputs_update_serial;
-  GList *outputs;
 } CoglXlibRenderer;
 
 CoglBool
