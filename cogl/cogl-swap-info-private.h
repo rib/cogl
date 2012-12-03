@@ -36,7 +36,7 @@ struct _CoglSwapInfo
   int64_t presentation_time;
   int64_t refresh_interval;
 
-  guint complete : 1;
+  unsigned int complete : 1;
 };
 
 CoglSwapInfo *_cogl_swap_info_new (void);

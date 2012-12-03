@@ -183,8 +183,8 @@ ensure_ust_type (CoglRenderer *renderer,
   int64_t msc;
   int64_t sbc;
   struct timeval tv;
-  gint64 current_system_time;
-  gint64 current_monotonic_time;
+  int64_t current_system_time;
+  int64_t current_monotonic_time;
 
   if (glx_renderer->ust_type != COGL_GLX_UST_IS_UNKNOWN)
     return;
@@ -225,7 +225,7 @@ ensure_ust_type (CoglRenderer *renderer,
   return;
 }
 
-static gint64
+static int64_t
 ust_to_monotonic_time (CoglRenderer *renderer,
                        GLXDrawable   drawable,
                        int64_t       ust)
@@ -243,8 +243,8 @@ ust_to_monotonic_time (CoglRenderer *renderer,
     case COGL_GLX_UST_IS_GETTIMEOFDAY:
       {
         struct timeval tv;
-        gint64 current_system_time;
-        gint64 current_monotonic_time;
+        int64_t current_system_time;
+        int64_t current_monotonic_time;
 
         gettimeofday(&tv, NULL);
         current_system_time = (tv.tv_sec * G_GINT64_CONSTANT (1000000)) + tv.tv_usec;
@@ -258,7 +258,7 @@ ust_to_monotonic_time (CoglRenderer *renderer,
       {
         if (glx_renderer->glXGetSyncValues)
           {
-            gint64 current_monotonic_time;
+            int64_t current_monotonic_time;
             int64_t ust;
             int64_t msc;
             int64_t sbc;

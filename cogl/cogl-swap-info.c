@@ -53,25 +53,25 @@ cogl_swap_info_get_complete (CoglSwapInfo *info)
   return info->complete;
 }
 
-gint64
+int64_t
 cogl_swap_info_get_frame_counter (CoglSwapInfo *info)
 {
   return info->frame_counter;
 }
 
-gint64
+int64_t
 cogl_swap_info_get_frame_time (CoglSwapInfo *info)
 {
   return info->frame_time;
 }
 
-gint64
+int64_t
 cogl_swap_info_get_presentation_time (CoglSwapInfo *info)
 {
   return info->presentation_time;
 }
 
-gint64
+int64_t
 cogl_swap_info_get_refresh_interval (CoglSwapInfo *info)
 {
   return info->refresh_interval;

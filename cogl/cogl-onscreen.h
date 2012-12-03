@@ -560,7 +560,7 @@ cogl_onscreen_get_frame_counter (CoglOnscreen *onscreen);
  */
 void
 cogl_onscreen_begin_frame (CoglOnscreen *onscreen,
-                           gint64 frame_time);
+                           int64_t frame_time);
 
 /**
  * cogl_onscreen_get_frame_history_start:

@@ -471,7 +471,7 @@ cogl_onscreen_get_frame_counter (CoglOnscreen *onscreen)
 
 void
 cogl_onscreen_begin_frame (CoglOnscreen *onscreen,
-                           gint64        frame_time)
+                           int64_t frame_time)
 {
   onscreen->frame_counter++;
   onscreen->current_swap_info = (onscreen->current_swap_info + 1) % COGL_ONSCREEN_MAX_SWAP_INFOS;
