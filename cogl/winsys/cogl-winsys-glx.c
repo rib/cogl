@@ -333,7 +333,8 @@ update_output (CoglOnscreen *onscreen)
   width = cogl_framebuffer_get_width (framebuffer);
   height = cogl_framebuffer_get_height (framebuffer);
   output = _cogl_xlib_renderer_output_for_rectangle (display->renderer,
-                                                     xlib_onscreen->x, xlib_onscreen->y,
+                                                     xlib_onscreen->x,
+                                                     xlib_onscreen->y,
                                                      width, height);
   if (xlib_onscreen->output != output)
     {
@@ -351,7 +352,8 @@ static void
 notify_resize (CoglContext *context,
                XConfigureEvent *configure_event)
 {
-  CoglOnscreen *onscreen = find_onscreen_for_xid (context, configure_event->window);
+  CoglOnscreen *onscreen = find_onscreen_for_xid (context,
+                                                  configure_event->window);
   CoglFramebuffer *framebuffer = COGL_FRAMEBUFFER (onscreen);
   CoglDisplay *display = context->display;
   CoglGLXDisplay *glx_display = display->winsys;
@@ -364,7 +366,9 @@ notify_resize (CoglContext *context,
   glx_onscreen = onscreen->winsys;
   xlib_onscreen = onscreen->winsys;
 
-  _cogl_framebuffer_winsys_update_size (framebuffer, configure_event->width, configure_event->height);
+  _cogl_framebuffer_winsys_update_size (framebuffer,
+                                        configure_event->width,
+                                        configure_event->height);
 
   /* We only want to notify that a resize happened when the
      application calls cogl_context_dispatch so instead of immediately

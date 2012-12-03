@@ -202,12 +202,18 @@ compare_outputs (CoglOutput *a,
 
 #define CSO(X) COGL_SUBPIXEL_ORDER_ ## X
 static CoglSubpixelOrder subpixel_map[6][6] = {
-  { CSO(UNKNOWN), CSO(NONE), CSO(HORIZONTAL_RGB), CSO(HORIZONTAL_BGR), CSO(VERTICAL_RGB),   CSO(VERTICAL_BGR) },   /* 0 */
-  { CSO(UNKNOWN), CSO(NONE), CSO(VERTICAL_RGB),   CSO(VERTICAL_BGR),   CSO(HORIZONTAL_BGR), CSO(HORIZONTAL_RGB) }, /* 90 */
-  { CSO(UNKNOWN), CSO(NONE), CSO(HORIZONTAL_BGR), CSO(HORIZONTAL_RGB), CSO(VERTICAL_BGR),   CSO(VERTICAL_RGB) },   /* 180 */
-  { CSO(UNKNOWN), CSO(NONE), CSO(VERTICAL_BGR),   CSO(VERTICAL_RGB),   CSO(HORIZONTAL_RGB), CSO(HORIZONTAL_BGR) }, /* 270 */
-  { CSO(UNKNOWN), CSO(NONE), CSO(HORIZONTAL_BGR), CSO(HORIZONTAL_RGB), CSO(VERTICAL_RGB),   CSO(VERTICAL_BGR) },   /* Reflect_X */
-  { CSO(UNKNOWN), CSO(NONE), CSO(HORIZONTAL_RGB), CSO(HORIZONTAL_BGR), CSO(VERTICAL_BGR),   CSO(VERTICAL_RGB) },   /* Reflect_Y */
+  { CSO(UNKNOWN), CSO(NONE), CSO(HORIZONTAL_RGB), CSO(HORIZONTAL_BGR),
+    CSO(VERTICAL_RGB),   CSO(VERTICAL_BGR) },   /* 0 */
+  { CSO(UNKNOWN), CSO(NONE), CSO(VERTICAL_RGB),   CSO(VERTICAL_BGR),
+    CSO(HORIZONTAL_BGR), CSO(HORIZONTAL_RGB) }, /* 90 */
+  { CSO(UNKNOWN), CSO(NONE), CSO(HORIZONTAL_BGR), CSO(HORIZONTAL_RGB),
+    CSO(VERTICAL_BGR),   CSO(VERTICAL_RGB) },   /* 180 */
+  { CSO(UNKNOWN), CSO(NONE), CSO(VERTICAL_BGR),   CSO(VERTICAL_RGB),
+    CSO(HORIZONTAL_RGB), CSO(HORIZONTAL_BGR) }, /* 270 */
+  { CSO(UNKNOWN), CSO(NONE), CSO(HORIZONTAL_BGR), CSO(HORIZONTAL_RGB),
+    CSO(VERTICAL_RGB),   CSO(VERTICAL_BGR) },   /* Reflect_X */
+  { CSO(UNKNOWN), CSO(NONE), CSO(HORIZONTAL_RGB), CSO(HORIZONTAL_BGR),
+    CSO(VERTICAL_BGR),   CSO(VERTICAL_RGB) },   /* Reflect_Y */
 };
 #undef CSO
 
@@ -240,7 +246,8 @@ update_outputs (CoglRenderer *renderer,
       float refresh_rate = 0;
       int j;
 
-      crtc_info = XRRGetCrtcInfo (xlib_renderer->xdpy, resources, resources->crtcs[i]);
+      crtc_info = XRRGetCrtcInfo (xlib_renderer->xdpy,
+                                  resources, resources->crtcs[i]);
       if (crtc_info == NULL)
         {
           error = TRUE;
@@ -254,7 +261,8 @@ update_outputs (CoglRenderer *renderer,
         {
           if (resources->modes[j].id == crtc_info->mode)
             refresh_rate = (resources->modes[j].dotClock /
-                            ((float)resources->modes[j].hTotal * resources->modes[j].vTotal));
+                            ((float)resources->modes[j].hTotal *
+                             resources->modes[j].vTotal));
         }
 
       output_info = XRRGetOutputInfo (xlib_renderer->xdpy,
@@ -354,9 +362,11 @@ update_outputs (CoglRenderer *renderer,
 
               if (!_cogl_output_values_equal (output_l, output_m))
                 {
-                  xlib_renderer->outputs = g_list_remove_link (xlib_renderer->outputs, m);
-                  xlib_renderer->outputs = g_list_insert_before (xlib_renderer->outputs ,
-                                                                 m_next, output_l);
+                  xlib_renderer->outputs =
+                    g_list_remove_link (xlib_renderer->outputs, m);
+                  xlib_renderer->outputs =
+                    g_list_insert_before (xlib_renderer->outputs,
+                                          m_next, output_l);
                   cogl_object_ref (output_l);
 
                   changed = TRUE;
@@ -367,8 +377,8 @@ update_outputs (CoglRenderer *renderer,
             }
           else if (cmp < 0)
             {
-              xlib_renderer->outputs = g_list_insert_before (xlib_renderer->outputs ,
-                                                             m, output_l);
+              xlib_renderer->outputs =
+                g_list_insert_before (xlib_renderer->outputs, m, output_l);
               cogl_object_ref (output_l);
               changed = TRUE;
               l = l->next;
@@ -376,7 +386,8 @@ update_outputs (CoglRenderer *renderer,
           else
             {
               GList *m_next = m->next;
-              xlib_renderer->outputs = g_list_remove_link (xlib_renderer->outputs, m);
+              xlib_renderer->outputs =
+                g_list_remove_link (xlib_renderer->outputs, m);
               changed = TRUE;
               m = m_next;
             }
@@ -424,7 +435,8 @@ update_outputs (CoglRenderer *renderer,
             }
 
           COGL_NOTE (WINSYS,
-                     " %10s: +%d+%dx%dx%d mm=%dx%d dpi=%.1fx%.1f subpixel_order=%s refresh_rate=%.3f",
+                     " %10s: +%d+%dx%dx%d mm=%dx%d dpi=%.1fx%.1f "
+                     "subpixel_order=%s refresh_rate=%.3f",
                      output->name,
                      output->x, output->y, output->width, output->height,
                      output->mm_width, output->mm_height,
