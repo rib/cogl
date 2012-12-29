@@ -69,5 +69,54 @@ namespace Cogl
                 throw new Cogl.Exception(error);
         }
 
+        /* XXX: XlibRenderer subclass? */
+#if COGL_HAS_XLIB_SUPPORT
+        [DllImport("cogl2.dll")]
+        private static extern IntPtr
+        cogl_xlib_renderer_get_display(IntPtr renderer);
+
+        public IntPtr XlibGetDisplay()
+        {
+            return cogl_xlib_renderer_get_display(handle);
+        }
+
+        [DllImport("cogl2.dll")]
+        private static extern void
+        cogl_xlib_renderer_set_foreign_display(IntPtr renderer, IntPtr display);
+
+        public void XlibSetForeignDisplay(IntPtr display)
+        {
+            cogl_xlib_renderer_set_foreign_display(handle, display);
+        }
+
+        [DllImport("cogl2.dll")]
+        private static extern IntPtr
+        cogl_xlib_renderer_get_foreign_display(IntPtr renderer);
+
+        public IntPtr XlibGetForeignDisplay()
+        {
+            return cogl_xlib_renderer_get_foreign_display(handle);
+        }
+
+        [DllImport("cogl2.dll")]
+        private static extern void
+        cogl_xlib_renderer_set_event_retrieval_enabled(IntPtr renderer,
+                                                       bool enable);
+
+        public void XlibSetEventRetrievalEnabled(bool enable)
+        {
+            cogl_xlib_renderer_set_event_retrieval_enabled(handle, enable);
+        }
+
+        [DllImport("cogl2.dll")]
+        private static extern void
+        cogl_xlib_renderer_handle_event(IntPtr renderer, IntPtr _event);
+
+        public void XlibHandleEvent(IntPtr _event)
+        {
+            cogl_xlib_renderer_handle_event(handle, _event);
+        }
+#endif
+
     }
 }
