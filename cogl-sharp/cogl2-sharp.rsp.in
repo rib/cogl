@@ -1,2 +1,3 @@
 /target:library
 /out:cogl2-sharp.dll
+@COGL_SHARP_DEFINES@

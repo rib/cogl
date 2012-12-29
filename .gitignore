@@ -33,6 +33,7 @@ stamp-marshal
 /cogl-pango/cogl-pango.rc
 /cogl-sharp/AssemblyInfo.cs
 /cogl-sharp/TestResult.xml
+/cogl-sharp/cogl2-sharp.rsp
 /cogl-sharp/tests/Config.cs
 /cogl/cogl.rc
 /cogl/cogl-defines.h

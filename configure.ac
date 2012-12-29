@@ -1219,6 +1219,13 @@ AS_IF([test "$enable_cogl_sharp" = "yes" -a "$have_nunit" = "yes"],
       [enable_nunit=yes], [enable_nunit=no])
 AM_CONDITIONAL(BUILD_NUNIT_TESTS, [test "$enable_nunit" = "yes"])
 
+for x in $COGL_DEFINES_SYMBOLS; do
+  COGL_SHARP_DEFINES="$COGL_SHARP_DEFINES
+/define:$x"
+done;
+AC_SUBST(COGL_SHARP_DEFINES)
+AM_SUBST_NOTMAKE(COGL_SHARP_DEFINES)
+
 dnl ================================================================
 dnl What needs to be substituted in other files
 dnl ================================================================
@@ -1287,6 +1294,7 @@ cogl-gles2/cogl-gles2-experimental.pc
 cogl-sharp/Makefile
 cogl-sharp/AssemblyInfo.cs
 cogl-sharp/cogl2-sharp.pc
+cogl-sharp/cogl2-sharp.rsp
 doc/Makefile
 doc/reference/Makefile
 doc/reference/cogl2/Makefile
