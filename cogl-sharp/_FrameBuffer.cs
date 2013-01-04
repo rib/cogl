@@ -153,22 +153,6 @@ namespace Cogl
         }
 
         [DllImport("cogl2.dll")]
-        public static extern void cogl_framebuffer_get_modelview_matrix(IntPtr o);
-
-        public void GetModelviewMatrix()
-        {
-            cogl_framebuffer_get_modelview_matrix(handle);
-        }
-
-        [DllImport("cogl2.dll")]
-        public static extern void cogl_framebuffer_get_projection_matrix(IntPtr o);
-
-        public void GetProjectionMatrix()
-        {
-            cogl_framebuffer_get_projection_matrix(handle);
-        }
-
-        [DllImport("cogl2.dll")]
         public static extern int cogl_framebuffer_get_red_bits(IntPtr o);
 
         public int GetRedBits()
@@ -182,14 +166,6 @@ namespace Cogl
         public int GetSamplesPerPixel()
         {
             return cogl_framebuffer_get_samples_per_pixel(handle);
-        }
-
-        [DllImport("cogl2.dll")]
-        public static extern void cogl_framebuffer_get_viewport4fv(IntPtr o);
-
-        public void GetViewport4fv()
-        {
-            cogl_framebuffer_get_viewport4fv(handle);
         }
 
         [DllImport("cogl2.dll")]

@@ -304,6 +304,7 @@ def generate_method(node, overrides, fo):
             if direction == 'out':
                 print("  Skipping %s, out parameters not supported yet" %
                       (cs_method_name))
+                generatable = False
                 break
 
             param_type = param.getElementsByTagName("type")

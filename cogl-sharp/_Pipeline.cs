@@ -32,14 +32,6 @@ namespace Cogl
         }
 
         [DllImport("cogl2.dll")]
-        public static extern void cogl_pipeline_get_color(IntPtr o);
-
-        public void GetColor()
-        {
-            cogl_pipeline_get_color(handle);
-        }
-
-        [DllImport("cogl2.dll")]
         public static extern ColorMask cogl_pipeline_get_color_mask(IntPtr o);
 
         public ColorMask GetColorMask()

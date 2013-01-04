@@ -15,14 +15,6 @@ namespace Cogl
         }
 
         [DllImport("cogl2.dll")]
-        public static extern bool cogl_texture_get_gl_texture(IntPtr o);
-
-        public bool GetGlTexture()
-        {
-            return cogl_texture_get_gl_texture(handle);
-        }
-
-        [DllImport("cogl2.dll")]
         public static extern uint cogl_texture_get_height(IntPtr o);
 
         public uint GetHeight()
