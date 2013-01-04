@@ -334,10 +334,29 @@ def generate_method(node, overrides, fo):
 
     return_str = 'return ' if (cs_return_value != 'void') else ''
 
+    # native symbol declaration
     fo.write("        [DllImport(\"cogl2.dll\")]\n")
     fo.write("        public static extern %s %s(%s);\n\n" %
             (native_return_value, native_method_name, ", ".join(native_params)))
 
+    # C# wrapper
+    #
+    # We support 2 types of functions:
+    #
+    # 1. simple wrappers (can return values as well)
+    #
+    #   public void SetColor(ref Color color)
+    #   {
+    #       cogl_pipeline_set_color(handle, ref color);
+    #   }
+    #
+    # 2. functions that return an object we need to wrap in a C# instance
+    #
+    #   public Texture GetLayerTexture(int layer_index)
+    #   {
+    #       IntPtr p = cogl_pipeline_get_layer_texture(handle, layer_index);
+    #       return new Texture(p);
+    #   }
     fo.write("        public %s %s(%s)\n" %
              (cs_return_value, cs_method_name, ", ".join(cs_params)))
     fo.write("        {\n")
