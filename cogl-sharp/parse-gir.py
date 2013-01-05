@@ -249,8 +249,9 @@ def is_handwritten(gir_name, overrides):
     return gir_name in overrides['handwritten']
 
 def generate_method(node, overrides, fo):
-    gir_name = node.getAttribute("name")
+    throw_exception = False
 
+    gir_name = node.getAttribute("name")
     gir_name = apply_name_override(gir_name, overrides)
 
     native_method_name = node.getAttributeNS(C_NS, "identifier")
@@ -301,7 +302,8 @@ def generate_method(node, overrides, fo):
         params = params_list.getElementsByTagName("parameter")
         for param in params:
             direction = param.getAttribute("direction")
-            if direction == 'out':
+            out = direction == 'out'
+            if out:
                 print("  Skipping %s, out parameters not supported yet" %
                       (cs_method_name))
                 generatable = False
@@ -311,7 +313,11 @@ def generate_method(node, overrides, fo):
             assert len(param_type) == 1
             c_type = param_type.item(0).getAttributeNS(C_NS, "type")
             gir_type = param_type.item(0).getAttribute("name")
-            if not known_type(gir_type):
+            # mark methods throwing exceptions
+            if c_type == 'CoglError**':
+                throw_exception = True
+                out = True
+            elif not known_type(gir_type):
                 print("  Skipping %s, unknown parameter type '%s' (%s)" %
                       (cs_method_name, gir_type, c_type))
                 generatable = False
@@ -320,17 +326,31 @@ def generate_method(node, overrides, fo):
             # time to update {native,cs}_params and call_params
             param_name = param.getAttribute("name")
             ref = 'ref ' if gir_type in struct_types else ''
+            out = 'out ' if out else ''
             t = derive_native_type(gir_type, c_type)
-            native_params.append(ref + t + ' ' + param_name)
+            native_params.append(ref + out + t + ' ' + param_name)
+
+            handle = '.Handle' if gir_type in object_types else ''
+            call_params.append(ref + out + param_name + handle)
+
+            # if we are throwing an exception then:
+            # 1. we don't want to mirror the exception argument in the C#
+            #    wrapper so we skip the cs_param update
+            # 2. we can safely break the loop as exception are always the
+            #    last parameter
+            if throw_exception:
+                break
 
             t = derive_cs_type(gir_type, c_type)
             cs_params.append(ref + t + ' ' + param_name)
 
-            handle = '.Handle' if gir_type in object_types else ''
-            call_params.append(ref + param_name + handle)
-
     if not generatable:
         return
+
+    # We hide the returned boolean from functions that can return a CoglError
+    # to have a exception-only error handling
+    if throw_exception:
+        cs_return_value = 'void'
 
     return_str = 'return ' if (cs_return_value != 'void') else ''
 
@@ -341,7 +361,7 @@ def generate_method(node, overrides, fo):
 
     # C# wrapper
     #
-    # We support 2 types of functions:
+    # We support 3 types of functions:
     #
     # 1. simple wrappers (can return values as well)
     #
@@ -357,10 +377,27 @@ def generate_method(node, overrides, fo):
     #       IntPtr p = cogl_pipeline_get_layer_texture(handle, layer_index);
     #       return new Texture(p);
     #   }
+    #
+    # 3. functions returning a CoglError throw exceptions
+    #
+    #   public void Allocate()
+    #   {
+    #       IntPtr error;
+    #
+    #       cogl_framebuffer_allocate(handle, out error);
+    #       if (error != IntPtr.Zero)
+    #           throw new Cogl.Exception(error);
+    #   }
     fo.write("        public %s %s(%s)\n" %
              (cs_return_value, cs_method_name, ", ".join(cs_params)))
     fo.write("        {\n")
-    if not return_object:
+    if throw_exception:
+        fo.write("            IntPtr error;\n\n")
+        fo.write("            %s(%s);\n" %
+                 (native_method_name, ", ".join(call_params)))
+        fo.write("            if (error != IntPtr.Zero)\n")
+        fo.write("                throw new Cogl.Exception(error);\n")
+    elif not return_object:
         fo.write("            %s%s(%s);\n" %
                  (return_str, native_method_name, ", ".join(call_params)))
     else:

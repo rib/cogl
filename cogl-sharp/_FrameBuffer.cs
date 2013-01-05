@@ -7,6 +7,18 @@ namespace Cogl
     public partial class FrameBuffer
     {
         [DllImport("cogl2.dll")]
+        public static extern bool cogl_framebuffer_allocate(IntPtr o, out IntPtr error);
+
+        public void Allocate()
+        {
+            IntPtr error;
+
+            cogl_framebuffer_allocate(handle, out error);
+            if (error != IntPtr.Zero)
+                throw new Cogl.Exception(error);
+        }
+
+        [DllImport("cogl2.dll")]
         public static extern void cogl_framebuffer_clear(IntPtr o, BufferBit buffers, ref Color color);
 
         public void Clear(BufferBit buffers, ref Color color)

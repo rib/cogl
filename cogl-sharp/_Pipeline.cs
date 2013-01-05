@@ -217,6 +217,18 @@ namespace Cogl
         }
 
         [DllImport("cogl2.dll")]
+        public static extern bool cogl_pipeline_set_layer_point_sprite_coords_enabled(IntPtr o, int layer_index, bool enable, out IntPtr error);
+
+        public void SetLayerPointSpriteCoordsEnabled(int layer_index, bool enable)
+        {
+            IntPtr error;
+
+            cogl_pipeline_set_layer_point_sprite_coords_enabled(handle, layer_index, enable, out error);
+            if (error != IntPtr.Zero)
+                throw new Cogl.Exception(error);
+        }
+
+        [DllImport("cogl2.dll")]
         public static extern void cogl_pipeline_set_layer_texture(IntPtr o, int layer_index, IntPtr texture);
 
         public void SetLayerTexture(int layer_index, Texture texture)
