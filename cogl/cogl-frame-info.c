@@ -25,54 +25,54 @@
 #include "config.h"
 #endif
 
-#include "cogl-swap-info-private.h"
+#include "cogl-frame-info-private.h"
 
-static void _cogl_swap_info_free (CoglSwapInfo *info);
+static void _cogl_frame_info_free (CoglFrameInfo *info);
 
-COGL_OBJECT_DEFINE (SwapInfo, swap_info);
+COGL_OBJECT_DEFINE (FrameInfo, frame_info);
 
-CoglSwapInfo *
-_cogl_swap_info_new (void)
+CoglFrameInfo *
+_cogl_frame_info_new (void)
 {
-  CoglSwapInfo *info;
+  CoglFrameInfo *info;
 
-  info = g_slice_new0 (CoglSwapInfo);
+  info = g_slice_new0 (CoglFrameInfo);
 
-  return _cogl_swap_info_object_new (info);
+  return _cogl_frame_info_object_new (info);
 }
 
 static void
-_cogl_swap_info_free (CoglSwapInfo *info)
+_cogl_frame_info_free (CoglFrameInfo *info)
 {
-  g_slice_free (CoglSwapInfo, info);
+  g_slice_free (CoglFrameInfo, info);
 }
 
 CoglBool
-cogl_swap_info_get_complete (CoglSwapInfo *info)
+cogl_frame_info_get_complete (CoglFrameInfo *info)
 {
   return info->complete;
 }
 
 int64_t
-cogl_swap_info_get_frame_counter (CoglSwapInfo *info)
+cogl_frame_info_get_frame_counter (CoglFrameInfo *info)
 {
   return info->frame_counter;
 }
 
 int64_t
-cogl_swap_info_get_frame_time (CoglSwapInfo *info)
+cogl_frame_info_get_frame_time (CoglFrameInfo *info)
 {
   return info->frame_time;
 }
 
 int64_t
-cogl_swap_info_get_presentation_time (CoglSwapInfo *info)
+cogl_frame_info_get_presentation_time (CoglFrameInfo *info)
 {
   return info->presentation_time;
 }
 
 int64_t
-cogl_swap_info_get_refresh_interval (CoglSwapInfo *info)
+cogl_frame_info_get_refresh_interval (CoglFrameInfo *info)
 {
   return info->refresh_interval;
 }

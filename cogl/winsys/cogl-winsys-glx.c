@@ -42,7 +42,7 @@
 #include "cogl-texture-2d-private.h"
 #include "cogl-texture-rectangle-private.h"
 #include "cogl-pipeline-opengl-private.h"
-#include "cogl-swap-info-private.h"
+#include "cogl-frame-info-private.h"
 #include "cogl-framebuffer-private.h"
 #include "cogl-onscreen-private.h"
 #include "cogl-swap-chain-private.h"
@@ -85,7 +85,7 @@ typedef struct _CoglOnscreenGLX
   uint32_t last_swap_vsync_counter;
   CoglBool pending_swap_notify;
   CoglBool pending_resize_notify;
-  CoglBool pending_swap_info_notify;
+  CoglBool pending_frame_info_notify;
 } CoglOnscreenGLX;
 
 typedef struct _CoglTexturePixmapGLX
@@ -283,12 +283,12 @@ set_info_complete (CoglOnscreen *onscreen)
   CoglContext *context = COGL_FRAMEBUFFER (onscreen)->context;
   CoglGLXDisplay *glx_display = context->display->winsys;
   int frame_counter = cogl_onscreen_get_frame_counter (onscreen);
-  CoglSwapInfo *info = cogl_onscreen_get_swap_info (onscreen, frame_counter);
+  CoglFrameInfo *info = cogl_onscreen_get_frame_info (onscreen, frame_counter);
 
   info->complete = TRUE;
 
-  glx_display->pending_swap_info_notify = TRUE;
-  glx_onscreen->pending_swap_info_notify = TRUE;
+  glx_display->pending_frame_info_notify = TRUE;
+  glx_onscreen->pending_frame_info_notify = TRUE;
 }
 
 static void
@@ -299,7 +299,7 @@ notify_swap_buffers (CoglContext *context, GLXBufferSwapComplete *swap_event)
   CoglGLXDisplay *glx_display = display->winsys;
   CoglOnscreenGLX *glx_onscreen;
   int frame_counter;
-  CoglSwapInfo *info;
+  CoglFrameInfo *info;
 
   if (!onscreen)
     return;
@@ -312,7 +312,7 @@ notify_swap_buffers (CoglContext *context, GLXBufferSwapComplete *swap_event)
   glx_onscreen->pending_swap_notify = TRUE;
 
   frame_counter = cogl_onscreen_get_frame_counter (onscreen);
-  info = cogl_onscreen_get_swap_info (onscreen, frame_counter);
+  info = cogl_onscreen_get_frame_info (onscreen, frame_counter);
   if (swap_event->ust != 0)
     info->presentation_time = ust_to_monotonic_time (context->display->renderer,
                                                         glx_onscreen->glxwin,
@@ -1408,10 +1408,10 @@ _cogl_winsys_wait_for_vblank (CoglOnscreen *onscreen)
       glx_renderer->glXGetVideoSync)
     {
       int frame_counter;
-      CoglSwapInfo *info;
+      CoglFrameInfo *info;
 
       frame_counter = cogl_onscreen_get_frame_counter (onscreen);
-      info = cogl_onscreen_get_swap_info (onscreen, frame_counter);
+      info = cogl_onscreen_get_frame_info (onscreen, frame_counter);
 
       if (glx_renderer->glXWaitForMsc)
         {
@@ -1464,7 +1464,7 @@ set_refresh_interval_from_output (CoglOnscreen *onscreen,
   if (refresh_rate != 0.0)
     {
       int frame_counter = cogl_onscreen_get_frame_counter (onscreen);
-      CoglSwapInfo *info = cogl_onscreen_get_swap_info (onscreen, frame_counter);
+      CoglFrameInfo *info = cogl_onscreen_get_frame_info (onscreen, frame_counter);
 
       info->refresh_interval = (int)(0.5 + (1000000. / refresh_rate));
     }
@@ -2421,7 +2421,7 @@ _cogl_winsys_poll_get_info (CoglContext *context,
      immediately */
   if (glx_display->pending_swap_notify ||
       glx_display->pending_resize_notify ||
-      glx_display->pending_swap_info_notify)
+      glx_display->pending_frame_info_notify)
     *timeout = 0;
 }
 
@@ -2448,10 +2448,10 @@ flush_pending_notifications_cb (void *data,
           glx_onscreen->pending_resize_notify = FALSE;
         }
 
-      if (glx_onscreen->pending_swap_info_notify)
+      if (glx_onscreen->pending_frame_info_notify)
         {
-          _cogl_onscreen_notify_swap_info (onscreen);
-          glx_onscreen->pending_swap_info_notify = FALSE;
+          _cogl_onscreen_notify_frame_info (onscreen);
+          glx_onscreen->pending_frame_info_notify = FALSE;
         }
     }
 }
@@ -2470,14 +2470,14 @@ _cogl_winsys_poll_dispatch (CoglContext *context,
 
   if (glx_display->pending_swap_notify ||
       glx_display->pending_resize_notify ||
-      glx_display->pending_swap_info_notify)
+      glx_display->pending_frame_info_notify)
     {
       g_list_foreach (context->framebuffers,
                       flush_pending_notifications_cb,
                       NULL);
       glx_display->pending_swap_notify = FALSE;
       glx_display->pending_resize_notify = FALSE;
-      glx_display->pending_swap_info_notify = FALSE;
+      glx_display->pending_frame_info_notify = FALSE;
     }
 }
 

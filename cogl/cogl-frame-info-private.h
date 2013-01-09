@@ -21,13 +21,13 @@
  *
  */
 
-#ifndef __COGL_SWAP_INFO_PRIVATE_H
-#define __COGL_SWAP_INFO_PRIVATE_H
+#ifndef __COGL_FRAME_INFO_PRIVATE_H
+#define __COGL_FRAME_INFO_PRIVATE_H
 
-#include "cogl-swap-info.h"
+#include "cogl-frame-info.h"
 #include "cogl-object-private.h"
 
-struct _CoglSwapInfo
+struct _CoglFrameInfo
 {
   CoglObject _parent;
 
@@ -39,6 +39,6 @@ struct _CoglSwapInfo
   unsigned int complete : 1;
 };
 
-CoglSwapInfo *_cogl_swap_info_new (void);
+CoglFrameInfo *_cogl_frame_info_new (void);
 
-#endif /* __COGL_SWAP_INFO_PRIVATE_H */
+#endif /* __COGL_FRAME_INFO_PRIVATE_H */

@@ -28,48 +28,48 @@
 #error "Only <cogl/cogl.h> can be included directly."
 #endif
 
-#ifndef __COGL_SWAP_INFO_H
-#define __COGL_SWAP_INFO_H
+#ifndef __COGL_FRAME_INFO_H
+#define __COGL_FRAME_INFO_H
 
 #include <cogl/cogl-types.h>
 #include <glib.h>
 
 G_BEGIN_DECLS
 
-typedef struct _CoglSwapInfo CoglSwapInfo;
-#define COGL_SWAP_INFO(X) ((CoglSwapInfo *)(X))
+typedef struct _CoglFrameInfo CoglFrameInfo;
+#define COGL_FRAME_INFO(X) ((CoglFrameInfo *)(X))
 
 /**
- * cogl_is_swap_info:
+ * cogl_is_frame_info:
  * @object: A #CoglObject pointer
  *
- * Gets whether the given object references a #CoglSwapInfo.
+ * Gets whether the given object references a #CoglFrameInfo.
  *
- * Return value: %TRUE if the object references a #CoglSwapInfo
+ * Return value: %TRUE if the object references a #CoglFrameInfo
  *   and %FALSE otherwise.
  * Since: 2.0
  * Stability: unstable
  */
 CoglBool
-cogl_is_swap_info (void *object);
+cogl_is_frame_info (void *object);
 
 /**
- * cogl_swap_info_get_complete:
- * @info: a #CoglSwapInfo object
+ * cogl_frame_info_get_complete:
+ * @info: a #CoglFrameInfo object
  *
  * Gets whether all information that will potentially be provided for
- * the frame has been provided. Once a swap info object is complete,
+ * the frame has been provided. Once a frame info object is complete,
  * no further changes will be made to it.
  *
- * Return value: whether the swap info object is complete.
+ * Return value: whether the frame info object is complete.
  * Since: 2.0
  * Stability: unstable
  */
-CoglBool cogl_swap_info_get_complete (CoglSwapInfo *info);
+CoglBool cogl_frame_info_get_complete (CoglFrameInfo *info);
 
 /**
- * cogl_swap_info_get_frame_counter:
- * @info: a #CoglSwapInfo object
+ * cogl_frame_info_get_frame_counter:
+ * @info: a #CoglFrameInfo object
  *
  * Gets the frame counter for the #CoglOnscreen that corresponds
  * to this frame.
@@ -78,11 +78,11 @@ CoglBool cogl_swap_info_get_complete (CoglSwapInfo *info);
  * Since: 2.0
  * Stability: unstable
  */
-int64_t cogl_swap_info_get_frame_counter (CoglSwapInfo *info);
+int64_t cogl_frame_info_get_frame_counter (CoglFrameInfo *info);
 
 /**
- * cogl_swap_info_get_frame_time:
- * @info: a #CoglSwapInfo object
+ * cogl_frame_info_get_frame_time:
+ * @info: a #CoglFrameInfo object
  *
  * Gets the time used for creating content for the frame. This
  * is determined by the time passed to cogl_onscreen_begin_frame(),
@@ -94,11 +94,11 @@ int64_t cogl_swap_info_get_frame_counter (CoglSwapInfo *info);
  * Since: 2.0
  * Stability: unstable
  */
-int64_t cogl_swap_info_get_frame_time (CoglSwapInfo *info);
+int64_t cogl_frame_info_get_frame_time (CoglFrameInfo *info);
 
 /**
- * cogl_swap_info_get_presentation_time:
- * @info: a #CoglSwapInfo object
+ * cogl_frame_info_get_presentation_time:
+ * @info: a #CoglFrameInfo object
  *
  * Gets the presentation time for the frame. This is the time at which
  * the frame became visible to the user.
@@ -108,11 +108,11 @@ int64_t cogl_swap_info_get_frame_time (CoglSwapInfo *info);
  * Since: 2.0
  * Stability: unstable
  */
-int64_t cogl_swap_info_get_presentation_time (CoglSwapInfo *info);
+int64_t cogl_frame_info_get_presentation_time (CoglFrameInfo *info);
 
 /**
- * cogl_swap_info_get_refresh_interval:
- * @info: a #CoglSwapInfo object
+ * cogl_frame_info_get_refresh_interval:
+ * @info: a #CoglFrameInfo object
  *
  * Gets the refresh interval for the output that the frame was on at the
  * time the frame was presented. This is the number of microseconds between
@@ -123,11 +123,11 @@ int64_t cogl_swap_info_get_presentation_time (CoglSwapInfo *info);
  * Since: 2.0
  * Stability: unstable
  */
-int64_t cogl_swap_info_get_refresh_interval (CoglSwapInfo *info);
+int64_t cogl_frame_info_get_refresh_interval (CoglFrameInfo *info);
 
 G_END_DECLS
 
-#endif /* __COGL_SWAP_INFO_H */
+#endif /* __COGL_FRAME_INFO_H */
 
 
 

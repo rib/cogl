@@ -33,7 +33,7 @@
 #include <windows.h>
 #endif
 
-#define COGL_ONSCREEN_MAX_SWAP_INFOS 16
+#define COGL_ONSCREEN_MAX_FRAME_INFOS 16
 
 typedef struct _CoglSwapBuffersNotifyEntry CoglSwapBuffersNotifyEntry;
 
@@ -61,15 +61,15 @@ struct _CoglResizeNotifyEntry
   unsigned int id;
 };
 
-typedef struct _CoglSwapInfoCallbackEntry CoglSwapInfoCallbackEntry;
+typedef struct _CoglFrameInfoCallbackEntry CoglFrameInfoCallbackEntry;
 
-COGL_TAILQ_HEAD (CoglSwapInfoCallbackList, CoglSwapInfoCallbackEntry);
+COGL_TAILQ_HEAD (CoglFrameInfoCallbackList, CoglFrameInfoCallbackEntry);
 
-struct _CoglSwapInfoCallbackEntry
+struct _CoglFrameInfoCallbackEntry
 {
-  COGL_TAILQ_ENTRY (CoglSwapInfoCallbackEntry) list_node;
+  COGL_TAILQ_ENTRY (CoglFrameInfoCallbackEntry) list_node;
 
-  CoglSwapInfoCallback callback;
+  CoglFrameInfoCallback callback;
   void *user_data;
   unsigned int id;
 };
@@ -95,15 +95,15 @@ struct _CoglOnscreen
   CoglBool resizable;
   CoglResizeNotifyList resize_callbacks;
 
-  CoglSwapInfoCallbackList swap_info_callbacks;
+  CoglFrameInfoCallbackList frame_info_callbacks;
 
   int64_t frame_counter;
   int64_t swap_frame_counter; /* frame counter at last all to
                                * cogl_onscreen_swap_region() or
                                * cogl_onscreen_swap_buffers() */
-  CoglSwapInfo *swap_info[COGL_ONSCREEN_MAX_SWAP_INFOS];
-  int current_swap_info;
-  int n_swap_infos;
+  CoglFrameInfo *frame_info[COGL_ONSCREEN_MAX_FRAME_INFOS];
+  int current_frame_info;
+  int n_frame_infos;
 
   void *winsys;
 };
@@ -122,6 +122,6 @@ void
 _cogl_onscreen_notify_resize (CoglOnscreen *onscreen);
 
 void
-_cogl_onscreen_notify_swap_info (CoglOnscreen *onscreen);
+_cogl_onscreen_notify_frame_info (CoglOnscreen *onscreen);
 
 #endif /* __COGL_ONSCREEN_PRIVATE_H */

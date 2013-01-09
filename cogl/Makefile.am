@@ -110,7 +110,7 @@ cogl_experimental_h = \
 	$(srcdir)/cogl-attribute.h 		\
 	$(srcdir)/cogl-primitive.h 		\
 	$(srcdir)/cogl-clip-state.h		\
-	$(srcdir)/cogl-swap-info.h		\
+	$(srcdir)/cogl-frame-info.h		\
 	$(srcdir)/cogl-framebuffer.h		\
 	$(srcdir)/cogl-onscreen.h		\
 	$(srcdir)/cogl-output.h			\
@@ -385,8 +385,8 @@ cogl_sources_c = \
 	$(srcdir)/cogl-spans.c				\
 	$(srcdir)/cogl-journal-private.h		\
 	$(srcdir)/cogl-journal.c			\
-	$(srcdir)/cogl-swap-info-private.h		\
-	$(srcdir)/cogl-swap-info.c			\
+	$(srcdir)/cogl-frame-info-private.h		\
+	$(srcdir)/cogl-frame-info.c			\
 	$(srcdir)/cogl-framebuffer-private.h		\
 	$(srcdir)/cogl-framebuffer.c 			\
 	$(srcdir)/cogl-onscreen-private.h		\
