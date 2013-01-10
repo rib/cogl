@@ -35,6 +35,7 @@
 #include <cogl/cogl-context.h>
 #include <cogl/cogl-framebuffer.h>
 #include <cogl/cogl-frame-info.h>
+#include <cogl/cogl-object.h>
 
 COGL_BEGIN_DECLS
 
@@ -333,6 +334,149 @@ cogl_onscreen_swap_region (CoglOnscreen *onscreen,
                            const int *rectangles,
                            int n_rectangles);
 
+/**
+ * CoglFrameEvent:
+ * @COGL_FRAME_EVENT_SYNC: Notifies that the system compositor has
+ *                         acknowledged a frame and is ready for a
+ *                         new frame to be created. Only delivered
+ *                         if the %COGL_FEATURE_ID_FRAME_SYNC
+ *                         feature is supported.
+ * @COGL_FRAME_EVENT_COMPLETE: Notifies that a frame has ended. This
+ *                             is a good time for applications to
+ *                             collect statistics about the frame
+ *                             since the #CoglFrameInfo should hold
+ *                             the most data at this point. No other
+ *                             events should be expected after a
+ *                             @COGL_FRAME_EVENT_COMPLETE event.
+ *
+ * Identifiers that are passed to #CoglFrameCallback functions
+ * (registered using cogl_onscreen_add_frame_callback()) that
+ * mark the progression of a frame in some way which usually
+ * means that new information will have been accumulated in the
+ * frame's corresponding #CoglFrameInfo object.
+ *
+ * The last event that will be sent for a frame will be a
+ * @COGL_FRAME_EVENT_COMPLETE event and so these are a good
+ * opportunity to collect statistics about a frame since the
+ * #CoglFrameInfo should hold the most data at this point.
+ *
+ * <note>A frame may not be completed before the next frame can start
+ * so applications should avoid needing to collect all statistics for
+ * a particular frame before they can start a new frame.</note>
+ *
+ * Since: 1.14
+ * Stability: unstable
+ */
+typedef enum _CoglFrameEvent
+{
+  COGL_FRAME_EVENT_SYNC = 1,
+  COGL_FRAME_EVENT_COMPLETE
+} CoglFrameEvent;
+
+/**
+ * CoglFrameCallback:
+ * @onscreen: The onscreen that the frame is associated with
+ * @event: A #CoglFrameEvent notifying how the frame has progressed
+ * @info: The meta information, such as timing information, about
+ *        the frame that has progressed.
+ * @user_data: The user pointer passed to
+ *             cogl_onscreen_add_frame_callback()
+ *
+ * Is a callback that can be registered via
+ * cogl_onscreen_add_frame_callback() to be called when a frame
+ * progresses in some notable way.
+ *
+ * Please see the documentation for #CoglFrameEvent and
+ * cogl_onscreen_add_frame_callback() for more details about what
+ * events can be notified.
+ *
+ * Since: 1.14
+ * Stability: unstable
+ */
+typedef void (*CoglFrameCallback) (CoglOnscreen *onscreen,
+                                   CoglFrameEvent event,
+                                   CoglFrameInfo *info,
+                                   void *user_data);
+
+/**
+ * CoglFrameClosure:
+ *
+ * An opaque type that tracks a #CoglFrameCallback and associated user
+ * data. A #CoglFrameClosure pointer will be returned from
+ * cogl_onscreen_add_frame_callback() and it allows you to remove a
+ * callback later using cogl_onscreen_remove_frame_callback().
+ *
+ * Since: 1.14
+ * Stability: unstable
+ */
+typedef struct _CoglFrameClosure CoglFrameClosure;
+
+/**
+ * cogl_onscreen_add_frame_callback:
+ * @onscreen: A #CoglOnscreen framebuffer
+ * @callback: A callback function to call for frame events
+ * @user_data: A private pointer to be passed to @callback
+ * @destroy: An optional callback to destroy @user_data when the
+ *           @callback is removed or @onscreen is freed.
+ *
+ * Installs a @callback function that will be called for significant
+ * events relating to the given @onscreen framebuffer.
+ *
+ * If the %COGL_FEATURE_ID_FRAME_SYNC feature is supported
+ * then @callback will be used to notify when the system compositor is
+ * ready for this application to render a new frame. In this case
+ * %COGL_FRAME_EVENT_SYNC will be passed as the event argument to the
+ * given @callback in addition to the #CoglFrameInfo corresponding to
+ * the frame beeing acknowledged by the compositor.
+ *
+ * If the %COGL_FEATURE_ID_PRESENTATION_EVENTS is available then
+ * @callback will be called to notify when the frame has become
+ * visible to the user. In this case %COGL_FRAME_EVENT_PRESENTED will
+ * be passed as the event argument to the given @callback in addition
+ * to the #CoglFrameInfo corresponding to the newly presented frame.
+ *
+ * We recommend throttling your application according to
+ * %COGL_FRAME_EVENT_SYNC events whenever the
+ * %COGL_FEATURE_ID_FRAME_SYNC feature is available. This allows your
+ * application to avoid being blocked by the driver which will block
+ * your applications mainloop.
+ *
+ * <note>Applications should not make assumptions about the relative
+ * ordering of different types of frame events. A
+ * %COGL_FRAME_EVENT_PRESENTED event can be received before a
+ * %COGL_FRAME_EVENT_SYNC if the compositor is agressively throttling
+ * your application.</note>
+ *
+ * Return value: a #CoglFrameClosure pointer that can be used to
+ *               remove the callback and associated @user_data later.
+ * Since: 1.14
+ * Stability: unstable
+ */
+CoglFrameClosure *
+cogl_onscreen_add_frame_callback (CoglOnscreen *onscreen,
+                                  CoglFrameCallback callback,
+                                  void *user_data,
+                                  CoglUserDataDestroyCallback destroy);
+
+/**
+ * cogl_onscreen_remove_frame_callback:
+ * @onscreen: A #CoglOnscreen
+ * @closure: A #CoglFrameClosure returned from
+ *           cogl_onscreen_add_frame_callback()
+ *
+ * Removes a callback and associated user data that were previously
+ * registered using cogl_onscreen_add_frame_callback().
+ *
+ * If a destroy callback was passed to
+ * cogl_onscreen_add_frame_callback() to destroy the user data then
+ * this will get called.
+ *
+ * Since: 1.14
+ * Stability: unstable
+ */
+void
+cogl_onscreen_remove_frame_callback (CoglOnscreen *onscreen,
+                                     CoglFrameClosure *closure);
 
 typedef void (*CoglSwapBuffersNotify) (CoglFramebuffer *framebuffer,
                                        void *user_data);
@@ -360,6 +504,7 @@ typedef void (*CoglSwapBuffersNotify) (CoglFramebuffer *framebuffer,
  *               the callback later.
  * Since: 1.10
  * Stability: unstable
+ * Deprecated: 1.14: Use cogl_onscreen_add_swap_complete_callback
  */
 unsigned int
 cogl_onscreen_add_swap_buffers_callback (CoglOnscreen *onscreen,
@@ -376,6 +521,7 @@ cogl_onscreen_add_swap_buffers_callback (CoglOnscreen *onscreen,
  *
  * Since: 1.10
  * Stability: unstable
+ * Deprecated: 1.14: Use cogl_onscreen_remove_swap_complete_callback
  */
 void
 cogl_onscreen_remove_swap_buffers_callback (CoglOnscreen *onscreen,
@@ -593,62 +739,6 @@ cogl_onscreen_get_frame_history_start (CoglOnscreen *onscreen);
 CoglFrameInfo *
 cogl_onscreen_get_frame_info (CoglOnscreen *onscreen,
                               int64_t frame_counter);
-
-/**
- * CoglFrameInfoCallback:
- * @onscreen: A #CoglOnscreen framebuffer that has updated timing information
- * @user_data: The private passed to
- *             cogl_onscreen_add_frame_info_callback()
- *
- * Is a callback type used with the
- * cogl_onscreen_add_frame_info_callback() allowing applications to be
- * notified whenever new frame timings information is available
- * via cogl_onscreen_get_frame_info().
- *
- * <note>A frame timings callback will only ever be called while dispatching
- * Cogl events from the system mainloop; so for example during
- * cogl_poll_dispatch(). This is so that callbacks shouldn't occur
- * while an application might have arbitrary locks held for
- * example.</note>
- *
- * Since: 2.0
- */
-typedef void (*CoglFrameInfoCallback) (CoglOnscreen *onscreen,
-                                       void *user_data);
-
-/**
- * cogl_onscreen_add_frame_info_callback:
- * @onscreen: A #CoglOnscreen framebuffer
- * @callback: A callback function to call when new frame timings information is available
- * @user_data: A private pointer to be passed to @callback
- *
- * Installs a @callback function that should be called whenever new data
- * is available via cogl_onscreen_get_frame_info().
- *
- * Return value: a unique identifier that can be used to remove to remove
- *               the callback later.
- * Since: 2.0
- * Stability: unstable
- */
-unsigned int
-cogl_onscreen_add_frame_info_callback (CoglOnscreen *onscreen,
-                                       CoglFrameInfoCallback callback,
-                                       void *user_data);
-
-/**
- * cogl_onscreen_remove_frame_info_callback:
- * @onscreen: A #CoglOnscreen framebuffer
- * @id: An identifier returned from cogl_onscreen_add_frame_info_callback()
- *
- * Removes a callback that was previously registered
- * using cogl_onscreen_add_frame_info_callback().
- *
- * Since: 1.10
- * Stability: unstable
- */
-void
-cogl_onscreen_remove_frame_info_callback (CoglOnscreen *onscreen,
-                                          unsigned int id);
 
 COGL_END_DECLS
 

@@ -190,6 +190,9 @@ struct _CoglContext
   gboolean have_last_offscreen_allocate_flags;
   CoglOffscreenAllocateFlags last_offscreen_allocate_flags;
 
+  GHashTable *swap_callback_closures;
+  int next_frame_callback_id;
+
   CoglGLES2Context *current_gles2_context;
   GQueue gles2_context_stack;
 

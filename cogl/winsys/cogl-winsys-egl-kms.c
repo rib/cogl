@@ -753,6 +753,8 @@ _cogl_winsys_egl_context_init (CoglContext *context,
                                CoglError **error)
 {
   COGL_FLAGS_SET (context->features,
+                  COGL_FEATURE_ID_FRAME_SYNC, TRUE);
+  COGL_FLAGS_SET (context->features,
                   COGL_FEATURE_ID_SWAP_BUFFERS_EVENT, TRUE);
   COGL_FLAGS_SET (context->winsys_features,
                   COGL_WINSYS_FEATURE_SWAP_BUFFERS_EVENT,
@@ -894,7 +896,13 @@ flush_pending_swap_notify_cb (void *data,
 
       if (kms_onscreen->pending_swap_notify)
         {
-          _cogl_onscreen_notify_swap_buffers (onscreen);
+          int64_t frame_counter = cogl_onscreen_get_frame_counter (onscreen);
+          CoglFrameInfo *info = cogl_onscreen_get_frame_info (onscreen, frame_counter);
+
+          info->complete = TRUE;
+
+          _cogl_onscreen_notify_frame_sync (onscreen, info);
+          _cogl_onscreen_notify_complete (onscreen, info);
           kms_onscreen->pending_swap_notify = FALSE;
         }
     }
