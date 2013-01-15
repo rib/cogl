@@ -72,7 +72,7 @@ cogl_frame_info_get_presentation_time (CoglFrameInfo *info)
 }
 
 int64_t
-cogl_frame_info_get_refresh_interval (CoglFrameInfo *info)
+cogl_frame_info_get_refresh_rate (CoglFrameInfo *info)
 {
-  return info->refresh_interval;
+  return info->refresh_rate;
 }

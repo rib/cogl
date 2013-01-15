@@ -111,19 +111,17 @@ int64_t cogl_frame_info_get_frame_time (CoglFrameInfo *info);
 int64_t cogl_frame_info_get_presentation_time (CoglFrameInfo *info);
 
 /**
- * cogl_frame_info_get_refresh_interval:
+ * cogl_frame_info_get_refresh_rate:
  * @info: a #CoglFrameInfo object
  *
- * Gets the refresh interval for the output that the frame was on at the
- * time the frame was presented. This is the number of microseconds between
- * refreshes of the screen, and is equal to 1000000 / refresh_rate.
+ * Gets the refresh rate in Hertz for the output that the frame was on
+ * at the time the frame was presented.
  *
- * Return value: the refresh interval, in microsecoonds.
- *  .
+ * Return value: the refresh rate in Hertz
  * Since: 2.0
  * Stability: unstable
  */
-int64_t cogl_frame_info_get_refresh_interval (CoglFrameInfo *info);
+int64_t cogl_frame_info_get_refresh_rate (CoglFrameInfo *info);
 
 G_END_DECLS
 

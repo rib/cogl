@@ -34,7 +34,7 @@ struct _CoglFrameInfo
   int64_t frame_counter;
   int64_t frame_time;
   int64_t presentation_time;
-  int64_t refresh_interval;
+  float refresh_rate;
 
   unsigned int complete : 1;
 };

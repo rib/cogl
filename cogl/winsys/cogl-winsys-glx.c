@@ -1457,8 +1457,8 @@ _cogl_winsys_get_vsync_counter (CoglContext *ctx)
 }
 
 static void
-set_refresh_interval_from_output (CoglOnscreen *onscreen,
-                                  CoglOutput   *output)
+set_refresh_rate_from_output (CoglOnscreen *onscreen,
+                              CoglOutput *output)
 {
   float refresh_rate = cogl_output_get_refresh_rate (output);
   if (refresh_rate != 0.0)
@@ -1466,7 +1466,7 @@ set_refresh_interval_from_output (CoglOnscreen *onscreen,
       int frame_counter = cogl_onscreen_get_frame_counter (onscreen);
       CoglFrameInfo *info = cogl_onscreen_get_frame_info (onscreen, frame_counter);
 
-      info->refresh_interval = (int)(0.5 + (1000000. / refresh_rate));
+      info->refresh_rate = refresh_rate;
     }
 }
 
@@ -1667,7 +1667,7 @@ _cogl_winsys_onscreen_swap_region (CoglOnscreen *onscreen,
                                                          xlib_onscreen->x + x_min, xlib_onscreen->y + y_min,
                                                          x_max - x_min, y_max - y_min);
       if (output)
-        set_refresh_interval_from_output (onscreen, output);
+        set_refresh_rate_from_output (onscreen, output);
     }
 
   set_info_complete (onscreen);
@@ -1752,7 +1752,7 @@ _cogl_winsys_onscreen_swap_buffers (CoglOnscreen *onscreen)
       _cogl_winsys_get_vsync_counter (context);
 
   if (xlib_onscreen->output)
-    set_refresh_interval_from_output (onscreen, xlib_onscreen->output);
+    set_refresh_rate_from_output (onscreen, xlib_onscreen->output);
 
   if (!(glx_renderer->glXSwapInterval &&
         _cogl_winsys_has_feature (COGL_WINSYS_FEATURE_VBLANK_WAIT)))
