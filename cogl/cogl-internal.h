@@ -82,7 +82,7 @@ _cogl_transform_point (const CoglMatrix *matrix_mv,
                        float *x,
                        float *y);
 
-#define COGL_DRIVER_ERROR (_cogl_driver_error_quark ())
+#define COGL_DRIVER_ERROR (_cogl_driver_error_domain ())
 
 typedef enum { /*< prefix=COGL_DRIVER_ERROR >*/
   COGL_DRIVER_ERROR_UNKNOWN_VERSION,
@@ -128,6 +128,6 @@ typedef enum _CoglPipelineEvalFlags
 } CoglPipelineEvalFlags;
 
 uint32_t
-_cogl_driver_error_quark (void);
+_cogl_driver_error_domain (void);
 
 #endif /* __COGL_INTERNAL_H */
