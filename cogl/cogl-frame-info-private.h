@@ -36,6 +36,8 @@ struct _CoglFrameInfo
   int64_t presentation_time;
   float refresh_rate;
 
+  CoglOutput *output;
+
   unsigned int complete : 1;
 };
 

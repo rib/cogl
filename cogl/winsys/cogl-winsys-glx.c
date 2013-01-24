@@ -1464,15 +1464,19 @@ _cogl_winsys_get_vsync_counter (CoglContext *ctx)
 }
 
 static void
-set_refresh_rate_from_output (CoglOnscreen *onscreen,
-                              CoglOutput *output)
+set_frame_info_output (CoglOnscreen *onscreen,
+                       CoglOutput *output)
 {
-  float refresh_rate = cogl_output_get_refresh_rate (output);
-  if (refresh_rate != 0.0)
+  int64_t frame_counter = cogl_onscreen_get_frame_counter (onscreen);
+  CoglFrameInfo *info = cogl_onscreen_get_frame_info (onscreen, frame_counter);
+
+  info->output = output;
+
+  if (output)
     {
-      int64_t frame_counter = cogl_onscreen_get_frame_counter (onscreen);
-      CoglFrameInfo *info = cogl_onscreen_get_frame_info (onscreen, frame_counter);
-      info->refresh_rate = refresh_rate;
+      float refresh_rate = cogl_output_get_refresh_rate (output);
+      if (refresh_rate != 0.0)
+        info->refresh_rate = refresh_rate;
     }
 }
 
@@ -1669,11 +1673,14 @@ _cogl_winsys_onscreen_swap_region (CoglOnscreen *onscreen,
       y_min = CLAMP (y_min, 0, framebuffer_width);
       y_max = CLAMP (y_max, 0, framebuffer_height);
 
-      output = _cogl_xlib_renderer_output_for_rectangle (context->display->renderer,
-                                                         xlib_onscreen->x + x_min, xlib_onscreen->y + y_min,
-                                                         x_max - x_min, y_max - y_min);
-      if (output)
-        set_refresh_rate_from_output (onscreen, output);
+      output =
+        _cogl_xlib_renderer_output_for_rectangle (context->display->renderer,
+                                                  xlib_onscreen->x + x_min,
+                                                  xlib_onscreen->y + y_min,
+                                                  x_max - x_min,
+                                                  y_max - y_min);
+
+      set_frame_info_output (onscreen, output);
     }
 
   set_info_complete (onscreen);
@@ -1757,8 +1764,7 @@ _cogl_winsys_onscreen_swap_buffers (CoglOnscreen *onscreen)
     glx_onscreen->last_swap_vsync_counter =
       _cogl_winsys_get_vsync_counter (context);
 
-  if (xlib_onscreen->output)
-    set_refresh_rate_from_output (onscreen, xlib_onscreen->output);
+  set_frame_info_output (onscreen, xlib_onscreen->output);
 
   if (!(glx_renderer->glXSwapInterval &&
         _cogl_winsys_has_feature (COGL_WINSYS_FEATURE_VBLANK_WAIT)))

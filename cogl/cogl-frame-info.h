@@ -32,6 +32,7 @@
 #define __COGL_FRAME_INFO_H
 
 #include <cogl/cogl-types.h>
+#include <cogl/cogl-output.h>
 #include <glib.h>
 
 G_BEGIN_DECLS
@@ -117,11 +118,31 @@ int64_t cogl_frame_info_get_presentation_time (CoglFrameInfo *info);
  * Gets the refresh rate in Hertz for the output that the frame was on
  * at the time the frame was presented.
  *
+ * <note>Some platforms can't associate a #CoglOutput with a
+ * #CoglFrameInfo object but are able to report a refresh rate via
+ * this api. Therefore if you need this information then this api is
+ * more reliable than using cogl_frame_info_get_output() followed by
+ * cogl_output_get_refresh_rate().</note>
+ *
  * Return value: the refresh rate in Hertz
  * Since: 2.0
  * Stability: unstable
  */
 int64_t cogl_frame_info_get_refresh_rate (CoglFrameInfo *info);
+
+/**
+ * cogl_frame_info_get_output:
+ * @info: a #CoglFrameInfo object
+ *
+ * Gets the #CoglOutput that the swapped frame was presented to.
+ *
+ * Return value: The #CoglOutput that the frame was presented to, or
+ *               %NULL if this could not be determined.
+ * Since: 2.0
+ * Stability: unstable
+ */
+CoglOutput *
+cogl_frame_info_get_output (CoglFrameInfo *info);
 
 G_END_DECLS
 

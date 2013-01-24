@@ -76,3 +76,9 @@ cogl_frame_info_get_refresh_rate (CoglFrameInfo *info)
 {
   return info->refresh_rate;
 }
+
+CoglOutput *
+cogl_frame_info_get_output (CoglFrameInfo *info)
+{
+  return info->output;
+}
