@@ -56,6 +56,7 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <fcntl.h>
+#include <time.h>
 
 #include <glib/gi18n-lib.h>
 
@@ -175,7 +176,7 @@ find_onscreen_for_xid (CoglContext *context, uint32_t xid)
 
 static void
 ensure_ust_type (CoglRenderer *renderer,
-                 GLXDrawable   drawable)
+                 GLXDrawable drawable)
 {
   CoglGLXRenderer *glx_renderer =  renderer->winsys;
   CoglXlibRenderer *xlib_renderer = _cogl_xlib_renderer_get_data (renderer);
@@ -183,6 +184,7 @@ ensure_ust_type (CoglRenderer *renderer,
   int64_t msc;
   int64_t sbc;
   struct timeval tv;
+  struct timespec ts;
   int64_t current_system_time;
   int64_t current_monotonic_time;
 
@@ -198,20 +200,26 @@ ensure_ust_type (CoglRenderer *renderer,
                                        &ust, &msc, &sbc))
     goto out;
 
-  /* This is the method that Xorg uses currently */
-  gettimeofday(&tv, NULL);
+  /* This is the time source that existing (buggy) linux drm drivers
+   * use */
+  gettimeofday (&tv, NULL);
   current_system_time = (tv.tv_sec * G_GINT64_CONSTANT (1000000)) + tv.tv_usec;
 
-  if (current_system_time > ust - 1000000 && current_system_time < ust + 1000000)
+  if (current_system_time > ust - 1000000 &&
+      current_system_time < ust + 1000000)
     {
       glx_renderer->ust_type = COGL_GLX_UST_IS_GETTIMEOFDAY;
       goto out;
     }
 
-  /* This is the method that would make sense for a GL implementation to use -
-   * clock_gettime (CLOCK_MONOTONIC, &ts) */
-  current_monotonic_time = g_get_monotonic_time ();
-  if (current_monotonic_time > ust - 1000000 && current_monotonic_time < ust + 1000000)
+  /* This is the time source that the newer (fixed) linux drm
+   * drivers use (Linux >= 3.8) */
+  clock_gettime (CLOCK_MONOTONIC, &ts);
+  current_monotonic_time = (ts.tv_sec * G_GINT64_CONSTANT (1000000)) +
+    (ts.tv_nsec / G_GINT64_CONSTANT (1000));
+
+  if (current_monotonic_time > ust - 1000000 &&
+      current_monotonic_time < ust + 1000000)
     {
       glx_renderer->ust_type = COGL_GLX_UST_IS_MONOTONIC_TIME;
       goto out;
@@ -231,7 +239,6 @@ ust_to_monotonic_time (CoglRenderer *renderer,
                        int64_t       ust)
 {
   CoglGLXRenderer *glx_renderer =  renderer->winsys;
-  CoglXlibRenderer *xlib_renderer = _cogl_xlib_renderer_get_data (renderer);
 
   ensure_ust_type (renderer, drawable);
 
@@ -243,34 +250,32 @@ ust_to_monotonic_time (CoglRenderer *renderer,
     case COGL_GLX_UST_IS_GETTIMEOFDAY:
       {
         struct timeval tv;
+        struct timespec ts;
         int64_t current_system_time;
         int64_t current_monotonic_time;
 
         gettimeofday(&tv, NULL);
+        clock_gettime (CLOCK_MONOTONIC, &ts);
         current_system_time = (tv.tv_sec * G_GINT64_CONSTANT (1000000)) + tv.tv_usec;
-        current_monotonic_time = g_get_monotonic_time ();
+        current_monotonic_time = (ts.tv_sec * G_GINT64_CONSTANT (1000000)) +
+          (ts.tv_nsec / G_GINT64_CONSTANT (1000));
 
         return ust + current_monotonic_time - current_system_time;
       }
     case COGL_GLX_UST_IS_MONOTONIC_TIME:
       return ust;
     case COGL_GLX_UST_IS_OTHER:
-      {
-        if (glx_renderer->glXGetSyncValues)
-          {
-            int64_t current_monotonic_time;
-            int64_t ust;
-            int64_t msc;
-            int64_t sbc;
-
-            glx_renderer->glXGetSyncValues (xlib_renderer->xdpy, drawable,
-                                            &ust, &msc, &sbc);
-
-            current_monotonic_time = g_get_monotonic_time ();
-            return ust + current_monotonic_time - ust;
-          }
-        break;
-      }
+      /* In this case the scale of UST is undefined so we can't easily
+       * scale to nanoseconds.
+       *
+       * For example the driver may be reporting the rdtsc CPU counter
+       * as UST values and so the scale would need to be determined
+       * empirically.
+       *
+       * Potentially we could block for a known duration within
+       * ensure_ust_type() to measure the timescale of UST but for now
+       * we just ignore unknown time sources */
+      return 0;
     }
 
   return 0;
@@ -1440,12 +1445,17 @@ _cogl_winsys_wait_for_vblank (CoglOnscreen *onscreen)
       else
         {
           uint32_t current_count;
+          struct timespec ts;
 
           glx_renderer->glXGetVideoSync (&current_count);
           glx_renderer->glXWaitVideoSync (2,
                                           (current_count + 1) % 2,
                                           &current_count);
-          info->presentation_time = g_get_monotonic_time ();
+
+          clock_gettime (CLOCK_MONOTONIC, &ts);
+          info->presentation_time =
+            (ts.tv_sec * G_GINT64_CONSTANT (1000000)) +
+            (ts.tv_nsec / G_GINT64_CONSTANT (1000));
         }
     }
 }
