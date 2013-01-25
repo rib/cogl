@@ -567,8 +567,7 @@ cogl_onscreen_get_frame_counter (CoglOnscreen *onscreen)
 }
 
 void
-cogl_onscreen_begin_frame (CoglOnscreen *onscreen,
-                           int64_t frame_time)
+cogl_onscreen_begin_frame (CoglOnscreen *onscreen)
 {
   onscreen->frame_counter++;
   onscreen->current_frame_info = (onscreen->current_frame_info + 1) % COGL_ONSCREEN_MAX_FRAME_INFOS;

@@ -82,22 +82,6 @@ CoglBool cogl_frame_info_get_complete (CoglFrameInfo *info);
 int64_t cogl_frame_info_get_frame_counter (CoglFrameInfo *info);
 
 /**
- * cogl_frame_info_get_frame_time:
- * @info: a #CoglFrameInfo object
- *
- * Gets the time used for creating content for the frame. This
- * is determined by the time passed to cogl_onscreen_begin_frame(),
- * and will typically be the current time when rendering started
- * for the frame.
- *
- * Return value: the time used for coreating content for the frame,
- *  in the timescale of g_get_monotonic_time().
- * Since: 2.0
- * Stability: unstable
- */
-int64_t cogl_frame_info_get_frame_time (CoglFrameInfo *info);
-
-/**
  * cogl_frame_info_get_presentation_time:
  * @info: a #CoglFrameInfo object
  *

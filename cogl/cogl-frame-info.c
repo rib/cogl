@@ -60,12 +60,6 @@ cogl_frame_info_get_frame_counter (CoglFrameInfo *info)
 }
 
 int64_t
-cogl_frame_info_get_frame_time (CoglFrameInfo *info)
-{
-  return info->frame_time;
-}
-
-int64_t
 cogl_frame_info_get_presentation_time (CoglFrameInfo *info)
 {
   return info->presentation_time;

@@ -696,8 +696,6 @@ cogl_onscreen_get_frame_counter (CoglOnscreen *onscreen);
 /**
  * cogl_onscreen_begin_frame:
  * @onscreen: a #CoglOnscreen framebuffer
- * @frame_time: the time that should be used for creating
- *   content for this frame.
  *
  * Marks the beginning of a frame. This increases the frame
  * counter value and creates a new #CoglFrameInfo objeect.
@@ -705,8 +703,7 @@ cogl_onscreen_get_frame_counter (CoglOnscreen *onscreen);
  * Since: 2.0
  */
 void
-cogl_onscreen_begin_frame (CoglOnscreen *onscreen,
-                           int64_t frame_time);
+cogl_onscreen_begin_frame (CoglOnscreen *onscreen);
 
 /**
  * cogl_onscreen_get_frame_history_start:
