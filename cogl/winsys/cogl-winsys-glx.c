@@ -234,9 +234,9 @@ ensure_ust_type (CoglRenderer *renderer,
 }
 
 static int64_t
-ust_to_monotonic_time (CoglRenderer *renderer,
-                       GLXDrawable   drawable,
-                       int64_t       ust)
+ust_to_nanoseconds (CoglRenderer *renderer,
+                    GLXDrawable drawable,
+                    int64_t ust)
 {
   CoglGLXRenderer *glx_renderer =  renderer->winsys;
 
@@ -257,13 +257,13 @@ ust_to_monotonic_time (CoglRenderer *renderer,
         gettimeofday(&tv, NULL);
         clock_gettime (CLOCK_MONOTONIC, &ts);
         current_system_time = (tv.tv_sec * G_GINT64_CONSTANT (1000000)) + tv.tv_usec;
-        current_monotonic_time = (ts.tv_sec * G_GINT64_CONSTANT (1000000)) +
-          (ts.tv_nsec / G_GINT64_CONSTANT (1000));
+        current_monotonic_time =
+          ts.tv_sec * G_GINT64_CONSTANT (1000000000) + ts.tv_nsec;
 
-        return ust + current_monotonic_time - current_system_time;
+        return current_monotonic_time + 1000 * (ust - current_system_time);
       }
     case COGL_GLX_UST_IS_MONOTONIC_TIME:
-      return ust;
+      return 1000 * ust;
     case COGL_GLX_UST_IS_OTHER:
       /* In this case the scale of UST is undefined so we can't easily
        * scale to nanoseconds.
@@ -320,9 +320,9 @@ notify_swap_buffers (CoglContext *context, GLXBufferSwapComplete *swap_event)
       CoglFrameInfo *info = cogl_onscreen_get_frame_info (onscreen, frame_counter);
 
       info->presentation_time =
-        ust_to_monotonic_time (context->display->renderer,
-                               glx_onscreen->glxwin,
-                               swap_event->ust);
+        ust_to_nanoseconds (context->display->renderer,
+                            glx_onscreen->glxwin,
+                            swap_event->ust);
     }
 
   set_info_complete (onscreen);
@@ -1438,9 +1438,9 @@ _cogl_winsys_wait_for_vblank (CoglOnscreen *onscreen)
           glx_renderer->glXWaitForMsc (xlib_renderer->xdpy, drawable,
                                        0, 2, (msc + 1) % 2,
                                        &ust, &msc, &sbc);
-          info->presentation_time = ust_to_monotonic_time (ctx->display->renderer,
-                                                           drawable,
-                                                           ust);
+          info->presentation_time = ust_to_nanoseconds (ctx->display->renderer,
+                                                        drawable,
+                                                        ust);
         }
       else
         {
@@ -1454,8 +1454,7 @@ _cogl_winsys_wait_for_vblank (CoglOnscreen *onscreen)
 
           clock_gettime (CLOCK_MONOTONIC, &ts);
           info->presentation_time =
-            (ts.tv_sec * G_GINT64_CONSTANT (1000000)) +
-            (ts.tv_nsec / G_GINT64_CONSTANT (1000));
+            ts.tv_sec * G_GINT64_CONSTANT (1000000000) + ts.tv_nsec;
         }
     }
 }
