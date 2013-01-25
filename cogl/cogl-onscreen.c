@@ -36,8 +36,6 @@
 
 static void _cogl_onscreen_free (CoglOnscreen *onscreen);
 
-static void cogl_onscreen_before_swap (CoglOnscreen *onscreen);
-
 COGL_OBJECT_DEFINE_WITH_CODE (Onscreen, onscreen,
                               _cogl_onscreen_class.virt_unref =
                               _cogl_framebuffer_unref);
@@ -77,9 +75,6 @@ _cogl_onscreen_new (void)
   _cogl_onscreen_init_from_template (onscreen, ctx->display->onscreen_template);
 
   COGL_FRAMEBUFFER (onscreen)->allocated = TRUE;
-
-  onscreen->frame_counter = -1;
-  onscreen->current_frame_info = COGL_ONSCREEN_MAX_FRAME_INFOS - 1;
 
   /* XXX: Note we don't initialize onscreen->winsys in this case. */
 
@@ -122,7 +117,7 @@ _cogl_onscreen_free (CoglOnscreen *onscreen)
   const CoglWinsysVtable *winsys = _cogl_framebuffer_get_winsys (framebuffer);
   CoglResizeNotifyEntry *resize_entry;
   CoglFrameClosure *frame_closure;
-  int i;
+  CoglFrameInfo *frame_info;
 
   while ((resize_entry = COGL_TAILQ_FIRST (&onscreen->resize_callbacks)))
     {
@@ -140,11 +135,9 @@ _cogl_onscreen_free (CoglOnscreen *onscreen)
       g_slice_free (CoglFrameClosure, frame_closure);
     }
 
-  for (i = 0; i < onscreen->n_frame_infos; i++)
-    {
-      cogl_object_unref (onscreen->frame_info[i]);
-      onscreen->frame_info[i] = NULL;
-    }
+  while ((frame_info = g_queue_pop_tail (&onscreen->pending_frame_infos)))
+    cogl_object_unref (frame_info);
+  g_queue_clear (&onscreen->pending_frame_infos);
 
   if (framebuffer->context->window_buffer == COGL_FRAMEBUFFER (onscreen))
     framebuffer->context->window_buffer = NULL;
@@ -163,10 +156,13 @@ cogl_onscreen_swap_buffers (CoglOnscreen *onscreen)
 {
   CoglFramebuffer *framebuffer = COGL_FRAMEBUFFER (onscreen);
   const CoglWinsysVtable *winsys;
+  CoglFrameInfo *info;
 
   _COGL_RETURN_IF_FAIL  (framebuffer->type == COGL_FRAMEBUFFER_TYPE_ONSCREEN);
 
-  cogl_onscreen_before_swap (onscreen);
+  info = _cogl_frame_info_new ();
+  info->frame_counter = onscreen->frame_counter;
+  g_queue_push_tail (&onscreen->pending_frame_infos, info);
 
   /* FIXME: we shouldn't need to flush *all* journals here! */
   cogl_flush ();
@@ -176,6 +172,7 @@ cogl_onscreen_swap_buffers (CoglOnscreen *onscreen)
                                     COGL_BUFFER_BIT_COLOR |
                                     COGL_BUFFER_BIT_DEPTH |
                                     COGL_BUFFER_BIT_STENCIL);
+  onscreen->frame_counter++;
 }
 
 void
@@ -185,10 +182,13 @@ cogl_onscreen_swap_region (CoglOnscreen *onscreen,
 {
   CoglFramebuffer *framebuffer = COGL_FRAMEBUFFER (onscreen);
   const CoglWinsysVtable *winsys;
+  CoglFrameInfo *info;
 
   _COGL_RETURN_IF_FAIL  (framebuffer->type == COGL_FRAMEBUFFER_TYPE_ONSCREEN);
 
-  cogl_onscreen_before_swap (onscreen);
+  info = _cogl_frame_info_new ();
+  info->frame_counter = onscreen->frame_counter;
+  g_queue_push_tail (&onscreen->pending_frame_infos, info);
 
   /* FIXME: we shouldn't need to flush *all* journals here! */
   cogl_flush ();
@@ -207,6 +207,7 @@ cogl_onscreen_swap_region (CoglOnscreen *onscreen,
                                     COGL_BUFFER_BIT_COLOR |
                                     COGL_BUFFER_BIT_DEPTH |
                                     COGL_BUFFER_BIT_STENCIL);
+  onscreen->frame_counter++;
 }
 
 #ifdef COGL_HAS_X11_SUPPORT
@@ -564,54 +565,4 @@ int64_t
 cogl_onscreen_get_frame_counter (CoglOnscreen *onscreen)
 {
   return onscreen->frame_counter;
-}
-
-void
-cogl_onscreen_begin_frame (CoglOnscreen *onscreen)
-{
-  onscreen->frame_counter++;
-  onscreen->current_frame_info = (onscreen->current_frame_info + 1) % COGL_ONSCREEN_MAX_FRAME_INFOS;
-
-  if (onscreen->n_frame_infos < COGL_ONSCREEN_MAX_FRAME_INFOS)
-    onscreen->n_frame_infos++;
-  else
-    cogl_object_unref (onscreen->frame_info[onscreen->current_frame_info]);
-
-  onscreen->frame_info[onscreen->current_frame_info] = _cogl_frame_info_new ();
-  onscreen->frame_info[onscreen->current_frame_info]->frame_counter = onscreen->frame_counter;
-  onscreen->frame_info[onscreen->current_frame_info]->frame_time = frame_time;
-}
-
-static void
-cogl_onscreen_before_swap (CoglOnscreen *onscreen)
-{
-  if (onscreen->swap_frame_counter == onscreen->frame_counter)
-    cogl_onscreen_begin_frame (onscreen, 0);
-
-  onscreen->swap_frame_counter = onscreen->frame_counter;
-}
-
-int64_t
-cogl_onscreen_get_frame_history_start (CoglOnscreen *onscreen)
-{
-  return onscreen->frame_counter - onscreen->n_frame_infos;
-}
-
-CoglFrameInfo *
-cogl_onscreen_get_frame_info (CoglOnscreen *onscreen,
-                              int64_t       frame_counter)
-{
-  int pos;
-
-  if (frame_counter > onscreen->frame_counter)
-    return NULL;
-
-  if (frame_counter <= onscreen->frame_counter - onscreen->n_frame_infos)
-    return NULL;
-
-  pos = ((onscreen->current_frame_info -
-          (onscreen->frame_counter - frame_counter) + COGL_ONSCREEN_MAX_FRAME_INFOS)
-         % COGL_ONSCREEN_MAX_FRAME_INFOS);
-
-  return onscreen->frame_info[pos];
 }

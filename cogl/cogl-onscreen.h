@@ -693,50 +693,6 @@ cogl_is_onscreen (void *object);
 int64_t
 cogl_onscreen_get_frame_counter (CoglOnscreen *onscreen);
 
-/**
- * cogl_onscreen_begin_frame:
- * @onscreen: a #CoglOnscreen framebuffer
- *
- * Marks the beginning of a frame. This increases the frame
- * counter value and creates a new #CoglFrameInfo objeect.
- *
- * Since: 2.0
- */
-void
-cogl_onscreen_begin_frame (CoglOnscreen *onscreen);
-
-/**
- * cogl_onscreen_get_frame_history_start:
- * @onscreen: a #CoglOnscreen framebuffer
- *
- * Gets the frame counter for the oldest #CoglFrameInfo that is
- * being kept in the history. cogl_onscreen_get_frame_info() will
- * always return %NULl for any frame counter before this.
- *
- * Return value: the frame counter for the oldest #CoglFrameInfo
- *  in the history.
- * Since: 2.0
- */
-int64_t
-cogl_onscreen_get_frame_history_start (CoglOnscreen *onscreen);
-
-
-/**
- * cogl_onscreen_get_frame_info:
- * @onscreen: A #CoglOnscreen framebuffer
- * @frame_counter: the value of cogl_onscreen_get_frame_counter()
- *       when the frame finished drawing.
- *
- * Gets frame timing information for a particular frame.
- *
- * Return value: a #CoglFrameInfo object, or %NULL if
- *   information is not available for the given frame.
- * Since: 2.0
- */
-CoglFrameInfo *
-cogl_onscreen_get_frame_info (CoglOnscreen *onscreen,
-                              int64_t frame_counter);
-
 COGL_END_DECLS
 
 #endif /* __COGL_ONSCREEN_H */

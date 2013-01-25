@@ -287,8 +287,7 @@ set_info_complete (CoglOnscreen *onscreen)
   CoglOnscreenGLX *glx_onscreen = onscreen->winsys;
   CoglContext *context = COGL_FRAMEBUFFER (onscreen)->context;
   CoglGLXDisplay *glx_display = context->display->winsys;
-  int64_t frame_counter = cogl_onscreen_get_frame_counter (onscreen);
-  CoglFrameInfo *info = cogl_onscreen_get_frame_info (onscreen, frame_counter);
+  CoglFrameInfo *info = g_queue_peek_tail (&onscreen->pending_frame_infos);
 
   info->complete = TRUE;
 
@@ -316,8 +315,7 @@ notify_swap_buffers (CoglContext *context, GLXBufferSwapComplete *swap_event)
 
   if (swap_event->ust != 0)
     {
-      int64_t frame_counter = cogl_onscreen_get_frame_counter (onscreen);
-      CoglFrameInfo *info = cogl_onscreen_get_frame_info (onscreen, frame_counter);
+      CoglFrameInfo *info = g_queue_peek_tail (&onscreen->pending_frame_infos);
 
       info->presentation_time =
         ust_to_nanoseconds (context->display->renderer,
@@ -1422,8 +1420,7 @@ _cogl_winsys_wait_for_vblank (CoglOnscreen *onscreen)
   if (glx_renderer->glXWaitForMsc ||
       glx_renderer->glXGetVideoSync)
     {
-      int64_t frame_counter = cogl_onscreen_get_frame_counter (onscreen);
-      CoglFrameInfo *info = cogl_onscreen_get_frame_info (onscreen, frame_counter);
+      CoglFrameInfo *info = g_queue_peek_tail (&onscreen->pending_frame_infos);
 
       if (glx_renderer->glXWaitForMsc)
         {
@@ -1476,8 +1473,7 @@ static void
 set_frame_info_output (CoglOnscreen *onscreen,
                        CoglOutput *output)
 {
-  int64_t frame_counter = cogl_onscreen_get_frame_counter (onscreen);
-  CoglFrameInfo *info = cogl_onscreen_get_frame_info (onscreen, frame_counter);
+  CoglFrameInfo *info = g_queue_peek_tail (&onscreen->pending_frame_infos);
 
   info->output = output;
 
@@ -2459,18 +2455,20 @@ flush_pending_notifications_cb (void *data,
 
       if (glx_onscreen->pending_sync_notify)
         {
-          int64_t frame_counter = cogl_onscreen_get_frame_counter (onscreen);
-          CoglFrameInfo *info = cogl_onscreen_get_frame_info (onscreen, frame_counter);
+          CoglFrameInfo *info = g_queue_peek_tail (&onscreen->pending_frame_infos);
+
           _cogl_onscreen_notify_frame_sync (onscreen, info);
           glx_onscreen->pending_sync_notify = FALSE;
         }
 
       if (glx_onscreen->pending_complete_notify)
         {
-          int64_t frame_counter = cogl_onscreen_get_frame_counter (onscreen);
-          CoglFrameInfo *info = cogl_onscreen_get_frame_info (onscreen, frame_counter);
+          CoglFrameInfo *info = g_queue_pop_tail (&onscreen->pending_frame_infos);
+
           _cogl_onscreen_notify_complete (onscreen, info);
           glx_onscreen->pending_complete_notify = FALSE;
+
+          cogl_object_unref (info);
         }
 
       if (glx_onscreen->pending_resize_notify)

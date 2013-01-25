@@ -896,14 +896,15 @@ flush_pending_swap_notify_cb (void *data,
 
       if (kms_onscreen->pending_swap_notify)
         {
-          int64_t frame_counter = cogl_onscreen_get_frame_counter (onscreen);
-          CoglFrameInfo *info = cogl_onscreen_get_frame_info (onscreen, frame_counter);
+          CoglFrameInfo *info = g_queue_pop_tail (&onscreen->pending_frame_infos);
 
           info->complete = TRUE;
 
           _cogl_onscreen_notify_frame_sync (onscreen, info);
           _cogl_onscreen_notify_complete (onscreen, info);
           kms_onscreen->pending_swap_notify = FALSE;
+
+          cogl_object_unref (info);
         }
     }
 }

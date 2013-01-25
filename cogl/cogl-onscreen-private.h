@@ -34,8 +34,6 @@
 #include <windows.h>
 #endif
 
-#define COGL_ONSCREEN_MAX_FRAME_INFOS 16
-
 COGL_TAILQ_HEAD (CoglFrameCallbackList, CoglFrameClosure);
 
 struct _CoglFrameClosure
@@ -86,9 +84,7 @@ struct _CoglOnscreen
   int64_t swap_frame_counter; /* frame counter at last all to
                                * cogl_onscreen_swap_region() or
                                * cogl_onscreen_swap_buffers() */
-  CoglFrameInfo *frame_info[COGL_ONSCREEN_MAX_FRAME_INFOS];
-  int current_frame_info;
-  int n_frame_infos;
+  GQueue pending_frame_infos;
 
   void *winsys;
 };
