@@ -282,14 +282,11 @@ ust_to_nanoseconds (CoglRenderer *renderer,
 }
 
 static void
-set_info_complete (CoglOnscreen *onscreen)
+set_complete_pending (CoglOnscreen *onscreen)
 {
   CoglOnscreenGLX *glx_onscreen = onscreen->winsys;
   CoglContext *context = COGL_FRAMEBUFFER (onscreen)->context;
   CoglGLXDisplay *glx_display = context->display->winsys;
-  CoglFrameInfo *info = g_queue_peek_tail (&onscreen->pending_frame_infos);
-
-  info->complete = TRUE;
 
   glx_display->pending_complete_notify = TRUE;
   glx_onscreen->pending_complete_notify = TRUE;
@@ -323,7 +320,7 @@ notify_swap_buffers (CoglContext *context, GLXBufferSwapComplete *swap_event)
                             swap_event->ust);
     }
 
-  set_info_complete (onscreen);
+  set_complete_pending (onscreen);
 }
 
 static void
@@ -1688,7 +1685,7 @@ _cogl_winsys_onscreen_swap_region (CoglOnscreen *onscreen,
       set_frame_info_output (onscreen, output);
     }
 
-  set_info_complete (onscreen);
+  set_complete_pending (onscreen);
 }
 
 static void
@@ -1773,7 +1770,7 @@ _cogl_winsys_onscreen_swap_buffers (CoglOnscreen *onscreen)
 
   if (!(glx_renderer->glXSwapInterval &&
         _cogl_winsys_has_feature (COGL_WINSYS_FEATURE_VBLANK_WAIT)))
-    set_info_complete (onscreen);
+    set_complete_pending (onscreen);
 }
 
 static uint32_t

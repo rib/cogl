@@ -36,8 +36,6 @@ struct _CoglFrameInfo
   float refresh_rate;
 
   CoglOutput *output;
-
-  unsigned int complete : 1;
 };
 
 CoglFrameInfo *_cogl_frame_info_new (void);

@@ -55,20 +55,6 @@ CoglBool
 cogl_is_frame_info (void *object);
 
 /**
- * cogl_frame_info_get_complete:
- * @info: a #CoglFrameInfo object
- *
- * Gets whether all information that will potentially be provided for
- * the frame has been provided. Once a frame info object is complete,
- * no further changes will be made to it.
- *
- * Return value: whether the frame info object is complete.
- * Since: 2.0
- * Stability: unstable
- */
-CoglBool cogl_frame_info_get_complete (CoglFrameInfo *info);
-
-/**
  * cogl_frame_info_get_frame_counter:
  * @info: a #CoglFrameInfo object
  *

@@ -898,8 +898,6 @@ flush_pending_swap_notify_cb (void *data,
         {
           CoglFrameInfo *info = g_queue_pop_tail (&onscreen->pending_frame_infos);
 
-          info->complete = TRUE;
-
           _cogl_onscreen_notify_frame_sync (onscreen, info);
           _cogl_onscreen_notify_complete (onscreen, info);
           kms_onscreen->pending_swap_notify = FALSE;

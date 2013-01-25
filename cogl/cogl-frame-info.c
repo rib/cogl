@@ -47,12 +47,6 @@ _cogl_frame_info_free (CoglFrameInfo *info)
   g_slice_free (CoglFrameInfo, info);
 }
 
-CoglBool
-cogl_frame_info_get_complete (CoglFrameInfo *info)
-{
-  return info->complete;
-}
-
 int64_t
 cogl_frame_info_get_frame_counter (CoglFrameInfo *info)
 {
