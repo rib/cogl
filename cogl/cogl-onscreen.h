@@ -688,7 +688,8 @@ cogl_is_onscreen (void *object);
  * is called.
  *
  * Return value: the current frame counter value
- * Since: 2.0
+ * Since: 1.14
+ * Stability: unstable
  */
 int64_t
 cogl_onscreen_get_frame_counter (CoglOnscreen *onscreen);

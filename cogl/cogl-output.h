@@ -36,6 +36,8 @@
 
 G_BEGIN_DECLS
 
+#ifdef COGL_ENABLE_EXPERIMENTAL_API
+
 /**
  * SECTION:cogl-output
  * @short_description: information about an output device
@@ -234,6 +236,8 @@ cogl_output_get_subpixel_order (CoglOutput *output);
  */
 float
 cogl_output_get_refresh_rate (CoglOutput *output);
+
+#endif /* COGL_ENABLE_EXPERIMENTAL_API */
 
 G_END_DECLS
 

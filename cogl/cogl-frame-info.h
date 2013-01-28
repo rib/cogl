@@ -37,6 +37,8 @@
 
 G_BEGIN_DECLS
 
+#ifdef COGL_ENABLE_EXPERIMENTAL_API
+
 typedef struct _CoglFrameInfo CoglFrameInfo;
 #define COGL_FRAME_INFO(X) ((CoglFrameInfo *)(X))
 
@@ -62,7 +64,7 @@ cogl_is_frame_info (void *object);
  * to this frame.
  *
  * Return value: The frame counter value
- * Since: 2.0
+ * Since: 1.14
  * Stability: unstable
  */
 int64_t cogl_frame_info_get_frame_counter (CoglFrameInfo *info);
@@ -86,7 +88,7 @@ int64_t cogl_frame_info_get_frame_counter (CoglFrameInfo *info);
  * incorrectly report non-monotonic timestamps.</note>
  *
  * Return value: the presentation time for the frame
- * Since: 2.0
+ * Since: 1.14
  * Stability: unstable
  */
 int64_t cogl_frame_info_get_presentation_time (CoglFrameInfo *info);
@@ -105,7 +107,7 @@ int64_t cogl_frame_info_get_presentation_time (CoglFrameInfo *info);
  * cogl_output_get_refresh_rate().</note>
  *
  * Return value: the refresh rate in Hertz
- * Since: 2.0
+ * Since: 1.14
  * Stability: unstable
  */
 int64_t cogl_frame_info_get_refresh_rate (CoglFrameInfo *info);
@@ -118,15 +120,14 @@ int64_t cogl_frame_info_get_refresh_rate (CoglFrameInfo *info);
  *
  * Return value: The #CoglOutput that the frame was presented to, or
  *               %NULL if this could not be determined.
- * Since: 2.0
+ * Since: 1.14
  * Stability: unstable
  */
 CoglOutput *
 cogl_frame_info_get_output (CoglFrameInfo *info);
 
+#endif /* COGL_ENABLE_EXPERIMENTAL_API */
+
 G_END_DECLS
 
 #endif /* __COGL_FRAME_INFO_H */
-
-
-
