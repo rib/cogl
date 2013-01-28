@@ -248,20 +248,6 @@ ust_to_nanoseconds (CoglRenderer *renderer,
       g_assert_not_reached ();
       break;
     case COGL_GLX_UST_IS_GETTIMEOFDAY:
-      {
-        struct timeval tv;
-        struct timespec ts;
-        int64_t current_system_time;
-        int64_t current_monotonic_time;
-
-        gettimeofday(&tv, NULL);
-        clock_gettime (CLOCK_MONOTONIC, &ts);
-        current_system_time = (tv.tv_sec * G_GINT64_CONSTANT (1000000)) + tv.tv_usec;
-        current_monotonic_time =
-          ts.tv_sec * G_GINT64_CONSTANT (1000000000) + ts.tv_nsec;
-
-        return current_monotonic_time + 1000 * (ust - current_system_time);
-      }
     case COGL_GLX_UST_IS_MONOTONIC_TIME:
       return 1000 * ust;
     case COGL_GLX_UST_IS_OTHER:
