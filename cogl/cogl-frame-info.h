@@ -110,7 +110,7 @@ int64_t cogl_frame_info_get_presentation_time (CoglFrameInfo *info);
  * Since: 1.14
  * Stability: unstable
  */
-int64_t cogl_frame_info_get_refresh_rate (CoglFrameInfo *info);
+float cogl_frame_info_get_refresh_rate (CoglFrameInfo *info);
 
 /**
  * cogl_frame_info_get_output:
