@@ -384,6 +384,8 @@ cogl_renderer_set_driver (CoglRenderer *renderer,
 CoglDriver
 cogl_renderer_get_driver (CoglRenderer *renderer);
 
+#ifdef COGL_ENABLE_EXPERIMENTAL_API
+
 /**
  * CoglOutputCallback:
  * @output: The current display output being iterated
@@ -410,6 +412,8 @@ void
 cogl_renderer_foreach_output (CoglRenderer *renderer,
                               CoglOutputCallback callback,
                               void *user_data);
+
+#endif /* COGL_ENABLE_EXPERIMENTAL_API */
 
 COGL_END_DECLS
 
