@@ -1093,6 +1093,8 @@ AS_IF([test "x$enable_kms_egl_platform" = "xyes"],
         AC_DEFINE_UNQUOTED([COGL_GBM_MICRO], [$GBM_MICRO], [The micro version for libgbm])
 
         COGL_DEFINES_SYMBOLS="$COGL_DEFINES_SYMBOLS COGL_HAS_EGL_PLATFORM_KMS_SUPPORT"
+
+        VTS_PKG_REQUIRES="libsystemd-daemon libsystemd-journal libsystemd-login libudev libdrm"
       ])
 AM_CONDITIONAL(SUPPORT_EGL_PLATFORM_KMS,
                [test "x$enable_kms_egl_platform" = "xyes"])
@@ -1250,6 +1252,9 @@ AC_DEFINE_UNQUOTED(GETTEXT_PACKAGE,
                    [The prefix for our gettext translation domains.])
 AS_ALL_LINGUAS
 
+AS_IF([test "x$enable_kms_egl_platform" = "xyes"],
+      [PKG_CHECK_MODULES(VTS_DEP, [$VTS_PKG_REQUIRES])]
+)
 
 AC_SUBST(COGL_PKG_REQUIRES)
 if test -n "$COGL_PKG_REQUIRES"; then
@@ -1442,6 +1447,7 @@ deps/Makefile
 deps/glib/Makefile
 deps/gmodule/Makefile
 deps/gmodule/gmoduleconf.h
+deps/vts/Makefile
 test-fixtures/Makefile
 cogl/Makefile
 cogl/cogl2.pc
