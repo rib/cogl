@@ -1076,11 +1076,7 @@ AS_IF([test "x$enable_kms_egl_platform" = "xyes"],
         NEED_EGL=yes
         EGL_PLATFORMS="$EGL_PLATFORMS kms"
 
-        PKG_CHECK_EXISTS([gbm],
-                         [
-                           COGL_PKG_REQUIRES="$COGL_PKG_REQUIRES gbm"
-                           COGL_PKG_REQUIRES="$COGL_PKG_REQUIRES libdrm"
-                         ],
+        PKG_CHECK_EXISTS([gbm], [],
                          [AC_MSG_ERROR([Unable to locate required kms libraries])])
 
         GBM_VERSION=`$PKG_CONFIG --modversion gbm`
@@ -1092,6 +1088,7 @@ AS_IF([test "x$enable_kms_egl_platform" = "xyes"],
         AC_DEFINE_UNQUOTED([COGL_GBM_MINOR], [$GBM_MINOR], [The minor version for libgbm])
         AC_DEFINE_UNQUOTED([COGL_GBM_MICRO], [$GBM_MICRO], [The micro version for libgbm])
 
+        COGL_PKG_REQUIRES="$COGL_PKG_REQUIRES gbm libdrm libudev pciaccess"
         COGL_DEFINES_SYMBOLS="$COGL_DEFINES_SYMBOLS COGL_HAS_EGL_PLATFORM_KMS_SUPPORT"
 
         VTS_PKG_REQUIRES="libsystemd-daemon libsystemd-journal libsystemd-login libudev libdrm"

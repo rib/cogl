@@ -428,7 +428,10 @@ cogl_experimental_h += \
 	$(srcdir)/cogl-kms-display.h
 cogl_sources_c += \
 	$(srcdir)/winsys/cogl-winsys-egl-kms.c \
-	$(srcdir)/winsys/cogl-winsys-egl-kms-private.h
+	$(srcdir)/winsys/cogl-winsys-egl-kms-private.h \
+	$(srcdir)/winsys/cogl-udev.c \
+	$(srcdir)/winsys/cogl-udev-private.h \
+	$(srcdir)/winsys/intel-chipset-defines.h
 endif
 if SUPPORT_EGL_PLATFORM_XLIB
 cogl_sources_c += \

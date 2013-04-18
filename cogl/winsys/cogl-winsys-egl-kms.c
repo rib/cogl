@@ -54,6 +54,7 @@
 #include "cogl-version.h"
 #include "cogl-error-private.h"
 #include "cogl-poll-private.h"
+#include "cogl-udev-private.h"
 
 static const CoglWinsysEGLVtable _cogl_winsys_egl_vtable;
 
@@ -61,6 +62,7 @@ static const CoglWinsysVtable *parent_vtable;
 
 typedef struct _CoglRendererKMS
 {
+  CoglUdevDrmDevice *udev_drm_device;
   int fd;
   struct gbm_device *gbm;
   CoglClosure *swap_notify_idle;
@@ -112,7 +114,14 @@ _cogl_winsys_renderer_disconnect (CoglRenderer *renderer)
   CoglRendererEGL *egl_renderer = renderer->winsys;
   CoglRendererKMS *kms_renderer = egl_renderer->platform;
 
-  eglTerminate (egl_renderer->edpy);
+  if (egl_renderer->edpy)
+    eglTerminate (egl_renderer->edpy);
+
+  if (kms_renderer->gbm)
+    gbm_device_destroy (kms_renderer->gbm);
+
+  if (kms_renderer->udev_drm_device)
+    cogl_udev_drm_device_destroy (kms_renderer->udev_drm_device);
 
   g_slice_free (CoglRendererKMS, kms_renderer);
   g_slice_free (CoglRendererEGL, egl_renderer);
@@ -272,23 +281,20 @@ _cogl_winsys_renderer_connect (CoglRenderer *renderer,
   egl_renderer->platform = g_slice_new0 (CoglRendererKMS);
   kms_renderer = egl_renderer->platform;
 
-  kms_renderer->fd = open (device_name, O_RDWR);
-  if (kms_renderer->fd < 0)
-    {
-      /* Probably permissions error */
-      _cogl_set_error (error, COGL_WINSYS_ERROR,
-                   COGL_WINSYS_ERROR_INIT,
-                   "Couldn't open %s", device_name);
-      return FALSE;
-    }
+  kms_renderer->udev_drm_device = cogl_udev_drm_device_open (renderer, error);
+  if (!kms_renderer->udev_drm_device)
+    goto error;
+
+  kms_renderer->fd =
+    cogl_udev_drm_device_get_fd (kms_renderer->udev_drm_device);
 
   kms_renderer->gbm = gbm_create_device (kms_renderer->fd);
   if (kms_renderer->gbm == NULL)
     {
       _cogl_set_error (error, COGL_WINSYS_ERROR,
-                   COGL_WINSYS_ERROR_INIT,
-                   "Couldn't create gbm device");
-      goto close_fd;
+                       COGL_WINSYS_ERROR_INIT,
+                       "Couldn't create gbm device");
+      goto error;
     }
 
   egl_renderer->edpy = eglGetDisplay ((EGLNativeDisplayType)kms_renderer->gbm);
@@ -297,11 +303,11 @@ _cogl_winsys_renderer_connect (CoglRenderer *renderer,
       _cogl_set_error (error, COGL_WINSYS_ERROR,
                    COGL_WINSYS_ERROR_INIT,
                    "Couldn't get eglDisplay");
-      goto destroy_gbm_device;
+      goto error;
     }
 
   if (!_cogl_winsys_egl_renderer_connect_common (renderer, error))
-    goto egl_terminate;
+    goto error;
 
   _cogl_poll_renderer_add_fd (renderer,
                               kms_renderer->fd,
@@ -312,12 +318,7 @@ _cogl_winsys_renderer_connect (CoglRenderer *renderer,
 
   return TRUE;
 
-egl_terminate:
-  eglTerminate (egl_renderer->edpy);
-destroy_gbm_device:
-  gbm_device_destroy (kms_renderer->gbm);
-close_fd:
-  close (kms_renderer->fd);
+error:
 
   _cogl_winsys_renderer_disconnect (renderer);
 
