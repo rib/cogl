@@ -47,9 +47,20 @@ _cogl_output_new (const char *name)
 static void
 _cogl_output_free (CoglOutput *output)
 {
-  g_free (output->name);
+  if (output->winsys_destroy_callback)
+    output->winsys_destroy_callback (output->winsys);
 
+  g_free (output->name);
   g_slice_free (CoglOutput, output);
+}
+
+void
+_cogl_output_set_winsys_data (CoglOutput *output,
+                              void *winsys,
+                              CoglUserDataDestroyCallback destroy_callback)
+{
+  output->winsys = winsys;
+  output->winsys_destroy_callback = destroy_callback;
 }
 
 gboolean

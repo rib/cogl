@@ -41,10 +41,21 @@ struct _CoglOutput
   int mm_height;
   float refresh_rate;
   CoglSubpixelOrder subpixel_order;
+
+  void *winsys;
+  CoglUserDataDestroyCallback winsys_destroy_callback;
 };
 
-CoglOutput *_cogl_output_new (const char *name);
-CoglBool _cogl_output_values_equal (CoglOutput *output,
-                                    CoglOutput *other);
+CoglOutput *
+_cogl_output_new (const char *name);
+
+void
+_cogl_output_set_winsys_data (CoglOutput *output,
+                              void *winsys,
+                              CoglUserDataDestroyCallback destroy_callback);
+
+CoglBool
+_cogl_output_values_equal (CoglOutput *output,
+                           CoglOutput *other);
 
 #endif /* __COGL_OUTPUT_PRIVATE_H */

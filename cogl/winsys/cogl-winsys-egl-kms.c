@@ -55,6 +55,7 @@
 #include "cogl-error-private.h"
 #include "cogl-poll-private.h"
 #include "cogl-udev-private.h"
+#include "cogl-output-private.h"
 
 static const CoglWinsysEGLVtable _cogl_winsys_egl_vtable;
 
@@ -70,6 +71,8 @@ typedef struct _CoglRendererKMS
 
 typedef struct _CoglOutputKMS
 {
+  uint32_t connector_id;
+
   drmModeConnector *connector;
   drmModeEncoder *encoder;
   drmModeCrtc *saved_crtc;
@@ -267,6 +270,220 @@ dispatch_kms_events (void *user_data, int revents)
   handle_drm_event (kms_renderer);
 }
 
+static int
+compare_outputs (CoglOutput *a, CoglOutput *b)
+{
+  CoglOutputKMS *kms_output_a = a->winsys;
+  CoglOutputKMS *kms_output_b = b->winsys;
+  return kms_output_a->connector_id - kms_output_b->connector_id;
+}
+
+static void
+kms_output_destroy_cb (void *user_data)
+{
+  CoglOutputKMS *kms_output = user_data;
+
+  if (kms_output->saved_crtc)
+    drmModeFreeCrtc (kms_output->saved_crtc);
+
+  if (kms_output->encoder)
+    drmModeFreeEncoder (kms_output->encoder);
+
+  if (kms_output->connector)
+    drmModeFreeConnector (kms_output->connector);
+
+  g_slice_free (CoglOutputKMS, user_data);
+}
+
+static const char *kms_connector_types[] = {
+    "Unknown",
+    "VGA",
+    "DVII",
+    "DVID",
+    "DVIA",
+    "Composite",
+    "SVIDEO",
+    "LVDS",
+    "Component",
+    "9PinDIN",
+    "DisplayPort",
+    "HDMIA",
+    "HDMIB",
+    "TV",
+    "eDP"
+};
+
+static void
+update_outputs (CoglRenderer *renderer)
+{
+  CoglRendererEGL *egl_renderer = renderer->winsys;
+  CoglRendererKMS *kms_renderer = egl_renderer->platform;
+  int fd = kms_renderer->fd;
+  drmModeRes *resources;
+  GList *new_outputs = NULL;
+  int i;
+
+  resources = drmModeGetResources (fd);
+  if (!resources)
+    {
+      g_warning ("Failed to query KMS resources");
+      return;
+    }
+
+  for (i = 0; i < resources->count_connectors; i++)
+    {
+      CoglOutput *output = NULL;
+      CoglOutputKMS *kms_output;
+      const char *type_name;
+      GList *l;
+
+      drmModeConnector *connector =
+        drmModeGetConnector (fd, resources->connectors[i]);
+      if (!connector)
+        {
+          g_warning ("Failed to query KMS connector");
+          continue;
+        }
+
+      /* Connectors not actually connected to a display aren't very
+       * interesting */
+      if (connector->connection == DRM_MODE_DISCONNECTED ||
+          connector->count_modes == 0 ||
+          connector->count_encoders == 0)
+        {
+          drmModeFreeConnector (connector);
+          continue;
+        }
+
+      /* If we already have a CoglOutput corresponding to this
+       * connector id then we can simply keep it and move on... */
+      for (l = renderer->outputs; l; l = l->next)
+        {
+          CoglOutput *existing_output = l->data;
+          CoglOutputKMS *existing_kms_output = existing_output->winsys;
+
+          if (existing_kms_output->connector_id == connector->connector_id)
+            {
+              renderer->outputs = g_list_delete_link (renderer->outputs, l);
+              output = existing_output;
+            }
+        }
+
+      if (output)
+        {
+          new_outputs = g_list_prepend (new_outputs, output);
+          drmModeFreeConnector (connector);
+          continue;
+        }
+
+      if (connector->connector_type < G_N_ELEMENTS (kms_connector_types))
+        type_name = kms_connector_types[connector->connector_type];
+      else
+        type_name = kms_connector_types[0];
+
+      output = _cogl_output_new (type_name);
+
+      kms_output = g_slice_new0 (CoglOutputKMS);
+      kms_output->connector_id = connector->connector_id;
+      kms_output->connector = connector;
+
+      /* We can't determinine anything about the relative position
+       * of the outputs... */
+      output->x = output->y = 0;
+
+      output->mm_width = connector->mmWidth;
+      output->mm_height = connector->mmHeight;
+
+      switch (connector->subpixel)
+        {
+        case DRM_MODE_SUBPIXEL_UNKNOWN:
+          output->subpixel_order = COGL_SUBPIXEL_ORDER_UNKNOWN;
+          break;
+        case DRM_MODE_SUBPIXEL_HORIZONTAL_RGB:
+          output->subpixel_order = COGL_SUBPIXEL_ORDER_HORIZONTAL_RGB;
+          break;
+        case DRM_MODE_SUBPIXEL_HORIZONTAL_BGR:
+          output->subpixel_order = COGL_SUBPIXEL_ORDER_HORIZONTAL_BGR;
+          break;
+        case DRM_MODE_SUBPIXEL_VERTICAL_RGB:
+          output->subpixel_order = COGL_SUBPIXEL_ORDER_VERTICAL_RGB;
+          break;
+        case DRM_MODE_SUBPIXEL_VERTICAL_BGR:
+          output->subpixel_order = COGL_SUBPIXEL_ORDER_VERTICAL_BGR;
+          break;
+        case DRM_MODE_SUBPIXEL_NONE:
+          output->subpixel_order = COGL_SUBPIXEL_ORDER_NONE;
+          break;
+        }
+
+      /* To set a width/height we need to find a crtc mode that is
+       * associated with this connector. First we look at the current
+       * encoder. */
+
+      if (connector->encoder_id)
+        {
+          kms_output->encoder = drmModeGetEncoder (fd, connector->encoder_id);
+          if (!kms_output->encoder)
+            g_warning ("Failed to get encoder description from KMS");
+        }
+
+      if (kms_output->encoder)
+        {
+          drmModeEncoder *encoder = kms_output->encoder;
+
+          if (encoder->crtc_id)
+            {
+              kms_output->saved_crtc = drmModeGetCrtc (fd, encoder->crtc_id);
+              if (!kms_output->saved_crtc)
+                g_warning ("Failed to get crtc description from KMS");
+            }
+        }
+
+      if (kms_output->saved_crtc)
+        {
+          output->width = kms_output->saved_crtc->width;
+          output->height = kms_output->saved_crtc->height;
+
+          if (kms_output->saved_crtc->mode_valid)
+            {
+              drmModeModeInfo *mode = &kms_output->saved_crtc->mode;
+              output->refresh_rate = mode->vrefresh;
+            }
+        }
+      else
+        {
+          /* If there is no encoder associated with the connector then
+           * there is no crtc mode and so there's currently no basis
+           * to specify a width/height */
+          output->width = 0;
+          output->height = 0;
+        }
+
+      _cogl_output_set_winsys_data (output,
+                                    kms_output,
+                                    kms_output_destroy_cb);
+
+      new_outputs = g_list_prepend (new_outputs, output);
+    }
+
+  new_outputs = g_list_sort (new_outputs, (GCompareFunc)compare_outputs);
+
+  /* Any remaining outputs listed under renderer->outputs don't
+   * correspond to KMS connector ids that are still valid so we can
+   * free them... */
+  g_list_free_full (renderer->outputs, (GDestroyNotify)cogl_object_unref);
+
+  renderer->outputs = new_outputs;
+
+  drmModeFreeResources (resources);
+}
+
+static void
+handle_hotplug (void *user_data)
+{
+  update_outputs (user_data);
+}
+
 static CoglBool
 _cogl_winsys_renderer_connect (CoglRenderer *renderer,
                                CoglError **error)
@@ -285,8 +502,14 @@ _cogl_winsys_renderer_connect (CoglRenderer *renderer,
   if (!kms_renderer->udev_drm_device)
     goto error;
 
+  cogl_udev_drm_device_set_hotplug_callback (kms_renderer->udev_drm_device,
+                                             handle_hotplug,
+                                             renderer);
+
   kms_renderer->fd =
     cogl_udev_drm_device_get_fd (kms_renderer->udev_drm_device);
+
+  update_outputs (renderer);
 
   kms_renderer->gbm = gbm_create_device (kms_renderer->fd);
   if (kms_renderer->gbm == NULL)
@@ -604,8 +827,8 @@ _cogl_winsys_egl_display_setup (CoglDisplay *display,
   if (!resources)
     {
       _cogl_set_error (error, COGL_WINSYS_ERROR,
-                   COGL_WINSYS_ERROR_INIT,
-                   "drmModeGetResources failed");
+                       COGL_WINSYS_ERROR_INIT,
+                       "drmModeGetResources failed");
       return FALSE;
     }
 
