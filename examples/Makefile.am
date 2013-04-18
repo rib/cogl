@@ -66,6 +66,13 @@ cogl_x11_tfp_SOURCES = cogl-x11-tfp.c
 cogl_x11_tfp_LDADD = $(common_ldadd)
 endif
 
+if SUPPORT_EGL_PLATFORM_KMS
+programs += cogl-kms-hello
+cogl_kms_hello_SOURCES = cogl-kms-hello.c
+cogl_kms_hello_CFLAGS = -I$(top_srcdir)/deps/vts $(AM_CFLAGS)
+cogl_kms_hello_LDADD = $(common_ldadd) $(VTS_DEP_LIBS) -lpam $(top_builddir)/deps/vts/libvts.la
+endif
+
 if SUPPORT_WAYLAND_EGL_SERVER
 programs += cogland
 cogland_SOURCES = cogland.c
