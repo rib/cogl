@@ -265,6 +265,7 @@ cogl_renderer_connect (CoglRenderer *renderer, CoglError **error);
  *    renderer supports creating a #CoglGLES2Context via
  *    cogl_gles2_context_new(). This can be used to integrate GLES 2.0
  *    code into Cogl based applications.
+ * @COGL_RENDERER_CONSTRAINT_USES_KMS: Require the renderer to be KMS based
  *
  * These constraint flags are hard-coded features of the different renderer
  * backends. Sometimes a platform may support multiple rendering options which
@@ -286,7 +287,8 @@ typedef enum
   COGL_RENDERER_CONSTRAINT_USES_X11 = (1 << 0),
   COGL_RENDERER_CONSTRAINT_USES_XLIB = (1 << 1),
   COGL_RENDERER_CONSTRAINT_USES_EGL = (1 << 2),
-  COGL_RENDERER_CONSTRAINT_SUPPORTS_COGL_GLES2 = (1 << 3)
+  COGL_RENDERER_CONSTRAINT_SUPPORTS_COGL_GLES2 = (1 << 3),
+  COGL_RENDERER_CONSTRAINT_USES_KMS = (1 << 4)
 } CoglRendererConstraint;
 
 

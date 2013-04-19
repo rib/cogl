@@ -1263,6 +1263,8 @@ _cogl_winsys_egl_kms_get_vtable (void)
       vtable.id = COGL_WINSYS_ID_EGL_KMS;
       vtable.name = "EGL_KMS";
 
+      vtable.constraints |= COGL_RENDERER_CONSTRAINT_USES_KMS;
+
       vtable.renderer_connect = _cogl_winsys_renderer_connect;
       vtable.renderer_disconnect = _cogl_winsys_renderer_disconnect;
 
