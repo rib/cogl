@@ -32,6 +32,11 @@
 #ifndef __COGL_ONSCREEN_H
 #define __COGL_ONSCREEN_H
 
+/* We forward declare the CoglOnscreen type here to avoid some
+ * circular dependency issues with the following headers.
+ */
+typedef struct _CoglOnscreen CoglOnscreen;
+
 #include <cogl/cogl-context.h>
 #include <cogl/cogl-framebuffer.h>
 #include <cogl/cogl-frame-info.h>
@@ -39,7 +44,6 @@
 
 COGL_BEGIN_DECLS
 
-typedef struct _CoglOnscreen CoglOnscreen;
 #define COGL_ONSCREEN(X) ((CoglOnscreen *)(X))
 
 /**

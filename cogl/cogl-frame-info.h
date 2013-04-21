@@ -31,13 +31,17 @@
 #ifndef __COGL_FRAME_INFO_H
 #define __COGL_FRAME_INFO_H
 
+/* We forward declare the CoglFrameInfo type here to avoid some
+ * circular dependency issues with the following headers.
+ */
+typedef struct _CoglFrameInfo CoglFrameInfo;
+
 #include <cogl/cogl-types.h>
 #include <cogl/cogl-output.h>
 #include <glib.h>
 
 G_BEGIN_DECLS
 
-typedef struct _CoglFrameInfo CoglFrameInfo;
 #define COGL_FRAME_INFO(X) ((CoglFrameInfo *)(X))
 
 /**

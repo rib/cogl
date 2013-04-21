@@ -46,6 +46,7 @@
 #endif
 
 #include <cogl/cogl-renderer.h>
+#include <cogl/cogl-overlay.h>
 #include <cogl/cogl-output.h>
 #include <cogl/cogl-display.h>
 #include <cogl/cogl-context.h>

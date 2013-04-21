@@ -194,6 +194,18 @@ typedef struct _CoglWinsysVtable
   void
   (*fence_destroy) (CoglContext *ctx, void *fence);
 
+  /* optional
+   *
+   * This iterates the current renderer->outputs and for each output
+   * with pending changes they should be applied to the window system
+   * or hardware.
+   *
+   * If it's not possible to apply the pending changes then the
+   * previous state should be restored and an error returned.
+   */
+  CoglBool
+  (*commit_outputs) (CoglRenderer *renderer, CoglError **error);
+
 } CoglWinsysVtable;
 
 CoglBool

@@ -24,23 +24,50 @@
 #ifndef __COGL_OUTPUT_PRIVATE_H
 #define __COGL_OUTPUT_PRIVATE_H
 
+#include <glib.h>
+
 #include "cogl-output.h"
 #include "cogl-object-private.h"
+
+#warning "TODO: remove if not used in the end"
+typedef enum _CoglOutputChange
+{
+  COGL_OUTPUT_CHANGE_OVERLAYS = 1<<0,
+  COGL_OUTPUT_CHANGE_MODE = 1<<1,
+} CoglOutputChange;
+
+typedef struct _CoglOutputState
+{
+  char *name;
+
+  GList *overlays;
+
+  CoglMode *mode;
+
+  /* x must be first field for _cogl_output_state_equal()
+   * and all following members should be comparable using
+   * memcmp() */
+  int x;
+  int y;
+  int mm_width;
+  int mm_height;
+  CoglSubpixelOrder subpixel_order;
+
+  CoglDpmsMode dpms_mode;
+
+#warning "TODO: remove if not used in the end"
+  CoglOutputChange changes;
+
+} CoglOutputState;
 
 struct _CoglOutput
 {
   CoglObject _parent;
 
-  char *name;
+  GList *modes;
 
-  int x; /* Must be first field for _cogl_output_values_equal() */
-  int y;
-  int width;
-  int height;
-  int mm_width;
-  int mm_height;
-  float refresh_rate;
-  CoglSubpixelOrder subpixel_order;
+  CoglOutputState *pending;
+  CoglOutputState *state;
 
   void *winsys;
   CoglUserDataDestroyCallback winsys_destroy_callback;
@@ -54,8 +81,11 @@ _cogl_output_set_winsys_data (CoglOutput *output,
                               void *winsys,
                               CoglUserDataDestroyCallback destroy_callback);
 
+void
+_cogl_output_update_state (CoglOutput *output);
+
 CoglBool
-_cogl_output_values_equal (CoglOutput *output,
-                           CoglOutput *other);
+_cogl_output_equal (CoglOutput *output,
+                    CoglOutput *other);
 
 #endif /* __COGL_OUTPUT_PRIVATE_H */

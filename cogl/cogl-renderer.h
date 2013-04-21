@@ -28,6 +28,11 @@
 #ifndef __COGL_RENDERER_H__
 #define __COGL_RENDERER_H__
 
+/* We forward declare the CoglRenderer type here to avoid some
+ * circular dependency issues with the following headers.
+ */
+typedef struct _CoglRenderer CoglRenderer;
+
 #include <cogl/cogl-types.h>
 #include <cogl/cogl-onscreen-template.h>
 #include <cogl/cogl-error.h>
@@ -77,8 +82,6 @@ COGL_BEGIN_DECLS
 
 uint32_t
 cogl_renderer_error_domain (void);
-
-typedef struct _CoglRenderer CoglRenderer;
 
 /**
  * cogl_is_renderer:
@@ -420,6 +423,26 @@ void
 cogl_renderer_foreach_output (CoglRenderer *renderer,
                               CoglOutputCallback callback,
                               void *user_data);
+
+/**
+ * cogl_renderer_commit_outputs:
+ * @renderer: A connected #CoglRenderer
+ *
+ * Attempts to apply all outstanding #CoglOutput changes to the
+ * underlying hardware. If for some reason it is not possible to
+ * support the whole configuration then all outstanding changes
+ * will be reverted and a #CoglError will be returned.
+ *
+ * XXX: Instead of reverting the outstanding changes should we
+ * instead have a separate api for manually reverting outstanding
+ * changes?
+ *
+ * Since: 1.16
+ * Stability: Unstable
+ */
+CoglBool
+cogl_renderer_commit_outputs (CoglRenderer *renderer,
+                              CoglError **error);
 
 COGL_END_DECLS
 

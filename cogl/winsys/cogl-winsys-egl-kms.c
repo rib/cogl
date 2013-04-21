@@ -334,7 +334,6 @@ update_outputs (CoglRenderer *renderer)
     {
       CoglOutput *output = NULL;
       CoglOutputKMS *kms_output;
-      const char *type_name;
       GList *l;
 
       drmModeConnector *connector =
@@ -356,7 +355,7 @@ update_outputs (CoglRenderer *renderer)
         }
 
       /* If we already have a CoglOutput corresponding to this
-       * connector id then we can simply keep it and move on... */
+       * connector id then we keep it... */
       for (l = renderer->outputs; l; l = l->next)
         {
           CoglOutput *existing_output = l->data;
@@ -366,53 +365,82 @@ update_outputs (CoglRenderer *renderer)
             {
               renderer->outputs = g_list_delete_link (renderer->outputs, l);
               output = existing_output;
+              kms_output = output->winsys;
+
+              if (output->pending != output->state)
+                {
+                  g_warning ("Unexpected pending state associated with CoglOutput "
+                             "%s while processing events. Pending output state "
+                             "shouldn't be maintained between mainloop "
+                             "iterations\n", output->state->name);
+                }
+
+              break;
             }
         }
 
-      if (output)
+      if (!output)
         {
-          new_outputs = g_list_prepend (new_outputs, output);
-          drmModeFreeConnector (connector);
-          continue;
+          const char *type_name;
+
+          if (connector->connector_type < G_N_ELEMENTS (kms_connector_types))
+            type_name = kms_connector_types[connector->connector_type];
+          else
+            type_name = kms_connector_types[0];
+
+          output = _cogl_output_new (type_name);
+
+          kms_output = g_slice_new0 (CoglOutputKMS);
+          kms_output->connector_id = connector->connector_id;
+          kms_output->connector = connector;
+
+          _cogl_output_set_winsys_data (output,
+                                        kms_output,
+                                        kms_output_destroy_cb);
         }
 
-      if (connector->connector_type < G_N_ELEMENTS (kms_connector_types))
-        type_name = kms_connector_types[connector->connector_type];
-      else
-        type_name = kms_connector_types[0];
+      for (j = 0; j < connector->count_modes; j++)
+        {
+          drmModeModeInfo *info = &connector->modes[j];
 
-      output = _cogl_output_new (type_name);
+          CoglMode *mode = _cogl_mode_new (info->name);
+          mode->width = info->hdisplay;
+          mode->height = info->vdisplay;
+          mode->refresh_rate =
+            (info->clock / ((float)info->htotal * info->vtotal));
+          new_modes = g_list_prepend (new_modes, mode);
+        }
 
-      kms_output = g_slice_new0 (CoglOutputKMS);
-      kms_output->connector_id = connector->connector_id;
-      kms_output->connector = connector;
+      if (output->modes)
+        g_list_free_full (output->modes, cogl_object_unref);
+      output->modes = g_list_reverse (new_modes);
 
       /* We can't determinine anything about the relative position
        * of the outputs... */
-      output->x = output->y = 0;
+      output->state->x = output->state->y = 0;
 
-      output->mm_width = connector->mmWidth;
-      output->mm_height = connector->mmHeight;
+      output->state->mm_width = connector->mmWidth;
+      output->state->mm_height = connector->mmHeight;
 
       switch (connector->subpixel)
         {
         case DRM_MODE_SUBPIXEL_UNKNOWN:
-          output->subpixel_order = COGL_SUBPIXEL_ORDER_UNKNOWN;
+          output->state->subpixel_order = COGL_SUBPIXEL_ORDER_UNKNOWN;
           break;
         case DRM_MODE_SUBPIXEL_HORIZONTAL_RGB:
-          output->subpixel_order = COGL_SUBPIXEL_ORDER_HORIZONTAL_RGB;
+          output->state->subpixel_order = COGL_SUBPIXEL_ORDER_HORIZONTAL_RGB;
           break;
         case DRM_MODE_SUBPIXEL_HORIZONTAL_BGR:
-          output->subpixel_order = COGL_SUBPIXEL_ORDER_HORIZONTAL_BGR;
+          output->state->subpixel_order = COGL_SUBPIXEL_ORDER_HORIZONTAL_BGR;
           break;
         case DRM_MODE_SUBPIXEL_VERTICAL_RGB:
-          output->subpixel_order = COGL_SUBPIXEL_ORDER_VERTICAL_RGB;
+          output->state->subpixel_order = COGL_SUBPIXEL_ORDER_VERTICAL_RGB;
           break;
         case DRM_MODE_SUBPIXEL_VERTICAL_BGR:
-          output->subpixel_order = COGL_SUBPIXEL_ORDER_VERTICAL_BGR;
+          output->state->subpixel_order = COGL_SUBPIXEL_ORDER_VERTICAL_BGR;
           break;
         case DRM_MODE_SUBPIXEL_NONE:
-          output->subpixel_order = COGL_SUBPIXEL_ORDER_NONE;
+          output->state->subpixel_order = COGL_SUBPIXEL_ORDER_NONE;
           break;
         }
 
@@ -439,29 +467,19 @@ update_outputs (CoglRenderer *renderer)
             }
         }
 
-      if (kms_output->saved_crtc)
-        {
-          output->width = kms_output->saved_crtc->width;
-          output->height = kms_output->saved_crtc->height;
+      if (output->state->mode)
+        cogl_object_unref (output->state->mode);
+      output->state->mode = NULL;
 
-          if (kms_output->saved_crtc->mode_valid)
-            {
-              drmModeModeInfo *mode = &kms_output->saved_crtc->mode;
-              output->refresh_rate = mode->vrefresh;
-            }
-        }
-      else
+      if (kms_output->saved_crtc &&
+          kms_output->saved_crtc->mode_valid)
         {
-          /* If there is no encoder associated with the connector then
-           * there is no crtc mode and so there's currently no basis
-           * to specify a width/height */
-          output->width = 0;
-          output->height = 0;
-        }
+          output->state->mode =
+            find_mode (output->modes, kms_output->saved_crtc->mode.name);
+          cogl_object_ref (output->state->mode);
 
-      _cogl_output_set_winsys_data (output,
-                                    kms_output,
-                                    kms_output_destroy_cb);
+          g_warn_if_fail (output->state->mode);
+        }
 
       new_outputs = g_list_prepend (new_outputs, output);
     }
@@ -476,6 +494,8 @@ update_outputs (CoglRenderer *renderer)
   renderer->outputs = new_outputs;
 
   drmModeFreeResources (resources);
+
+  _cogl_renderer_notify_outputs_changed (renderer);
 }
 
 static void
@@ -1242,6 +1262,419 @@ _cogl_winsys_onscreen_deinit (CoglOnscreen *onscreen)
   onscreen->winsys = NULL;
 }
 
+static drmModeProperty *
+get_connector_property (int fd,
+                        drmModeConnector *connector,
+                        const char *name)
+{
+  drmModeProperty *property;
+  int i;
+
+  for (i = 0; i < connector->count_props; i++)
+    {
+      property = drmModeGetProperty (fd, connector->props[i]);
+      if (!property)
+        continue;
+
+      if (strcmp (property->name, name) == 0)
+        return props;
+
+      drmModeFreeProperty (property);
+    }
+
+  return NULL;
+}
+
+/* XXX: NB: Don't assume that the output->state is a reliable cache
+ * of the real hardware state such that state changes can be avoided
+ * by looking for NOP changes between ->state and ->pending since we
+ * sometimes have to deal with the display being changed behind our
+ * back.
+ *
+ * TODO: Support incremental updates in certain cases
+ *
+ * XXX: The corner cases to consider...
+ *
+ * Q: How do we _commit an overlay configuration?
+ * A: During a _commit we always check that each overlay has
+ *    an associated framebuffer source that has a valid
+ *    ->next_bo or ->current_bo (otherwise we report an error)
+ *    since we can't set a mode without a framebuffer and we
+ *    don't want to be automatically allocating place holder
+ *    framebuffers in corner cases or displaying undefined
+ *    buffer contents.
+ *
+ *    If we need to call drmModeSetCrtc() we will pass ->next_bo
+ *    if available, otherwise ->current_bo.
+ *
+ *    We always assume there could be outstanding rendering
+ *    associated with a bo when calling drmModeSetCrtc() and so
+ *    we explicitly synchronize with the GPU to make sure all
+ *    rendering to the buffer is complete first.
+ *
+ *    If we are using ->next_bo that implies there is currently
+ *    a pending flip that hasn't completed. We should mark the
+ *    pending flip as a "stale" flip by incrementing
+ *    ->stale_flips++. Later when we reach page_flip_handler()
+ *    we will check the ->stale_flips counter before
+ *    decrementing it and whenever it is set we should only make
+ *    sure to issue any necessary _FRAME_SYNC events but we
+ *    should avoid making any updates to ->current_bo/->next_bo
+ *    pointers.
+ *
+ *XXX: why does stale_flips need to be a counter instead of just
+ *     a boolean
+ *
+ *    After successfully calling drmModeSetCrtc() we insert a
+ *    reference to the overlay in kms_onscreen->overlays.
+ *
+ * Q: what if there is an error when calling drmModeSetCrtc?
+ * A: We roll-back the whole configuration
+ *
+ * Q: What are the semantics for calling drmModeSetCrtc while
+ *    there are pending page flips?
+ * A: Looking at the intel drm driver it looks like setting
+ *    a mode starts by disabling the crtc, which involves
+ *    waiting for pending flips so I think we can assume
+ *    page flip events will *always* be delivered by drm.
+ *
+ * Q: How do we deal with roll-back when this is the first
+ *    configuration to be committed?
+ * A: We should be assuming that update_outputs has been
+ *    called before any configuration so we should know the
+ *    previous state. XXX: what about previous framebuffer
+ *    state? It seems likely that we'll need to special case
+ *    restoring a saved state where the saved drmModeFB doesn't
+ *    correspond to a CoglFramebuffer.
+ *
+ * Q: What if we disassociate a framebuffer from an overlay
+ *    while it still has a pending flip? (considering what
+ *    might go wrong if we then immediately tried to associate
+ *    the framebuffer with a different overlay)
+ * A: XXX
+ *
+ * Q: When do we remove references from the
+ *    kms_onscreen->overlays list?
+ * A: XXX
+ *
+ * Q: How do we handle _swap_buffers
+ * A: We iterate through each output that is associated with
+ *    the onscreen framebuffer and for the first output
+ *    we use drmModePageFlip (passing DRM_MODE_PAGE_FLIP_EVENT)
+ *    to post the framebuffer for overlay0 and use
+ *    drmModeSetPlane() for any additional overlays. For
+ *    all other outputs we use drmModeSetCrtc to post the
+ *    framebuffer for overlay0 while also using
+ *    drmModeSetPlane() for additional overlays.
+ *
+ *    Note: until we have the atomic page flipping api we
+ *    don't have a very sane way of synchronizing changes
+ *    to overlay planes.
+ *
+ *    Note: we are intentionally only trying to synchronize
+ *    with one output but we will probably want to provide
+ *    api for controlling which output is synchronized.
+ *
+ * Q: Would it be better when handling multiple outputs to
+ *    call drmModeSetCrtc() after being notified of the flip
+ *    for the first output?
+ * A: Since using drmModeSetCrtc() implies needing to
+ *    synchronize with the GPU to make sure rendering is
+ *    complete, then waiting until the flip should minimize
+ *    blocking on the CPU, especially in the case where the same
+ *    buffer is being posted to multiple outputs since the flip
+ *    should end up waiting for the GPU to finish for us so we
+ *    won't have to.
+ *
+ *    We should create a queue_swap_outputs utility for us to
+ *    queue the swapping of all unsynchronized outputs.
+ *
+ *
+ * Q: What if we call _swap_buffers() before we have committed
+ *    an output configuration associating the framebuffer with
+ *    a hardware overlay?
+ * A: In this case we'll see that kms_output->overlays is NULL.
+ *    We lock the front buffer, set it on ->next_bo and directly
+ *    call page_flip_handler() to behave as if the flip
+ *    completed immediately. This will make sure we issue a
+ *    _FRAME_SYNC event for the swap and move the bo to
+ *    ->current_bo.
+ *
+ *
+ * Q: How do we deal with an error in drmModePageFlip() also
+ *    considering that after the error we might commit a
+ *    new display configuration which will want to find
+ *    a next/current_bo to reference.
+ * A: We can pretend there was no error and that the page
+ *    flip completed immediately by calling page_flip_handler()
+ *    directly in this case. This will make sure cogl
+ *    dispatches a _FRAME_SYNC event for the frame otherwise
+ *    applications may freeze. The main problem here is that
+ *    we don't have meaningful timestamp data to pass to
+ *    page_flip_handler(). XXX: wont this potentially break the
+ *    invariable that we should be able to assume ->current_bo
+ *    has no outstanding rendering?
+ *
+ * Q: How do we handle an onscreen framebuffer resize?
+ * A: We don't, you just have to create a new framebuffer
+ */
+static void
+_cogl_winsys_commit_outputs (CoglRenderer *renderer,
+                             CoglError **error)
+{
+  CoglRendererEGL *egl_renderer = renderer->winsys;
+  CoglRendererKMS *kms_renderer = egl_renderer->platform;
+  GList *l;
+  CoglBool roll_back = FALSE;
+
+
+  /* If we hit an error at any point while committing the new
+   * configuration then we revert back to here with roll_back
+   * set to TRUE and instead re-commit the previous
+   * configuration */
+ROLL_BACK:
+
+
+  for (l = renderer->outputs; l; l = l->next)
+    {
+      CoglOutput *output = l->data;
+      CoglOutputKMS *kms_output = output->winsys;
+      CoglOutputState *state = roll_back ? output->state : output->pending;
+      CoglOverlay *overlay0;
+      drmModeConnector *connector;
+      drmModeProperty *property;
+      int i;
+
+      connector = drmModeGetConnector (kms_renderer->fd,
+                                       kms_output->connector_id);
+      if (!connector)
+        {
+          g_warn_if_reached ();
+          continue;
+        }
+
+      if (state->overlays)
+        overlay0 = state->overlays->data;
+      else
+        overlay0 = NULL;
+
+      /* If the output has no associated overlays then we assume
+       * it's ok to try and put it into DPMS_MODE_OFF */
+      dpms_mode = overlay0_new ? state_new->dpms_mode : DRM_MODE_DPMS_OFF;
+
+      property = get_connector_property (kms_renderer->fd,
+                                         connector,
+                                         "DPMS");
+      if (property)
+        {
+          int status = drmModeConnectorSetProperty (kms_renderer->fd,
+                                                    connector->connector_id,
+                                                    property->prop_id,
+                                                    dpms_mode);
+          drmModeFreeProperty (property);
+
+          if (status < 0)
+            {
+              const char *dpms_mode_names[] = {
+                  "ON",
+                  "STANDBY",
+                  "SUSPEND",
+                  "OFF"
+              };
+
+              g_return_if_fail (roll_back == FALSE);
+
+              roll_back = TRUE;
+              roll_back_error =
+                g_strdup_printf ("Failed to set DPMS state for "
+                                 "connector %d to %s",
+                                 kms_output->connector_id,
+                                 dpms_mode_names[dpms_mode]);
+              goto ROLL_BACK;
+            }
+        }
+
+      if (!overlay0)
+        {
+          drmModeFreeConnector (connector);
+          continue;
+        }
+
+      if (!overlay0->onscreen_source)
+        {
+          g_return_if_fail (roll_back == FALSE);
+
+          roll_back = TRUE;
+          roll_back_error =
+            g_strdup_printf ("An overlay must be associated with an "
+                             "onscreen framebuffer as a color source");
+          goto ROLL_BACK;
+        }
+
+      for (i = 0; i < connector->count_modes; i++)
+        {
+          drmModeInfo *mode_info = &connector->modes[i];
+          int n_planes;
+
+          if (strcmp (mode_info->name, state->mode->name) == 0)
+            {
+              CoglOnscreen *onscreen = overlay0->onscreen_source;
+              CoglOnscreenEGL *egl_onscreen = onscreen->winsys;
+              CoglOnscreenKMS *kms_onscreen = egl_onscreen->platform;
+              uint32_t fb_id;
+              int status;
+
+              if (overlay0->src_x != 0 ||
+                  overlay0->src_y != 0 ||
+                  overlay0->src_width != mode_info->width ||
+                  overlay0->src_height != mode_info->height)
+                {
+                  g_return_if_fail (roll_back == FALSE);
+
+                  roll_back = TRUE;
+                  roll_back_error =
+                    g_strdup_printf ("On KMS the first overlay's source can "
+                                     "not be offset and its size must match "
+                                     "the mode resolution");
+                  goto ROLL_BACK;
+                }
+
+              if (kms_onscreen->next_fb_id)
+                fb_id = kms_onscreen->next_fb_id;
+              else if (kms_onscreen->current_fb_id)
+                fb_id = kms_onscreen->current_fb_id;
+              else
+                {
+                  g_return_if_fail (roll_back == FALSE);
+
+                  roll_back = TRUE;
+                  roll_back_error =
+                    g_strdup_printf ("Can't commit output changes involving "
+                                     "an uninitialized (un-swapped) onscreen "
+                                     "framebuffer since it has no actual "
+                                     "data to scan out yet");
+                  goto ROLL_BACK;
+                }
+
+              /* drmModeSetCrtc isn't synchronized with the GPU
+               * pipeline so we explicitly wait for any out standing
+               * rendering to complete before setting the new
+               * mode... */
+              cogl_framebuffer_finish (overlay0->onscreen_source);
+
+              status = drmModeSetCrtc (kms_renderer->fd,
+                                       kms_output->encoder->crtc_id,
+                                       fb_id, 0, 0,
+                                       &kms_output->connector_id, 1,
+                                       &kms_mode_info);
+              if (status < 0)
+                {
+                  g_return_if_fail (roll_back == FALSE);
+
+                  roll_back = TRUE;
+                  roll_back_error =
+                    g_strdup_printf ("KMS was unable to set the requested "
+                                     "mode (%s) on connector %d, possibly "
+                                     "due to a hardware limitation",
+                                     dpms_mode_names[dpms_mode],
+                                     kms_output->connector_id);
+                  goto ROLL_BACK;
+                }
+            }
+
+          /*
+           * The remaining overlays should be setup via drmModeSetPlane()
+           */
+
+          for (n_planes = 0, l = state->overlays->next;
+               l;
+               n_planes++, l = l->next)
+            ;
+
+          if (n_planes)
+            {
+              drmModePlaneRes *planes =
+                drmModeGetPlaneResources (kms_renderer->fd);
+
+              if (!planes)
+                g_warn_if_reached ();
+
+              if (planes == NULL || planes->count_planes < n_planes)
+                {
+                  g_return_if_fail (roll_back == FALSE);
+
+                  roll_back = TRUE;
+                  roll_back_error =
+                    g_strdup_printf ("Hardware doesn't support enough "
+                                     "overlays to support configuration.");
+                  goto ROLL_BACK;
+                }
+
+              for (n = 0, l = state->overlays->next; l; n++, l = l->next)
+                {
+                  CoglOverlay *overlay = l->data;
+                  CoglOnscreen *onscreen = overlay0->onscreen_source;
+                  CoglOnscreenEGL *egl_onscreen = onscreen->winsys;
+                  CoglOnscreenKMS *kms_onscreen = egl_onscreen->platform;
+                  uint32_t fb_id;
+
+                  if (!overlay->onscreen_source)
+                    {
+                      g_return_if_fail (roll_back == FALSE);
+
+                      roll_back = TRUE;
+                      roll_back_error =
+                        g_strdup_printf ("An overlay must be associated with an "
+                                         "onscreen framebuffer as a color source");
+                      goto ROLL_BACK;
+                    }
+
+                  if (kms_onscreen->next_fb_id)
+                    fb_id = kms_onscreen->next_fb_id;
+                  else if (kms_onscreen->current_fb_id)
+                    fb_id = kms_onscreen->current_fb_id;
+                  else
+                    {
+                      g_return_if_fail (roll_back == FALSE);
+
+                      roll_back = TRUE;
+                      roll_back_error =
+                        g_strdup_printf ("Can't commit output changes involving "
+                                         "an uninitialized (un-swapped) onscreen "
+                                         "framebuffer since it has no actual "
+                                         "data to scan out yet");
+                      goto ROLL_BACK;
+                    }
+
+                  if (drmModeSetPlane (kms_renderer->fd,
+                                       planes->planes[n],
+                                       kms_output->encoder->crtc_id,
+                                       fb_id,
+                                       /* FIXME: flags? */,
+                                       /* FIXME: ctc_x/y/w/h,
+                                        * src_x/y/w/h */) < 0)
+                    {
+                      g_return_if_fail (roll_back == FALSE);
+
+                      roll_back = TRUE;
+                      roll_back_error =
+                        g_strdup_printf ("KMS was unable to setup the "
+                                         "overlays as requested, possibly "
+                                         "due to a hardware limitation.");
+                      goto ROLL_BACK;
+                    }
+                }
+
+              drmModeFreePlaneResources (planes);
+            }
+        }
+
+      drmModeFreeConnector (connector);
+
+      _cogl_output_update_state (output);
+    }
+}
+
 static const CoglWinsysEGLVtable
 _cogl_winsys_egl_vtable =
   {
@@ -1281,6 +1714,8 @@ _cogl_winsys_egl_kms_get_vtable (void)
       vtable.onscreen_swap_region = NULL;
       vtable.onscreen_swap_buffers_with_damage =
         _cogl_winsys_onscreen_swap_buffers_with_damage;
+
+      vtable.commit_outputs = _cogl_winsys_commit_outputs;
 
       vtable_inited = TRUE;
     }

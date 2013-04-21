@@ -39,6 +39,7 @@
 #include "cogl-winsys-private.h"
 #include "cogl-error-private.h"
 #include "cogl-poll-private.h"
+#include "cogl-mode-private.h"
 
 #include <X11/Xlib.h>
 #include <X11/extensions/Xdamage.h>
@@ -198,7 +199,7 @@ static int
 compare_outputs (CoglOutput *a,
                  CoglOutput *b)
 {
-  return strcmp (a->name, b->name);
+  return strcmp (a->pending->name, b->pending->name);
 }
 
 #define CSO(X) COGL_SUBPIXEL_ORDER_ ## X
@@ -243,8 +244,9 @@ update_outputs (CoglRenderer *renderer,
     {
       XRRCrtcInfo *crtc_info = NULL;
       XRROutputInfo *output_info = NULL;
+      GList *new_modes = NULL;
+      CoglMode *current_mode = NULL;
       CoglOutput *output;
-      float refresh_rate = 0;
       int j;
 
       crtc_info = XRRGetCrtcInfo (xlib_renderer->xdpy,
@@ -260,10 +262,17 @@ update_outputs (CoglRenderer *renderer,
 
       for (j = 0; j < resources->nmode; j++)
         {
-          if (resources->modes[j].id == crtc_info->mode)
-            refresh_rate = (resources->modes[j].dotClock /
-                            ((float)resources->modes[j].hTotal *
-                             resources->modes[j].vTotal));
+          XRRModeInfo *info = &resources->modes[j];
+
+          CoglMode *mode = _cogl_mode_new (info->name);
+          mode->width = info->width;
+          mode->height = info->height;
+          mode->refresh_rate =
+            (info->dotClock / ((float)info->hTotal * info->vTotal));
+          new_modes = g_list_prepend (new_modes, mode);
+
+          if (info->id == crtc_info->mode)
+            current_mode = mode;
         }
 
       output_info = XRRGetOutputInfo (xlib_renderer->xdpy,
@@ -276,53 +285,51 @@ update_outputs (CoglRenderer *renderer,
         }
 
       output = _cogl_output_new (output_info->name);
-      output->x = crtc_info->x;
-      output->y = crtc_info->y;
-      output->width = crtc_info->width;
-      output->height = crtc_info->height;
+      output->modes = g_list_reverse (new_modes);
+      output->state->mode = cogl_object_ref (current_mode);
+      output->state->x = crtc_info->x;
+      output->state->y = crtc_info->y;
       if ((crtc_info->rotation & (RR_Rotate_90 | RR_Rotate_270)) != 0)
         {
-          output->mm_width = output_info->mm_height;
-          output->mm_height = output_info->mm_width;
+          output->state->mm_width = output_info->mm_height;
+          output->state->mm_height = output_info->mm_width;
         }
       else
         {
-          output->mm_width = output_info->mm_width;
-          output->mm_height = output_info->mm_height;
+          output->state->mm_width = output_info->mm_width;
+          output->state->mm_height = output_info->mm_height;
         }
-
-      output->refresh_rate = refresh_rate;
 
       switch (output_info->subpixel_order)
         {
         case SubPixelUnknown:
         default:
-          output->subpixel_order = COGL_SUBPIXEL_ORDER_UNKNOWN;
+          output->state->subpixel_order = COGL_SUBPIXEL_ORDER_UNKNOWN;
           break;
         case SubPixelNone:
-          output->subpixel_order = COGL_SUBPIXEL_ORDER_NONE;
+          output->state->subpixel_order = COGL_SUBPIXEL_ORDER_NONE;
           break;
         case SubPixelHorizontalRGB:
-          output->subpixel_order = COGL_SUBPIXEL_ORDER_HORIZONTAL_RGB;
+          output->state->subpixel_order = COGL_SUBPIXEL_ORDER_HORIZONTAL_RGB;
           break;
         case SubPixelHorizontalBGR:
-          output->subpixel_order = COGL_SUBPIXEL_ORDER_HORIZONTAL_BGR;
+          output->state->subpixel_order = COGL_SUBPIXEL_ORDER_HORIZONTAL_BGR;
           break;
         case SubPixelVerticalRGB:
-          output->subpixel_order = COGL_SUBPIXEL_ORDER_VERTICAL_RGB;
+          output->state->subpixel_order = COGL_SUBPIXEL_ORDER_VERTICAL_RGB;
           break;
         case SubPixelVerticalBGR:
-          output->subpixel_order = COGL_SUBPIXEL_ORDER_VERTICAL_BGR;
+          output->state->subpixel_order = COGL_SUBPIXEL_ORDER_VERTICAL_BGR;
           break;
         }
 
-      output->subpixel_order = COGL_SUBPIXEL_ORDER_HORIZONTAL_RGB;
+      output->state->subpixel_order = COGL_SUBPIXEL_ORDER_HORIZONTAL_RGB;
 
       /* Handle the effect of rotation and reflection on subpixel order (ugh) */
       for (j = 0; j < 6; j++)
         {
           if ((crtc_info->rotation & (1 << j)) != 0)
-            output->subpixel_order = subpixel_map[j][output->subpixel_order];
+            output->state->subpixel_order = subpixel_map[j][output->state->subpixel_order];
         }
 
       new_outputs = g_list_prepend (new_outputs, output);
@@ -350,6 +357,14 @@ update_outputs (CoglRenderer *renderer,
           CoglOutput *output_l = l ? (CoglOutput *)l->data : NULL;
           CoglOutput *output_m = m ? (CoglOutput *)m->data : NULL;
 
+          if (output_m && output_m->pending != output_m->state)
+            {
+              g_warning ("Unexpected pending state associated with CoglOutput "
+                         "%s while processing events. Pending output state "
+                         "shouldn't be maintained between mainloop "
+                         "iterations\n", output_m->state->name);
+            }
+
           if (l && m)
             cmp = compare_outputs (output_l, output_m);
           else if (l)
@@ -361,7 +376,7 @@ update_outputs (CoglRenderer *renderer,
             {
               GList *m_next = m->next;
 
-              if (!_cogl_output_values_equal (output_l, output_m))
+              if (!_cogl_output_equal (output_l, output_m))
                 {
                   renderer->outputs = g_list_remove_link (renderer->outputs, m);
                   renderer->outputs = g_list_insert_before (renderer->outputs,
@@ -396,57 +411,7 @@ update_outputs (CoglRenderer *renderer,
   _cogl_xlib_renderer_untrap_errors (renderer, &state);
 
   if (changed)
-    {
-      const CoglWinsysVtable *winsys = renderer->winsys_vtable;
-
-      if (notify)
-        COGL_NOTE (WINSYS, "Outputs changed:");
-      else
-        COGL_NOTE (WINSYS, "Outputs:");
-
-      for (l = renderer->outputs; l; l = l->next)
-        {
-          CoglOutput *output = l->data;
-          const char *subpixel_string;
-
-          switch (output->subpixel_order)
-            {
-            case COGL_SUBPIXEL_ORDER_UNKNOWN:
-            default:
-              subpixel_string = "unknown";
-              break;
-            case COGL_SUBPIXEL_ORDER_NONE:
-              subpixel_string = "none";
-              break;
-            case COGL_SUBPIXEL_ORDER_HORIZONTAL_RGB:
-              subpixel_string = "horizontal_rgb";
-              break;
-            case COGL_SUBPIXEL_ORDER_HORIZONTAL_BGR:
-              subpixel_string = "horizontal_bgr";
-              break;
-            case COGL_SUBPIXEL_ORDER_VERTICAL_RGB:
-              subpixel_string = "vertical_rgb";
-              break;
-            case COGL_SUBPIXEL_ORDER_VERTICAL_BGR:
-              subpixel_string = "vertical_bgr";
-              break;
-            }
-
-          COGL_NOTE (WINSYS,
-                     " %10s: +%d+%dx%dx%d mm=%dx%d dpi=%.1fx%.1f "
-                     "subpixel_order=%s refresh_rate=%.3f",
-                     output->name,
-                     output->x, output->y, output->width, output->height,
-                     output->mm_width, output->mm_height,
-                     output->width / (output->mm_width / 25.4),
-                     output->height / (output->mm_height / 25.4),
-                     subpixel_string,
-                     output->refresh_rate);
-        }
-
-      if (notify && winsys->renderer_outputs_changed != NULL)
-        winsys->renderer_outputs_changed (renderer);
-    }
+    _cogl_renderer_notify_outputs_changed (renderer);
 }
 
 static CoglFilterReturn
@@ -634,8 +599,10 @@ _cogl_xlib_renderer_output_for_rectangle (CoglRenderer *renderer,
   for (l = renderer->outputs; l; l = l->next)
     {
       CoglOutput *output = l->data;
-      int xb1 = output->x, xb2 = output->x + output->width;
-      int yb1 = output->y, yb2 = output->y + output->height;
+      int xb1 = output->state->x;
+      int xb2 = output->state->x + cogl_output_get_width (output);
+      int yb1 = output->state->y;
+      int yb2 = output->state->y + cogl_output_get_height (output);
 
       int overlap_x = MIN(xa2, xb2) - MAX(xa1, xb1);
       int overlap_y = MIN(ya2, yb2) - MAX(ya1, yb1);

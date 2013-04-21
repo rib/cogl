@@ -44,6 +44,7 @@
 #include "cogl-winsys-stub-private.h"
 #include "cogl-config-private.h"
 #include "cogl-error-private.h"
+#include "cogl-output-private.h"
 
 #ifdef COGL_HAS_EGL_PLATFORM_XLIB_SUPPORT
 #include "cogl-winsys-egl-x11-private.h"
@@ -111,7 +112,7 @@ static CoglDriverDescription _cogl_drivers[] =
   {
     COGL_DRIVER_GL3,
     "gl3",
-    0,
+    COGL_RENDERER_CONSTRAINT_USES_KMS,
     COGL_PRIVATE_FEATURE_ANY_GL |
       COGL_PRIVATE_FEATURE_GL_PROGRAMMABLE,
     &_cogl_driver_gl,
@@ -121,7 +122,7 @@ static CoglDriverDescription _cogl_drivers[] =
   {
     COGL_DRIVER_GL,
     "gl",
-    0,
+    COGL_RENDERER_CONSTRAINT_USES_KMS,
     COGL_PRIVATE_FEATURE_ANY_GL |
       COGL_PRIVATE_FEATURE_GL_FIXED |
       COGL_PRIVATE_FEATURE_GL_PROGRAMMABLE,
@@ -134,7 +135,8 @@ static CoglDriverDescription _cogl_drivers[] =
   {
     COGL_DRIVER_GLES2,
     "gles2",
-    COGL_RENDERER_CONSTRAINT_SUPPORTS_COGL_GLES2,
+    COGL_RENDERER_CONSTRAINT_SUPPORTS_COGL_GLES2 |
+      COGL_RENDERER_CONSTRAINT_USES_KMS,
     COGL_PRIVATE_FEATURE_ANY_GL |
       COGL_PRIVATE_FEATURE_GL_EMBEDDED |
       COGL_PRIVATE_FEATURE_GL_PROGRAMMABLE,
@@ -147,7 +149,7 @@ static CoglDriverDescription _cogl_drivers[] =
   {
     COGL_DRIVER_GLES1,
     "gles1",
-    0,
+    COGL_RENDERER_CONSTRAINT_USES_KMS,
     COGL_PRIVATE_FEATURE_ANY_GL |
       COGL_PRIVATE_FEATURE_GL_EMBEDDED |
       COGL_PRIVATE_FEATURE_GL_FIXED,
@@ -173,7 +175,7 @@ static CoglDriverDescription _cogl_drivers[] =
   {
     COGL_DRIVER_NOP,
     "nop",
-    0, /* constraints satisfied */
+    COGL_RENDERER_CONSTRAINT_USES_KMS, /* constraints satisfied */
     0, /* flags */
     &_cogl_driver_nop,
     NULL, /* texture driver */
@@ -842,4 +844,81 @@ cogl_renderer_foreach_output (CoglRenderer *renderer,
 
   for (l = renderer->outputs; l; l = l->next)
     callback (l->data, user_data);
+}
+
+CoglBool
+cogl_renderer_commit_outputs (CoglRenderer *renderer,
+                              CoglError **error)
+{
+  CoglWinsysVtable *winsys;
+
+  _COGL_RETURN_IF_FAIL (!renderer->connected);
+
+  winsys = renderer->winsys;
+
+  if (winsys->commit_outputs)
+    return winsys->commit_outputs (renderer, error);
+  else
+    {
+      _cogl_set_error (error,
+                       COGL_SYSTEM_ERROR,
+                       COGL_SYSTEM_ERROR_UNSUPPORTED,
+                       "The current Cogl window system doesn't support "
+                       "display configuration");
+      return FALSE;
+    }
+}
+
+void
+_cogl_renderer_notify_outputs_changed (CoglRenderer *renderer)
+{
+  const CoglWinsysVtable *winsys = renderer->winsys_vtable;
+  GList *l;
+
+  COGL_NOTE (WINSYS, "Outputs changed:");
+
+  for (l = renderer->outputs; l; l = l->next)
+    {
+      CoglOutput *output = l->data;
+      const char *subpixel_string;
+
+      switch (output->state->subpixel_order)
+        {
+        case COGL_SUBPIXEL_ORDER_UNKNOWN:
+        default:
+          subpixel_string = "unknown";
+          break;
+        case COGL_SUBPIXEL_ORDER_NONE:
+          subpixel_string = "none";
+          break;
+        case COGL_SUBPIXEL_ORDER_HORIZONTAL_RGB:
+          subpixel_string = "horizontal_rgb";
+          break;
+        case COGL_SUBPIXEL_ORDER_HORIZONTAL_BGR:
+          subpixel_string = "horizontal_bgr";
+          break;
+        case COGL_SUBPIXEL_ORDER_VERTICAL_RGB:
+          subpixel_string = "vertical_rgb";
+          break;
+        case COGL_SUBPIXEL_ORDER_VERTICAL_BGR:
+          subpixel_string = "vertical_bgr";
+          break;
+        }
+
+      COGL_NOTE (WINSYS,
+                 " %10s: +%d+%dx%dx%d mm=%dx%d dpi=%.1fx%.1f "
+                 "subpixel_order=%s refresh_rate=%.3f",
+                 output->state->name,
+                 output->state->x, output->state->y,
+                 cogl_output_get_width (output),
+                 cogl_output_get_height (output),
+                 output->state->mm_width, output->state->mm_height,
+                 cogl_output_get_width (output) / (output->state->mm_width / 25.4),
+                 cogl_output_get_height (output) / (output->state->mm_height / 25.4),
+                 subpixel_string,
+                 cogl_output_get_refresh_rate (output));
+    }
+
+  if (winsys->renderer_outputs_changed)
+    winsys->renderer_outputs_changed (renderer);
 }

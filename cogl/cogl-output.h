@@ -31,7 +31,14 @@
 #ifndef __COGL_OUTPUT_H
 #define __COGL_OUTPUT_H
 
+/* We forward declare the CoglOutput type here to avoid some circular
+ * dependency issues with the following headers.
+ */
+typedef struct _CoglOutput CoglOutput;
+
 #include <cogl/cogl-types.h>
+#include <cogl/cogl-overlay.h>
+#include <cogl/cogl-mode.h>
 
 COGL_BEGIN_DECLS
 
@@ -57,7 +64,6 @@ COGL_BEGIN_DECLS
  * to the #CoglOnscreen.
  */
 
-typedef struct _CoglOutput CoglOutput;
 #define COGL_OUTPUT(X) ((CoglOutput *)(X))
 
 /**
@@ -233,6 +239,243 @@ cogl_output_get_subpixel_order (CoglOutput *output);
  */
 float
 cogl_output_get_refresh_rate (CoglOutput *output);
+
+/**
+ * cogl_output_get_overlay0:
+ * @output: a #CoglOutput
+ *
+ * Queries the first, base overlay associated with the given @output.
+ *
+ * Return value: A pointer to the first #CoglOverlay associated with
+ *               @output.
+ * Since: 1.16
+ * Stability: unstable
+ */
+CoglOverlay *
+cogl_output_get_overlay0 (CoglOutput *output);
+
+/**
+ * cogl_output_append_overlay:
+ * @output: a #CoglOutput
+ * @overlay: A #CoglOverlay to add
+ *
+ * Stacks @overlay above all the other overlays currently associated
+ * with the given @output.
+ *
+ * Since: 1.16
+ * Stability: unstable
+ */
+void
+cogl_output_append_overlay (CoglOutput *output,
+                            CoglOverlay *overlay);
+
+/**
+ * cogl_output_put_overlay_above:
+ * @output: a #CoglOutput
+ * @overlay: A #CoglOverlay to position
+ * @sibling: A #CoglOverlay to position @overlay above or %NULL
+ *
+ * Stacks @overlay above @sibling. If @sibling is %NULL then @overlay
+ * is stacked at the lowest position.
+ *
+ * Since: 1.16
+ * Stability: unstable
+ */
+void
+cogl_output_put_overlay_above (CoglOutput *output,
+                               CoglOverlay *overlay,
+                               CoglOverlay *sibling);
+
+/**
+ * cogl_output_put_overlay_below:
+ * @output: a #CoglOutput
+ * @overlay: A #CoglOverlay to position
+ * @sibling: A #CoglOverlay to position @overlay below or %NULL
+ *
+ * Stacks @overlay below @sibling. If @sibling is %NULL then @overlay
+ * is stacked at the highest position.
+ *
+ * Since: 1.16
+ * Stability: unstable
+ */
+void
+cogl_output_put_overlay_below (CoglOutput *output,
+                               CoglOverlay *overlay,
+                               CoglOverlay *sibling);
+
+/**
+ * cogl_output_remove_overlay:
+ * @output: a #CoglOutput
+ * @overlay: A #CoglOverlay to remove
+ *
+ * Removes @overlay from the given @output.
+ *
+ * Since: 1.16
+ * Stability: unstable
+ */
+void
+cogl_output_remove_overlay (CoglOutput *output,
+                            CoglOverlay *overlay);
+
+/**
+ * CoglOutputModeCallback:
+ * @overlay: The current overlay being iterated
+ * @user_data: The private data passed to
+ *             cogl_output_foreach_mode()
+ *
+ * A callback type for use with cogl_output_foreach_mode()
+ *
+ * Since: 1.16
+ * Stability: unstable
+ */
+typedef void (*CoglOutputModeCallback) (CoglMode *mode,
+                                        void *user_data);
+
+/**
+ * cogl_output_foreach_mode:
+ * @output: a #CoglOutput
+ * @callback: A #CoglOutputModeCallback to call for each mode.
+ * @user_data: A private pointer to pass to @callback
+ *
+ * Iterates through the possible #CoglMode<!-- -->'s usable with @output.
+ *
+ * Since: 1.16
+ * Stability: unstable
+ */
+void
+cogl_output_foreach_mode (CoglOutput *output,
+                          CoglOutputModeCallback callback,
+                          void *user_data);
+
+/**
+ * cogl_output_set_mode:
+ * @output: a #CoglOutput
+ * @mode: A #CoglMode
+ *
+ * Requests to set the given @mode on the given @output the next
+ * time output configurations are comitted via
+ * cogl_renderer_commit_outputs().
+ *
+ * <note>@mode should be a mode that was found via
+ * cogl_output_foreach_mode()</note>
+ *
+ * Since: 1.16
+ * Stability: unstable
+ */
+void
+cogl_output_set_mode (CoglOutput *output,
+                      CoglMode *mode);
+
+/**
+ * cogl_output_get_mode:
+ * @output: a #CoglOutput
+ *
+ * Queries the mode that's currently set on the given @output.
+ *
+ * <note>If the mode is set via cogl_output_set_mode() but
+ * cogl_renderer_commit_outputs() hasn't since been called then this
+ * will return the last set mode, which might not correspond to the
+ * outputs actual mode.</note>
+ *
+ * Since: 1.16
+ * Stability: unstable
+ */
+CoglMode *
+cogl_output_get_mode (CoglOutput *output);
+
+/**
+ * CoglDpmsMode:
+ * @COGL_DPMS_MODE_ON: Set when the display is use
+ * @COGL_DPMS_MODE_STANDBY: Uses less than 80% of the power compared
+ *                          to @COGL_DPMS_MODE_ON. Recovery time about
+ *                          1 second.
+ * @COGL_DPMS_MODE_SUSPEND: Uses less the 30W. Recovery time may be
+ *                          about 5 seconds.
+ * @COGL_DPMS_MODE_OFF: Uses less than 8W. Recovery time may be about
+ *                      20 seconds.
+ *
+ * Standard VESA Display Power Management modes that can be controlled
+ * for each #CoglOutput via cogl_output_set_dpms_mode().
+ *
+ * Since: 1.16
+ * Stability: unstable
+ */
+typedef enum _CoglDpmsMode
+{
+  COGL_DPMS_MODE_ON,
+  COGL_DPMS_MODE_STANDBY,
+  COGL_DPMS_MODE_SUSPEND,
+  COGL_DPMS_MODE_OFF,
+} CoglDpmsMode;
+
+/**
+ * cogl_output_set_dpms_mode:
+ * @output: a #CoglOutput
+ * @dpms_mode: A #CoglDpmsMode
+ *
+ * Requests to set the given @dpms_mode on the given @output the next
+ * time that cogl_renderer_commit_outputs() is called.
+ *
+ * This can be used to save power when a display is not in active
+ * use.
+ *
+ * Since: 1.16
+ * Stability: unstable
+ */
+void
+cogl_output_set_dpms_mode (CoglOutput *output,
+                           CoglDpmsMode dpms_mode);
+
+/**
+ * cogl_output_get_dpms_mode:
+ * @output: a #CoglOutput
+ *
+ * Queries the dpms mode last set on @output.
+ *
+ * <note>If the dpms mode has been set with
+ * cogl_output_set_dpms_mode() but cogl_renderer_commit_outputs()
+ * hasn't since been called then this will return the last set
+ * dpms mode that might not correspond to the actual state of
+ * @output.<note.
+ *
+ * Return value: The dpms mode set on @output.
+ *
+ * Since: 1.16
+ * Stability: unstable
+ */
+CoglDpmsMode
+cogl_output_get_dpms_mode (CoglOutput *output);
+
+/**
+ * CoglOutputOverlayCallback:
+ * @overlay: The current overlay being iterated
+ * @user_data: The private data passed to
+ *             cogl_output_foreach_overlay()
+ *
+ * A callback type for use with cogl_output_foreach_overlay()
+ *
+ * Since: 1.16
+ * Stability: unstable
+ */
+typedef void (*CoglOutputOverlayCallback) (CoglOverlay *overlay,
+                                           void *user_data);
+
+/**
+ * cogl_output_foreach_overlay:
+ * @output: a #CoglOutput
+ * @callback: A #CoglOutputOverlayCallback to call for each overlay.
+ * @user_data: A private pointer to pass to @callback
+ *
+ * Iterates through the current @output overlays, starting from
+ * overlay 0.
+ *
+ * Since: 1.16
+ * Stability: unstable
+ */
+void
+cogl_output_foreach_overlay (CoglOutput *output,
+                             CoglOutputOverlayCallback callback,
+                             void *user_data);
 
 COGL_END_DECLS
 

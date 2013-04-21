@@ -59,6 +59,8 @@ DISTCLEANFILES += $(pc_files)
 
 # public api headers
 cogl_public_h = \
+	$(srcdir)/cogl-mode.h 			\
+	$(srcdir)/cogl-overlay.h 		\
 	$(srcdir)/cogl-attribute-buffer.h 	\
 	$(srcdir)/cogl-attribute.h 		\
 	$(srcdir)/cogl-bitmap.h 		\
@@ -365,6 +367,9 @@ cogl_sources_c = \
 	$(srcdir)/cogl-closure-list.c			\
 	$(srcdir)/cogl-fence.c				\
 	$(srcdir)/cogl-fence-private.h			\
+	$(srcdir)/cogl-overlay-private.h		\
+	$(srcdir)/cogl-overlay.c			\
+	$(srcdir)/cogl-mode.c				\
 	$(NULL)
 
 if USE_GLIB

@@ -117,4 +117,7 @@ _cogl_renderer_get_proc_address (CoglRenderer *renderer,
                                  const char *name,
                                  CoglBool in_core);
 
+void
+_cogl_renderer_notify_outputs_changed (CoglRenderer *renderer);
+
 #endif /* __COGL_RENDERER_PRIVATE_H */
