@@ -132,6 +132,8 @@ main (int argc, char **argv)
 
   ADD_TEST (test_euler_quaternion, 0, 0);
 
+  ADD_TEST (test_texture_no_allocate, 0, TEST_KNOWN_FAILURE);
+
   g_printerr ("Unknown test name \"%s\"\n", argv[1]);
 
   return 1;
