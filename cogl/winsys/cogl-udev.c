@@ -70,6 +70,13 @@ USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <unistd.h>
 #include <stdlib.h>
 
+#include <xf86drm.h>
+
+#ifdef COGL_HAS_X11_SUPPORT
+#include <xcb/xcb.h>
+#include <xcb/dri2.h>
+#endif
+
 #define LIBUDEV_I_KNOW_THE_API_IS_SUBJECT_TO_CHANGE
 #include <libudev.h>
 
@@ -133,6 +140,63 @@ handle_udev_monitor_event (void *user_data, int revents)
   udev_device_unref (dev);
 }
 
+static CoglBool
+authenticate_drm_fd (CoglRenderer *render,
+                     int fd,
+                     CoglError **error)
+{
+#ifdef COGL_HAS_X11_SUPPORT
+  xcb_connection_t *connection;
+#endif
+  uint32_t magic;
+  CoglBool ret = FALSE;
+
+  if (drmGetMagic (fd, &magic) < 0)
+    {
+      _cogl_set_error (error,
+                       COGL_WINSYS_ERROR,
+                       COGL_WINSYS_ERROR_INIT,
+                       "Failed to get DRM magic number for authentication");
+      return FALSE;
+    }
+
+  /* First try and self authenticate */
+  if (drmAuthMagic (fd, magic) == 0)
+    return TRUE;
+
+  /* If that fails then we next try and authenticate via an X server */
+#ifdef COGL_HAS_X11_SUPPORT
+  connection = xcb_connect (NULL, NULL);
+  if (!xcb_connection_has_error (connection))
+    {
+      xcb_screen_t *screen =
+        xcb_setup_roots_iterator (xcb_get_setup (connection)).data;
+      xcb_dri2_authenticate_cookie_t authenticate_cookie =
+        xcb_dri2_authenticate (connection, screen->root, magic);
+      xcb_dri2_authenticate_reply_t *authenticate =
+        xcb_dri2_authenticate_reply (connection, authenticate_cookie, 0);
+
+      if (authenticate && authenticate->authenticated)
+        ret = TRUE;
+
+      free (authenticate);
+    }
+  xcb_disconnect (connection);
+#endif
+
+  /* TODO: If that fails then try authenticating via a Wayland server */
+
+  if (!ret)
+    {
+      _cogl_set_error (error,
+                       COGL_WINSYS_ERROR,
+                       COGL_WINSYS_ERROR_INIT,
+                       "Failed to authenticate DRM device with magic number");
+    }
+
+  return ret;
+}
+
 CoglUdevDrmDevice *
 cogl_udev_drm_device_open (CoglRenderer *renderer,
                            CoglError **error)
@@ -193,6 +257,9 @@ cogl_udev_drm_device_open (CoglRenderer *renderer,
                        "Failed to find suitable drm device");
       return FALSE;
     }
+
+  if (!authenticate_drm_fd (renderer, fd, error))
+    return FALSE;
 
   monitor = udev_monitor_new_from_netlink (udev, "udev");
   if (!monitor)
