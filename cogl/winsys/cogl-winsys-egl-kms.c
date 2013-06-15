@@ -520,6 +520,12 @@ _cogl_winsys_renderer_connect (CoglRenderer *renderer,
       goto error;
     }
 
+  /* The EGL API doesn't provide for a way to explicitly select a
+   * platform when the driver can support multiple. Mesa allows
+   * selection using an environment variable though so that's what
+   * we're doing here... */
+  g_setenv ("EGL_PLATFORM", "gbm", 1);
+
   egl_renderer->edpy = eglGetDisplay ((EGLNativeDisplayType)kms_renderer->gbm);
   if (egl_renderer->edpy == EGL_NO_DISPLAY)
     {
