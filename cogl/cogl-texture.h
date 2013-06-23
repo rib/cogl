@@ -124,6 +124,28 @@ uint32_t cogl_texture_error_domain (void);
 CoglBool
 cogl_is_texture (void *object);
 
+typedef enum _CoglTextureComponents
+{
+  COGL_TEXTURE_COMPONENTS_A = 1,
+  COGL_TEXTURE_COMPONENTS_RGB,
+  COGL_TEXTURE_COMPONENTS_RGBA,
+  COGL_TEXTURE_COMPONENTS_DEPTH
+} CoglTextureComponents;
+
+void
+cogl_texture_set_components (CoglTexture *texture,
+                             CoglTextureComponents components);
+
+CoglBool
+cogl_texture_get_components (CoglTexture *texture);
+
+void
+cogl_texture_set_premultiplied (CoglTexture *texture,
+                                CoglBool premultiplied);
+
+CoglBool
+cogl_texture_get_premultiplied (CoglTexture *texture);
+
 /**
  * cogl_texture_get_width:
  * @texture: a #CoglTexture pointer.
