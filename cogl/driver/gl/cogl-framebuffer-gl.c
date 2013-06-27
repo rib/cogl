@@ -735,14 +735,26 @@ _cogl_offscreen_gl_allocate (CoglOffscreen *offscreen,
   CoglContext *ctx = fb->context;
   CoglOffscreenAllocateFlags flags;
   CoglGLFramebuffer *gl_framebuffer = &offscreen->gl_framebuffer;
+  int level_width;
+  int level_height;
+
+  _COGL_RETURN_VAL_IF_FAIL (offscreen->texture_level <
+                            _cogl_texture_get_n_levels (offscreen->texture),
+                            NULL);
+
+  _cogl_texture_get_level_size (offscreen->texture,
+                                offscreen->texture_level,
+                                &level_width,
+                                &level_height,
+                                NULL);
 
   if (fb->config.depth_texture_enabled &&
       offscreen->depth_texture == NULL)
     {
       offscreen->depth_texture =
         create_depth_texture (ctx,
-                              offscreen->texture_level_width,
-                              offscreen->texture_level_height);
+                              level_width,
+                              level_height);
 
       if (!cogl_texture_allocate (offscreen->depth_texture, error))
         {
@@ -771,8 +783,8 @@ _cogl_offscreen_gl_allocate (CoglOffscreen *offscreen,
        try_creating_fbo (ctx,
                          offscreen->texture,
                          offscreen->texture_level,
-                         offscreen->texture_level_width,
-                         offscreen->texture_level_height,
+                         level_width,
+                         level_height,
                          offscreen->depth_texture,
                          &fb->config,
                          flags = 0,
@@ -782,8 +794,8 @@ _cogl_offscreen_gl_allocate (CoglOffscreen *offscreen,
        try_creating_fbo (ctx,
                          offscreen->texture,
                          offscreen->texture_level,
-                         offscreen->texture_level_width,
-                         offscreen->texture_level_height,
+                         level_width,
+                         level_height,
                          offscreen->depth_texture,
                          &fb->config,
                          flags = ctx->last_offscreen_allocate_flags,
@@ -801,8 +813,8 @@ _cogl_offscreen_gl_allocate (CoglOffscreen *offscreen,
        try_creating_fbo (ctx,
                          offscreen->texture,
                          offscreen->texture_level,
-                         offscreen->texture_level_width,
-                         offscreen->texture_level_height,
+                         level_width,
+                         level_height,
                          offscreen->depth_texture,
                          &fb->config,
                          flags = COGL_OFFSCREEN_ALLOCATE_FLAG_DEPTH_STENCIL,
@@ -811,8 +823,8 @@ _cogl_offscreen_gl_allocate (CoglOffscreen *offscreen,
       try_creating_fbo (ctx,
                         offscreen->texture,
                         offscreen->texture_level,
-                        offscreen->texture_level_width,
-                        offscreen->texture_level_height,
+                        level_width,
+                        level_height,
                         offscreen->depth_texture,
                         &fb->config,
                         flags = COGL_OFFSCREEN_ALLOCATE_FLAG_DEPTH |
@@ -822,8 +834,8 @@ _cogl_offscreen_gl_allocate (CoglOffscreen *offscreen,
       try_creating_fbo (ctx,
                         offscreen->texture,
                         offscreen->texture_level,
-                        offscreen->texture_level_width,
-                        offscreen->texture_level_height,
+                        level_width,
+                        level_height,
                         offscreen->depth_texture,
                         &fb->config,
                         flags = COGL_OFFSCREEN_ALLOCATE_FLAG_STENCIL,
@@ -832,8 +844,8 @@ _cogl_offscreen_gl_allocate (CoglOffscreen *offscreen,
       try_creating_fbo (ctx,
                         offscreen->texture,
                         offscreen->texture_level,
-                        offscreen->texture_level_width,
-                        offscreen->texture_level_height,
+                        level_width,
+                        level_height,
                         offscreen->depth_texture,
                         &fb->config,
                         flags = COGL_OFFSCREEN_ALLOCATE_FLAG_DEPTH,
@@ -842,8 +854,8 @@ _cogl_offscreen_gl_allocate (CoglOffscreen *offscreen,
       try_creating_fbo (ctx,
                         offscreen->texture,
                         offscreen->texture_level,
-                        offscreen->texture_level_width,
-                        offscreen->texture_level_height,
+                        level_width,
+                        level_height,
                         offscreen->depth_texture,
                         &fb->config,
                         flags = 0,
