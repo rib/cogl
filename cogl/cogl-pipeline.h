@@ -57,6 +57,8 @@ COGL_BEGIN_DECLS
 
 #define COGL_PIPELINE(OBJECT) ((CoglPipeline *)OBJECT)
 
+COGL_GTYPE_DECLARE_TYPE (pipeline);
+
 /**
  * cogl_pipeline_new:
  * @context: a #CoglContext
