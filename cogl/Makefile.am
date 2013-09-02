@@ -140,6 +140,15 @@ cogl_experimental_h = \
 	$(srcdir)/cogl-error.h			\
 	$(NULL)
 
+cogl_additional_experimental_h = \
+	$(srcdir)/cogl-bitmap.h			\
+	$(srcdir)/cogl-color.h			\
+	$(srcdir)/cogl-matrix.h			\
+	$(srcdir)/cogl-texture.h		\
+	$(srcdir)/cogl-types.h			\
+	$(srcdir)/cogl-gtype-private.h		\
+	$(NULL)
+
 cogl_nodist_experimental_h = \
 	$(NULL)
 
@@ -354,6 +363,7 @@ cogl_sources_c = \
 	$(srcdir)/cogl-flags.h				\
 	$(srcdir)/cogl-bitmask.h                        \
 	$(srcdir)/cogl-bitmask.c                        \
+	$(srcdir)/cogl-gtype.c                          \
 	$(srcdir)/cogl-gtype-private.h                  \
 	$(srcdir)/cogl-point-in-poly-private.h       	\
 	$(srcdir)/cogl-point-in-poly.c       		\
@@ -670,12 +680,36 @@ Cogl_1_0_gir_FILES += \
 	$(top_srcdir)/cogl-path/cogl-path-types.h \
 	$(top_srcdir)/cogl-path/cogl1-path-functions.h
 endif
+
+Cogl-2.0.gir: libcogl.la Makefile
+
+Cogl_2_0_gir_NAMESPACE = Cogl
+Cogl_2_0_gir_VERSION = 2.0
+Cogl_2_0_gir_LIBS = libcogl.la
+if UNIT_TESTS
+Cogl_2_0_gir_LIBS += $(top_builddir)/test-fixtures/libtest-fixtures.la
+endif
+Cogl_2_0_gir_FILES = $(cogl_experimental_h) $(cogl_additional_experimental_h) cogl-enum-types.h
+if BUILD_COGL_PATH
+Cogl_2_0_gir_FILES += \
+	$(top_builddir)/cogl-path/cogl-path-enum-types.h \
+	$(top_srcdir)/cogl-path/cogl-path-types.h \
+	$(top_srcdir)/cogl-path/cogl1-path-functions.h
+endif
+
+
 Cogl_1_0_gir_CFLAGS = $(AM_CPPFLAGS) $(COGL_DEP_CFLAGS) -UCOGL_ENABLE_EXPERIMENTAL_API -UCOGL_ENABLE_EXPERIMENTAL_2_0_API -UCOGL_COMPILATION -D__COGL_H_INSIDE__ -D__COGL_XLIB_H_INSIDE__
 Cogl_1_0_gir_INCLUDES = GL-1.0 GObject-2.0
 Cogl_1_0_gir_EXPORT_PACKAGES = cogl-1.0
 Cogl_1_0_gir_SCANNERFLAGS = --warn-all --c-include='cogl/cogl.h'
 
-INTROSPECTION_GIRS += Cogl-1.0.gir
+
+Cogl_2_0_gir_CFLAGS = $(AM_CPPFLAGS) $(COGL_DEP_CFLAGS) -DCOGL_ENABLE_EXPERIMENTAL_API=1 -UCOGL_COMPILATION -D__COGL_H_INSIDE__ -D__COGL_XLIB_H_INSIDE__
+Cogl_2_0_gir_INCLUDES = GL-1.0 GObject-2.0
+Cogl_2_0_gir_EXPORT_PACKAGES = cogl-2.0-experimental
+Cogl_2_0_gir_SCANNERFLAGS = --warn-all --c-include='cogl/cogl.h'
+
+INTROSPECTION_GIRS += Cogl-1.0.gir Cogl-2.0.gir
 
 girdir = $(datadir)/gir-1.0
 gir_DATA = $(INTROSPECTION_GIRS)

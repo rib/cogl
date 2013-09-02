@@ -149,6 +149,13 @@ typedef void * CoglHandle;
 GType
 cogl_handle_get_type (void) G_GNUC_CONST;
 
+#define COGL_GTYPE_DECLARE_TYPE(name)       \
+  GType cogl_ ## name ## _get_gtype (void)
+
+#else
+
+#define COGL_GTYPE_DECLARE_TYPE(name)
+
 #endif /* COGL_HAS_GTYPE_SUPPORT */
 
 /**

@@ -34,6 +34,17 @@ typedef struct _CoglObject      CoglObject;
 #define COGL_OBJECT(X)          ((CoglObject *)X)
 
 /**
+ * CoglObject:
+ *
+ * Ref Func: cogl_object_ref
+ * Unref Func: cogl_object_unref
+ * Set Value Func: cogl_object_value_set_object
+ * Get Value Func: cogl_object_value_get_object
+ */
+
+COGL_GTYPE_DECLARE_TYPE (object);
+
+/**
  * cogl_object_ref: (skip)
  * @object: a #CoglObject
  *
