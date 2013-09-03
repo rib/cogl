@@ -40,6 +40,8 @@ G_BEGIN_DECLS
 typedef struct _CoglFrameInfo CoglFrameInfo;
 #define COGL_FRAME_INFO(X) ((CoglFrameInfo *)(X))
 
+COGL_GTYPE_DECLARE_TYPE (frame_info);
+
 /**
  * cogl_is_frame_info:
  * @object: A #CoglObject pointer
