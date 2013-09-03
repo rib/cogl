@@ -43,6 +43,8 @@
 
 COGL_BEGIN_DECLS
 
+COGL_GTYPE_DECLARE_TYPE (color);
+
 /**
  * cogl_color_new:
  *
