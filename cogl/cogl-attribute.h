@@ -49,6 +49,8 @@ COGL_BEGIN_DECLS
  * FIXME
  */
 
+COGL_GTYPE_DECLARE_TYPE (attribute);
+
 /**
  * cogl_attribute_new: (constructor)
  * @attribute_buffer: The #CoglAttributeBuffer containing the actual

@@ -45,6 +45,7 @@
 #include "cogl-pipeline-progend-glsl-private.h"
 #endif
 #include "cogl-private.h"
+#include "cogl-gtype-private.h"
 
 #include <string.h>
 #include <stdio.h>
@@ -58,6 +59,7 @@
 static void _cogl_attribute_free (CoglAttribute *attribute);
 
 COGL_OBJECT_DEFINE (Attribute, attribute);
+COGL_GTYPE_DEFINE_CLASS (Attribute, attribute);
 
 static CoglBool
 validate_cogl_attribute_name (const char *name,
