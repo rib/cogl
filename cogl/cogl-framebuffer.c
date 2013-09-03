@@ -49,6 +49,7 @@
 #include "cogl-primitives-private.h"
 #include "cogl-error-private.h"
 #include "cogl-texture-gl-private.h"
+#include "cogl-gtype-private.h"
 
 typedef struct _CoglFramebufferStackEntry
 {
@@ -68,6 +69,7 @@ COGL_OBJECT_DEFINE_WITH_CODE (Offscreen, offscreen,
                               _cogl_offscreen_class.virt_unref =
                               _cogl_framebuffer_unref);
 COGL_OBJECT_DEFINE_DEPRECATED_REF_COUNTING (offscreen);
+COGL_GTYPE_DEFINE_INTERFACE (Framebuffer, framebuffer);
 
 /* XXX:
  * The CoglObject macros don't support any form of inheritance, so for

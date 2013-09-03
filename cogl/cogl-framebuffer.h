@@ -96,6 +96,8 @@ COGL_BEGIN_DECLS
 
 #ifdef COGL_ENABLE_EXPERIMENTAL_API
 
+COGL_GTYPE_DECLARE_TYPE (framebuffer);
+
 /**
  * cogl_framebuffer_allocate:
  * @framebuffer: A #CoglFramebuffer
@@ -1813,4 +1815,3 @@ cogl_is_framebuffer (void *object);
 COGL_END_DECLS
 
 #endif /* __COGL_FRAMEBUFFER_H */
-
