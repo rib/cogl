@@ -66,6 +66,8 @@ typedef struct _CoglDisplay	      CoglDisplay;
 
 #define COGL_DISPLAY(OBJECT) ((CoglDisplay *)OBJECT)
 
+COGL_GTYPE_DECLARE_TYPE (display);
+
 /**
  * cogl_display_new:
  * @renderer: A #CoglRenderer
