@@ -123,6 +123,7 @@ COGL_BEGIN_DECLS
  */
 struct _CoglQuaternion
 {
+  /*< public >*/
   float w;
 
   float x;
@@ -136,6 +137,8 @@ struct _CoglQuaternion
   float padding3;
 };
 COGL_STRUCT_SIZE_ASSERT (CoglQuaternion, 32);
+
+COGL_GTYPE_DECLARE_TYPE (quaternion);
 
 /**
  * cogl_quaternion_init:
