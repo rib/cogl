@@ -55,6 +55,8 @@ COGL_BEGIN_DECLS
 typedef struct _CoglTexture2D CoglTexture2D;
 #define COGL_TEXTURE_2D(X) ((CoglTexture2D *)X)
 
+COGL_GTYPE_DECLARE_TYPE (texture_2d);
+
 /**
  * cogl_is_texture_2d:
  * @object: A #CoglObject
