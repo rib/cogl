@@ -42,6 +42,8 @@ COGL_BEGIN_DECLS
 typedef struct _CoglOnscreen CoglOnscreen;
 #define COGL_ONSCREEN(X) ((CoglOnscreen *)(X))
 
+COGL_GTYPE_DECLARE_TYPE (onscreen);
+
 /**
  * cogl_onscreen_new: (constructor)
  * @context: A #CoglContext
