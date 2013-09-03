@@ -62,6 +62,8 @@ COGL_BEGIN_DECLS
 
 #define COGL_TEXTURE_MAX_WASTE  127
 
+COGL_GTYPE_DECLARE_TYPE (texture);
+
 /**
  * COGL_TEXTURE_ERROR:
  *
@@ -71,7 +73,6 @@ COGL_BEGIN_DECLS
  * Stability: Unstable
  */
 #define COGL_TEXTURE_ERROR (cogl_texture_error_quark ())
-
 
 /**
  * CoglTextureError:
