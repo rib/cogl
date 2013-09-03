@@ -28,9 +28,13 @@
 #ifndef __COGL_SWAP_CHAIN_H__
 #define __COGL_SWAP_CHAIN_H__
 
+#include <cogl/cogl-types.h>
+
 COGL_BEGIN_DECLS
 
 typedef struct _CoglSwapChain CoglSwapChain;
+
+COGL_GTYPE_DECLARE_TYPE (swap_chain);
 
 CoglSwapChain *
 cogl_swap_chain_new (void);
