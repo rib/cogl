@@ -50,6 +50,8 @@ COGL_BEGIN_DECLS
 
 #define COGL_ATTRIBUTE_BUFFER(buffer) ((CoglAttributeBuffer *)(buffer))
 
+COGL_GTYPE_DECLARE_TYPE (attribute_buffer);
+
 /**
  * cogl_attribute_buffer_new_with_size:
  * @context: A #CoglContext
