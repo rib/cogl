@@ -98,6 +98,8 @@ COGL_BEGIN_DECLS
  * for drawing quads as above.
  */
 
+COGL_GTYPE_DECLARE_TYPE (indices);
+
 CoglIndices *
 cogl_indices_new (CoglContext *context,
                   CoglIndicesType type,
