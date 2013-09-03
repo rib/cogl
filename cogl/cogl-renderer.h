@@ -80,6 +80,8 @@ cogl_renderer_error_quark (void);
 
 typedef struct _CoglRenderer CoglRenderer;
 
+COGL_GTYPE_DECLARE_TYPE (renderer);
+
 /**
  * cogl_is_renderer:
  * @object: A #CoglObject pointer
