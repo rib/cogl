@@ -63,6 +63,8 @@ COGL_BEGIN_DECLS
 typedef struct _CoglTextureRectangle CoglTextureRectangle;
 #define COGL_TEXTURE_RECTANGLE(X) ((CoglTextureRectangle *)X)
 
+COGL_GTYPE_DECLARE_TYPE (texture_rectangle);
+
 /**
  * cogl_is_texture_rectangle:
  * @object: A #CoglObject
