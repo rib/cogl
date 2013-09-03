@@ -43,6 +43,8 @@ typedef struct _CoglBitmap CoglBitmap;
 
 COGL_BEGIN_DECLS
 
+COGL_GTYPE_DECLARE_TYPE (bitmap);
+
 /**
  * SECTION:cogl-bitmap
  * @short_description: Functions for loading images
