@@ -47,6 +47,8 @@ COGL_BEGIN_DECLS
 
 typedef struct _CoglIndexBuffer	      CoglIndexBuffer;
 
+COGL_GTYPE_DECLARE_TYPE (index_buffer);
+
 /**
  * cogl_index_buffer_new:
  * @context: A #CoglContext
