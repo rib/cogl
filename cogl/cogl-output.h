@@ -60,6 +60,8 @@ COGL_BEGIN_DECLS
 typedef struct _CoglOutput CoglOutput;
 #define COGL_OUTPUT(X) ((CoglOutput *)(X))
 
+COGL_GTYPE_DECLARE_TYPE (output);
+
 /**
  * CoglSubpixelOrder:
  * @COGL_SUBPIXEL_ORDER_UNKNOWN: the layout of subpixel
