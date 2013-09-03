@@ -335,6 +335,8 @@ typedef struct _CoglSnippet CoglSnippet;
 
 #define COGL_SNIPPET(OBJECT) ((CoglSnippet *)OBJECT)
 
+COGL_GTYPE_DECLARE_TYPE (snippet);
+
 /* Enumeration of all the hook points that a snippet can be attached
    to within a pipeline. */
 /**
