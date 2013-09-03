@@ -43,6 +43,8 @@ COGL_BEGIN_DECLS
 
 #define COGL_PIXEL_BUFFER(buffer) ((CoglPixelBuffer *)(buffer))
 
+COGL_GTYPE_DECLARE_TYPE (pixel_buffer);
+
 /**
  * cogl_pixel_buffer_new:
  * @context: A #CoglContext
