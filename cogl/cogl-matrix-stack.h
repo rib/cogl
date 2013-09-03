@@ -164,6 +164,9 @@ typedef struct _CoglMatrixStack CoglMatrixStack;
  */
 typedef struct _CoglMatrixEntry CoglMatrixEntry;
 
+COGL_GTYPE_DECLARE_TYPE (matrix_stack);
+COGL_GTYPE_DECLARE_TYPE (matrix_entry);
+
 /**
  * cogl_matrix_stack_new:
  * @ctx: A #CoglContext
