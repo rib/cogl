@@ -50,6 +50,8 @@ COGL_BEGIN_DECLS
  * FIXME
  */
 
+COGL_GTYPE_DECLARE_TYPE (primitive);
+
 /**
  * CoglVertexP2:
  * @x: The x component of a position attribute

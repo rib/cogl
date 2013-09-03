@@ -35,6 +35,7 @@
 #include "cogl-primitive-private.h"
 #include "cogl-attribute-private.h"
 #include "cogl-framebuffer-private.h"
+#include "cogl-gtype-private.h"
 
 #include <stdarg.h>
 #include <string.h>
@@ -42,6 +43,7 @@
 static void _cogl_primitive_free (CoglPrimitive *primitive);
 
 COGL_OBJECT_DEFINE (Primitive, primitive);
+COGL_GTYPE_DEFINE_CLASS (Primitive, primitive);
 
 CoglPrimitive *
 cogl_primitive_new_with_attributes (CoglVerticesMode mode,
