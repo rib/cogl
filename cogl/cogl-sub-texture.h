@@ -47,6 +47,8 @@ COGL_BEGIN_DECLS
 #define COGL_SUB_TEXTURE(tex) ((CoglSubTexture *) tex)
 typedef struct _CoglSubTexture CoglSubTexture;
 
+COGL_GTYPE_DECLARE_TYPE (sub_texture);
+
 /**
  * cogl_sub_texture_new:
  * @ctx: A #CoglContext pointer
