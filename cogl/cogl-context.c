@@ -49,6 +49,7 @@
 #include "cogl-gpu-info-private.h"
 #include "cogl-config-private.h"
 #include "cogl-error-private.h"
+#include "cogl-gtype-private.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -69,6 +70,7 @@
 static void _cogl_context_free (CoglContext *context);
 
 COGL_OBJECT_DEFINE (Context, context);
+COGL_GTYPE_DEFINE_CLASS (Context, context);
 
 extern void
 _cogl_create_context_driver (CoglContext *context);
