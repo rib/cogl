@@ -47,6 +47,8 @@ typedef struct _CoglTexture3D CoglTexture3D;
 
 #define COGL_TEXTURE_3D(X) ((CoglTexture3D *)X)
 
+COGL_GTYPE_DECLARE_TYPE (texture_3d);
+
 /**
  * cogl_texture_3d_new_with_size:
  * @context: a #CoglContext
