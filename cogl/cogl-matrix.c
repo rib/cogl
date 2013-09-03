@@ -77,12 +77,10 @@
 #include <math.h>
 #include <string.h>
 
-#ifdef _COGL_SUPPORTS_GTYPE_INTEGRATION
 #include <cogl-gtype-private.h>
 COGL_GTYPE_DEFINE_BOXED ("Matrix", matrix,
                          cogl_matrix_copy,
                          cogl_matrix_free);
-#endif
 
 /*
  * Symbolic names to some of the entries in the matrix
