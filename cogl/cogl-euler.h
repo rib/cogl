@@ -157,6 +157,8 @@ struct _CoglEuler
 };
 COGL_STRUCT_SIZE_ASSERT (CoglEuler, 32);
 
+COGL_GTYPE_DECLARE_TYPE (euler);
+
 /**
  * cogl_euler_init:
  * @euler: The #CoglEuler angle to initialize
