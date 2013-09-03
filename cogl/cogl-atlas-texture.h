@@ -61,6 +61,7 @@ COGL_BEGIN_DECLS
 typedef struct _CoglAtlasTexture CoglAtlasTexture;
 #define COGL_ATLAS_TEXTURE(tex) ((CoglAtlasTexture *) tex)
 
+COGL_GTYPE_DECLARE_TYPE (atlas_texture);
 
 /**
  * cogl_atlas_texture_new_with_size:
