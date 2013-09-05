@@ -39,6 +39,8 @@ typedef struct _CoglOnscreenTemplate	      CoglOnscreenTemplate;
 
 #define COGL_ONSCREEN_TEMPLATE(OBJECT) ((CoglOnscreenTemplate *)OBJECT)
 
+COGL_GTYPE_DECLARE_TYPE (onscreen_template);
+
 CoglOnscreenTemplate *
 cogl_onscreen_template_new (CoglSwapChain *swap_chain);
 
