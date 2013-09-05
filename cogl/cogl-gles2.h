@@ -141,6 +141,8 @@ struct _CoglGLES2Vtable
 #undef COGL_EXT_END
 };
 
+COGL_GTYPE_DECLARE_TYPE (gles2_context);
+
 uint32_t
 _cogl_gles2_context_error_quark (void);
 
