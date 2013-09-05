@@ -45,6 +45,8 @@ typedef struct _CoglOffscreen CoglOffscreen;
 
 #define COGL_OFFSCREEN(X) ((CoglOffscreen *)X)
 
+COGL_GTYPE_DECLARE_TYPE (offscreen);
+
 /* Offscreen api */
 
 /**
