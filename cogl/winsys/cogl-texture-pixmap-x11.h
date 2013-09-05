@@ -61,6 +61,8 @@ typedef struct _CoglTexturePixmapX11 CoglTexturePixmapX11;
 
 #define COGL_TEXTURE_PIXMAP_X11(X) ((CoglTexturePixmapX11 *)X)
 
+COGL_GTYPE_DECLARE_TYPE (texture_pixmap_x11);
+
 typedef enum
 {
   COGL_TEXTURE_PIXMAP_X11_DAMAGE_RAW_RECTANGLES,
