@@ -46,6 +46,16 @@
 #include "cogl-sub-texture.h"
 #include "cogl-texture-2d-gl.h"
 
+static void
+set_auto_mipmap_cb (CoglTexture *sub_texture,
+                    const float *sub_texture_coords,
+                    const float *meta_coords,
+                    void *user_data)
+{
+  cogl_primitive_texture_set_auto_mipmap (COGL_PRIMITIVE_TEXTURE (sub_texture),
+                                          FALSE);
+}
+
 CoglTexture *
 cogl_texture_new_with_size (unsigned int width,
 			    unsigned int height,
@@ -80,13 +90,7 @@ cogl_texture_new_with_size (unsigned int width,
   else
     tex = NULL;
 
-  if (tex)
-    {
-      CoglBool auto_mipmap = !(flags & COGL_TEXTURE_NO_AUTO_MIPMAP);
-      cogl_primitive_texture_set_auto_mipmap (COGL_PRIMITIVE_TEXTURE (tex),
-                                              auto_mipmap);
-    }
-  else
+  if (!tex)
     {
       /* If it fails resort to sliced textures */
       int max_waste = flags & COGL_TEXTURE_NO_SLICING ? -1 : COGL_TEXTURE_MAX_WASTE;
@@ -95,6 +99,27 @@ cogl_texture_new_with_size (unsigned int width,
                                                                 height,
                                                                 max_waste,
                                                                 internal_format));
+    }
+
+  /* NB: This api existed before Cogl introduced lazy allocation of
+   * textures and so we maintain its original synchronous allocation
+   * semantics and return NULL if allocation fails... */
+  if (!cogl_texture_allocate (tex, &skip_error))
+    {
+      cogl_error_free (skip_error);
+      cogl_object_unref (tex);
+      return NULL;
+    }
+
+  if (tex &&
+      flags & COGL_TEXTURE_NO_AUTO_MIPMAP)
+    {
+      cogl_meta_texture_foreach_in_region (COGL_META_TEXTURE (tex),
+                                           0, 0, 1, 1,
+                                           COGL_PIPELINE_WRAP_MODE_CLAMP_TO_EDGE,
+                                           COGL_PIPELINE_WRAP_MODE_CLAMP_TO_EDGE,
+                                           set_auto_mipmap_cb,
+                                           NULL);
     }
 
   return tex;
