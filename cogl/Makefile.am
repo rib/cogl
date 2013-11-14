@@ -707,7 +707,7 @@ Cogl_1_0_gir_SCANNERFLAGS = --warn-all --c-include='cogl/cogl.h'
 Cogl_2_0_gir_CFLAGS = $(AM_CPPFLAGS) $(COGL_DEP_CFLAGS) -DCOGL_ENABLE_EXPERIMENTAL_API=1 -UCOGL_COMPILATION -D__COGL_H_INSIDE__ -D__COGL_XLIB_H_INSIDE__
 Cogl_2_0_gir_INCLUDES = GL-1.0 GObject-2.0
 Cogl_2_0_gir_EXPORT_PACKAGES = cogl-2.0-experimental
-Cogl_2_0_gir_SCANNERFLAGS = --warn-all --c-include='cogl/cogl.h'
+Cogl_2_0_gir_SCANNERFLAGS = --warn-all --c-include='cogl/cogl.h' --symbol-prefix=cogl --symbol-prefix=cogl2
 
 INTROSPECTION_GIRS += Cogl-1.0.gir Cogl-2.0.gir
 
