@@ -66,7 +66,7 @@ cogl_path_new (void);
  * Internally the path will share the data until one of the paths is
  * modified so copying paths should be relatively cheap.
  *
- * Return value: a copy of the path in @path.
+ * Return value: (transfer full): a copy of the path in @path.
  *
  * Since: 2.0
  */
