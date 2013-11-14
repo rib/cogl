@@ -694,7 +694,7 @@ if BUILD_COGL_PATH
 Cogl_2_0_gir_FILES += \
 	$(top_builddir)/cogl-path/cogl-path-enum-types.h \
 	$(top_srcdir)/cogl-path/cogl-path-types.h \
-	$(top_srcdir)/cogl-path/cogl1-path-functions.h
+	$(top_srcdir)/cogl-path/cogl2-path-functions.h
 endif
 
 
