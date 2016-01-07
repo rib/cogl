@@ -286,6 +286,34 @@ cogl_texture_3d_new_from_data (CoglContext *context,
   return ret;
 }
 
+#ifdef COGL_HAS_GTYPE_SUPPORT
+
+CoglTexture3D *
+cogl_texture_3d_new_from_bytes (CoglContext *context,
+                                int width,
+                                int height,
+                                int depth,
+                                CoglPixelFormat format,
+                                int rowstride,
+                                int image_stride,
+                                GBytes *bytes,
+                                CoglError **error)
+{
+  _COGL_RETURN_VAL_IF_FAIL (bytes != NULL, NULL);
+
+  return cogl_texture_3d_new_from_data (context,
+                                        width,
+                                        height,
+                                        depth,
+                                        format,
+                                        rowstride,
+                                        image_stride,
+                                        g_bytes_get_data (bytes, NULL),
+                                        error);
+}
+
+#endif
+
 static CoglBool
 _cogl_texture_3d_can_create (CoglContext *ctx,
                              int width,

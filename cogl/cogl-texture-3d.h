@@ -145,6 +145,47 @@ cogl_texture_3d_new_from_data (CoglContext *context,
                                const uint8_t *data,
                                CoglError **error);
 
+#ifdef COGL_HAS_GTYPE_SUPPORT
+
+/**
+ * cogl_texture_3d_new_from_bytes:
+ * @context: a #CoglContext
+ * @width: width of the texture in pixels.
+ * @height: height of the texture in pixels.
+ * @depth: depth of the texture in pixels.
+ * @format: the #CoglPixelFormat the buffer is stored in in RAM
+ * @rowstride: the memory offset in bytes between the starts of
+ *    scanlines in @data or 0 to infer it from the width and format
+ * @image_stride: the number of bytes from one image to the next. This
+ *    can be used to add padding between the images in a similar way
+ *    that the rowstride can be used to add padding between
+ *    rows. Alternatively 0 can be passed to infer the @image_stride
+ *    from the @height.
+ * @bytes: A #GBytes object where the source buffer resides
+ * @error: A CoglError return location.
+ *
+ * A helper to create 3d textures from #GBytes objects, similar to
+ * cogl_texture_3d_new_from_data().
+ *
+ * Return value: (transfer full): the newly created #CoglTexture3D or
+ *               %NULL if there was an error and an exception will be
+ *               returned through @error.
+ * Since: 2.0
+ * Stability: Unstable
+ */
+CoglTexture3D *
+cogl_texture_3d_new_from_bytes (CoglContext *context,
+                                int width,
+                                int height,
+                                int depth,
+                                CoglPixelFormat format,
+                                int rowstride,
+                                int image_stride,
+                                GBytes *bytes,
+                                CoglError **error);
+
+#endif
+
 /**
  * cogl_texture_3d_new_from_bitmap:
  * @bitmap: A #CoglBitmap object.

@@ -461,6 +461,41 @@ cogl_texture_set_data (CoglTexture *texture,
                        int level,
                        CoglError **error);
 
+#ifdef COGL_HAS_GTYPE_SUPPORT
+
+/**
+ * cogl_texture_set_data_bytes:
+ * @texture a #CoglTexture.
+ * @format: the #CoglPixelFormat used in the source @data buffer.
+ * @rowstride: rowstride of the source @data buffer (computed from
+ *             the texture width and @format if it equals 0)
+ * @bytes: A #GBytes object containing the source data, pointing to the
+ *         first top-left pixel to set
+ * @level: The mipmap level to update (Normally 0 for the largest,
+ *         base texture)
+ * @error: A #CoglError to return exceptional errors
+ *
+ * Sets all the pixels for a given mipmap @level by copying the pixel
+ * data provided by the @bytes argument into the given @texture.
+ *
+ * This is a helper for GLib based applications and mostly applications
+ * using bindings from a different languages where pointers to memory are
+ * not available.
+ *
+ * Since: 1.24
+ * Return value: %TRUE if the data upload was successful, and
+ *               %FALSE otherwise
+ */
+CoglBool
+cogl_texture_set_data_bytes (CoglTexture *texture,
+                             CoglPixelFormat format,
+                             int rowstride,
+                             GBytes *bytes,
+                             int level,
+                             CoglError **error);
+
+#endif
+
 /**
  * cogl_texture_set_region_from_bitmap:
  * @texture: a #CoglTexture pointer

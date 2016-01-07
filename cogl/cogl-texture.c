@@ -541,6 +541,29 @@ cogl_texture_set_data (CoglTexture *texture,
                                    error);
 }
 
+#ifdef COGL_HAS_GTYPE_SUPPORT
+
+CoglBool
+cogl_texture_set_data_bytes (CoglTexture *texture,
+                             CoglPixelFormat format,
+                             int rowstride,
+                             GBytes *bytes,
+                             int level,
+                             CoglError **error)
+{
+  if (bytes == NULL)
+    return FALSE;
+
+  return cogl_texture_set_data (texture,
+                                format,
+                                rowstride,
+                                g_bytes_get_data (bytes, NULL),
+                                level,
+                                error);
+}
+
+#endif
+
 /* Reads back the contents of a texture by rendering it to the framebuffer
  * and reading back the resulting pixels.
  *

@@ -198,6 +198,41 @@ cogl_texture_2d_new_from_data (CoglContext *ctx,
                                const uint8_t *data,
                                CoglError **error);
 
+#ifdef COGL_HAS_GTYPE_SUPPORT
+
+/**
+ * cogl_texture_2d_new_from_bytes:
+ * @ctx: A #CoglContext
+ * @width: width of texture in pixels
+ * @height: height of texture in pixels
+ * @format: the #CoglPixelFormat the buffer is stored in in RAM
+ * @rowstride: the memory offset in bytes between the starts of
+ *    scanlines in @data. A value of 0 will make Cogl automatically
+ *    calculate @rowstride from @width and @format.
+ * @bytes: A #GBytes object where the source buffer resides
+ * @error: A #CoglError for exceptions
+ *
+ * A helper to create 2d textures from #GBytes objects, similar to
+ * cogl_texture_2d_new_from_data().
+ *
+ * Returns: (transfer full): A newly allocated #CoglTexture2D, or if
+ *          the size is not supported (because it is too large or a
+ *          non-power-of-two size that the hardware doesn't support)
+ *          it will return %NULL and set @error.
+ *
+ * Since: 2.0
+ */
+CoglTexture2D *
+cogl_texture_2d_new_from_bytes (CoglContext *ctx,
+                                int width,
+                                int height,
+                                CoglPixelFormat format,
+                                int rowstride,
+                                GBytes *bytes,
+                                CoglError **error);
+
+#endif
+
 /**
  * cogl_texture_2d_new_from_bitmap:
  * @bitmap: A #CoglBitmap

@@ -231,6 +231,29 @@ cogl_texture_2d_new_from_data (CoglContext *ctx,
   return tex_2d;
 }
 
+#ifdef COGL_HAS_GTYPE_SUPPORT
+
+CoglTexture2D *
+cogl_texture_2d_new_from_bytes (CoglContext *ctx,
+                                int width,
+                                int height,
+                                CoglPixelFormat format,
+                                int rowstride,
+                                GBytes *bytes,
+                                CoglError **error)
+{
+  _COGL_RETURN_VAL_IF_FAIL (bytes != NULL, NULL);
+
+  return cogl_texture_2d_new_from_data (ctx,
+                                        width, height,
+                                        format,
+                                        rowstride,
+                                        g_bytes_get_data (bytes, NULL),
+                                        error);
+}
+
+#endif
+
 #if defined (COGL_HAS_EGL_SUPPORT) && defined (EGL_KHR_image_base)
 /* NB: The reason we require the width, height and format to be passed
  * even though they may seem redundant is because GLES 1/2 don't
