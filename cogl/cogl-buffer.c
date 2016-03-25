@@ -58,6 +58,12 @@
 
 static GSList *_cogl_buffer_types;
 
+uint32_t
+cogl_buffer_error_quark (void)
+{
+  return g_quark_from_static_string ("cogl-buffer-error-quark");
+}
+
 void
 _cogl_buffer_register_buffer_type (const CoglObjectClass *klass)
 {

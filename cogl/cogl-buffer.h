@@ -76,7 +76,7 @@ typedef struct _CoglBuffer CoglBuffer;
 #define COGL_BUFFER(buffer) ((CoglBuffer *)(buffer))
 #endif
 
-#define COGL_BUFFER_ERROR (_cogl_buffer_error_domain ())
+#define COGL_BUFFER_ERROR (cogl_buffer_error_quark ())
 
 /**
  * CoglBufferError:
@@ -93,7 +93,7 @@ typedef enum { /*< prefix=COGL_BUFFER_ERROR >*/
 } CoglBufferError;
 
 uint32_t
-_cogl_buffer_error_domain (void);
+cogl_buffer_error_quark (void);
 
 /**
  * cogl_is_buffer:

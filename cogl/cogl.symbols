@@ -57,6 +57,7 @@ cogl_bitmap_new_with_size
 cogl_blend_string_error_get_type
 
 cogl_buffer_bit_get_type
+cogl_buffer_error_quark
 cogl_buffer_get_size
 cogl_buffer_get_update_hint
 #if 0
