@@ -595,6 +595,12 @@ _cogl_renderer_choose_driver (CoglRenderer *renderer,
   renderer->texture_driver = desc->texture_driver;
   libgl_name = desc->libgl_name;
 
+  for (i = 0; i < sizeof (CoglRendererConstraint) * 8; i++)
+    {
+      if (desc->constraints & (1L << i))
+        cogl_renderer_add_constraint (renderer, 1L << i);
+    }
+
   memset(renderer->private_features, 0, sizeof (renderer->private_features));
   for (i = 0; desc->private_features[i] != -1; i++)
     COGL_FLAGS_SET (renderer->private_features,
