@@ -236,7 +236,10 @@ _cogl_shader_compile_real (CoglHandle handle,
 #endif
     {
       GLenum gl_type;
+      CoglGlslShaderType type;
       GLint status;
+      GString *shader_source;
+      GLint shader_length;
 
       if (shader->gl_handle)
         {
@@ -258,9 +261,11 @@ _cogl_shader_compile_real (CoglHandle handle,
         {
         case COGL_SHADER_TYPE_VERTEX:
           gl_type = GL_VERTEX_SHADER;
+          type = COGL_GLSL_SHADER_TYPE_VERTEX;
           break;
         case COGL_SHADER_TYPE_FRAGMENT:
           gl_type = GL_FRAGMENT_SHADER;
+          type = COGL_GLSL_SHADER_TYPE_FRAGMENT;
           break;
         default:
           g_assert_not_reached ();
@@ -269,16 +274,21 @@ _cogl_shader_compile_real (CoglHandle handle,
 
       shader->gl_handle = ctx->glCreateShader (gl_type);
 
-      _cogl_glsl_shader_set_source_with_boilerplate (ctx,
-                                                     shader->gl_handle,
-                                                     gl_type,
-                                                     pipeline,
-                                                     1,
-                                                     (const char **)
-                                                      &shader->source,
-                                                     NULL);
+      shader_source = _cogl_glsl_shader_get_source_with_boilerplate (ctx,
+                                                                     type,
+                                                                     pipeline,
+                                                                     1,
+                                                                     (const char **)
+                                                                     &shader->source,
+                                                                     NULL);
+      shader_length = shader_source->len;
 
+      GE( ctx, glShaderSource (shader->gl_handle, 1,
+                               (const char **) &shader_source->str,
+                               &shader_length) );
       GE (ctx, glCompileShader (shader->gl_handle));
+
+      g_string_free (shader_source, TRUE);
 
       shader->compilation_pipeline = cogl_object_ref (pipeline);
 

@@ -75,14 +75,13 @@ add_layer_fragment_boilerplate_cb (CoglPipelineLayer *layer,
   return TRUE;
 }
 
-void
-_cogl_glsl_shader_set_source_with_boilerplate (CoglContext *ctx,
-                                               GLuint shader_gl_handle,
-                                               GLenum shader_gl_type,
+GString *
+_cogl_glsl_shader_get_source_with_boilerplate (CoglContext *ctx,
+                                               CoglGlslShaderType shader_type,
                                                CoglPipeline *pipeline,
-                                               GLsizei count_in,
+                                               int count_in,
                                                const char **strings_in,
-                                               const GLint *lengths_in)
+                                               const int *lengths_in)
 {
   const char *vertex_boilerplate;
   const char *fragment_boilerplate;
@@ -92,7 +91,8 @@ _cogl_glsl_shader_set_source_with_boilerplate (CoglContext *ctx,
   char *version_string;
   int count = 0;
 
-  int n_layers;
+  int i, n_layers;
+  GString *result = g_string_new (NULL);
 
   vertex_boilerplate = _COGL_VERTEX_SHADER_BOILERPLATE;
   fragment_boilerplate = _COGL_FRAGMENT_SHADER_BOILERPLATE;
@@ -111,12 +111,12 @@ _cogl_glsl_shader_set_source_with_boilerplate (CoglContext *ctx,
       lengths[count++] = sizeof (texture_3d_extension) - 1;
     }
 
-  if (shader_gl_type == GL_VERTEX_SHADER)
+  if (shader_type == COGL_GLSL_SHADER_TYPE_VERTEX)
     {
       strings[count] = vertex_boilerplate;
       lengths[count++] = strlen (vertex_boilerplate);
     }
-  else if (shader_gl_type == GL_FRAGMENT_SHADER)
+  else if (shader_type == COGL_GLSL_SHADER_TYPE_FRAGMENT)
     {
       strings[count] = fragment_boilerplate;
       lengths[count++] = strlen (fragment_boilerplate);
@@ -132,7 +132,7 @@ _cogl_glsl_shader_set_source_with_boilerplate (CoglContext *ctx,
                               "varying vec4 _cogl_tex_coord[%d];\n",
                               n_layers);
 
-      if (shader_gl_type == GL_VERTEX_SHADER)
+      if (shader_type == COGL_GLSL_SHADER_TYPE_VERTEX)
         {
           g_string_append_printf (layer_declarations,
                                   "uniform mat4 cogl_texture_matrix[%d];\n",
@@ -142,7 +142,7 @@ _cogl_glsl_shader_set_source_with_boilerplate (CoglContext *ctx,
                                                  add_layer_vertex_boilerplate_cb,
                                                  layer_declarations);
         }
-      else if (shader_gl_type == GL_FRAGMENT_SHADER)
+      else if (shader_type == COGL_GLSL_SHADER_TYPE_FRAGMENT)
         {
           _cogl_pipeline_foreach_layer_internal (pipeline,
                                                  add_layer_fragment_boilerplate_cb,
@@ -158,35 +158,25 @@ _cogl_glsl_shader_set_source_with_boilerplate (CoglContext *ctx,
     memcpy (lengths + count, lengths_in, sizeof (GLint) * count_in);
   else
     {
-      int i;
-
       for (i = 0; i < count_in; i++)
         lengths[count + i] = -1; /* null terminated */
     }
   count += count_in;
 
-  if (G_UNLIKELY (COGL_DEBUG_ENABLED (COGL_DEBUG_SHOW_SOURCE)))
-    {
-      GString *buf = g_string_new (NULL);
-      int i;
-
-      g_string_append_printf (buf,
-                              "%s shader:\n",
-                              shader_gl_type == GL_VERTEX_SHADER ?
-                              "vertex" : "fragment");
-      for (i = 0; i < count; i++)
-        if (lengths[i] != -1)
-          g_string_append_len (buf, strings[i], lengths[i]);
-        else
-          g_string_append (buf, strings[i]);
-
-      g_message ("%s", buf->str);
-
-      g_string_free (buf, TRUE);
-    }
-
-  GE( ctx, glShaderSource (shader_gl_handle, count,
-                           (const char **) strings, lengths) );
+  /* Build up the resulting shader */
+  for (i = 0; i < count; i++)
+    if (lengths[i] != -1)
+      g_string_append_len (result, strings[i], lengths[i]);
+    else
+      g_string_append (result, strings[i]);
 
   g_free (version_string);
+
+  if (G_UNLIKELY (COGL_DEBUG_ENABLED (COGL_DEBUG_SHOW_SOURCE)))
+    g_message ("%s shader:\n%s",
+               shader_type == COGL_GLSL_SHADER_TYPE_VERTEX ?
+               "vertex" : "fragment",
+               result->str);
+
+  return result;
 }

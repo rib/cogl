@@ -1006,6 +1006,7 @@ _cogl_pipeline_fragend_glsl_end (CoglPipeline *pipeline,
       GLint compile_status;
       GLuint shader;
       CoglPipelineSnippetData snippet_data;
+      GString *shader_source;
 
       COGL_STATIC_COUNTER (fragend_glsl_compile_counter,
                            "glsl fragment compile counter",
@@ -1068,12 +1069,17 @@ _cogl_pipeline_fragend_glsl_end (CoglPipeline *pipeline,
       lengths[1] = shader_state->source->len;
       source_strings[1] = shader_state->source->str;
 
-      _cogl_glsl_shader_set_source_with_boilerplate (ctx,
-                                                     shader, GL_FRAGMENT_SHADER,
-                                                     pipeline,
-                                                     2, /* count */
-                                                     source_strings, lengths);
+      shader_source =
+        _cogl_glsl_shader_get_source_with_boilerplate (ctx,
+                                                       COGL_GLSL_SHADER_TYPE_FRAGMENT,
+                                                       pipeline,
+                                                       2, /* count */
+                                                       source_strings, lengths);
+      lengths[0] = shader_source->len;
 
+      GE( ctx, glShaderSource (shader, 1,
+                               (const char **) &shader_source->str,
+                               lengths) );
       GE( ctx, glCompileShader (shader) );
       GE( ctx, glGetShaderiv (shader, GL_COMPILE_STATUS, &compile_status) );
 
@@ -1087,6 +1093,8 @@ _cogl_pipeline_fragend_glsl_end (CoglPipeline *pipeline,
           GE( ctx, glGetShaderInfoLog (shader, len, &len, shader_log) );
           g_warning ("Shader compilation failed:\n%s", shader_log);
         }
+
+      g_string_free (shader_source, TRUE);
 
       shader_state->header = NULL;
       shader_state->source = NULL;
