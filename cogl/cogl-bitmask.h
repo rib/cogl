@@ -191,11 +191,13 @@ _cogl_bitmask_set (CoglBitmask *bitmask, unsigned int bit_num, CoglBool value)
       bit_num >= COGL_BITMASK_MAX_DIRECT_BITS)
     _cogl_bitmask_set_in_array (bitmask, bit_num, value);
   else if (value)
-    *bitmask = _cogl_bitmask_from_bits (_cogl_bitmask_to_bits (bitmask) |
-                                        (1UL << bit_num));
+    *bitmask =
+      (CoglBitmask) _cogl_bitmask_from_bits (_cogl_bitmask_to_bits (bitmask) |
+                                             (1UL << bit_num));
   else
-    *bitmask = _cogl_bitmask_from_bits (_cogl_bitmask_to_bits (bitmask) &
-                                        ~(1UL << bit_num));
+    *bitmask =
+      (CoglBitmask) _cogl_bitmask_from_bits (_cogl_bitmask_to_bits (bitmask) &
+                                             ~(1UL << bit_num));
 }
 
 /*
@@ -215,11 +217,13 @@ _cogl_bitmask_set_range (CoglBitmask *bitmask,
       n_bits > COGL_BITMASK_MAX_DIRECT_BITS)
     _cogl_bitmask_set_range_in_array (bitmask, n_bits, value);
   else if (value)
-    *bitmask = _cogl_bitmask_from_bits (_cogl_bitmask_to_bits (bitmask) |
-                                        ~(~0UL << n_bits));
+    *bitmask =
+      (CoglBitmask) _cogl_bitmask_from_bits (_cogl_bitmask_to_bits (bitmask) |
+                                             ~(~0UL << n_bits));
   else
-    *bitmask = _cogl_bitmask_from_bits (_cogl_bitmask_to_bits (bitmask) &
-                                        (~0UL << n_bits));
+    *bitmask =
+      (CoglBitmask) _cogl_bitmask_from_bits (_cogl_bitmask_to_bits (bitmask) &
+                                             (~0UL << n_bits));
 }
 
 /*
@@ -247,7 +251,7 @@ _cogl_bitmask_clear_all (CoglBitmask *bitmask)
   if (_cogl_bitmask_has_array (bitmask))
     _cogl_bitmask_clear_all_in_array (bitmask);
   else
-    *bitmask = _cogl_bitmask_from_bits (0);
+    *bitmask = (CoglBitmask) _cogl_bitmask_from_bits (0);
 }
 
 /*
