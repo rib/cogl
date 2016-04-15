@@ -146,7 +146,8 @@ _cogl_buffer_initialize (CoglBuffer *buffer,
         use_malloc = TRUE;
     }
   else if (default_target == COGL_BUFFER_BIND_TARGET_ATTRIBUTE_BUFFER ||
-           default_target == COGL_BUFFER_BIND_TARGET_INDEX_BUFFER)
+           default_target == COGL_BUFFER_BIND_TARGET_INDEX_BUFFER ||
+           default_target == COGL_BUFFER_BIND_TARGET_UNIFORM_BUFFER)
     {
       if (!_cogl_has_private_feature (ctx, COGL_PRIVATE_FEATURE_VBOS))
         use_malloc = TRUE;
