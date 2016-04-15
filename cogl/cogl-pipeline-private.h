@@ -711,12 +711,6 @@ typedef struct _CoglPipelineFlushOptions
   CoglTexture *layer0_override_texture;
 } CoglPipelineFlushOptions;
 
-void
-_cogl_use_fragment_program (GLuint gl_program, CoglPipelineProgramType type);
-
-void
-_cogl_use_vertex_program (GLuint gl_program, CoglPipelineProgramType type);
-
 unsigned int
 _cogl_get_n_args_for_combine_func (CoglPipelineCombineFunc func);
 

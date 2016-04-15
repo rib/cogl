@@ -154,5 +154,10 @@ _cogl_pipeline_flush_gl_state (CoglContext *context,
                                CoglBool skip_gl_state,
                                CoglBool unknown_color_alpha);
 
-#endif /* __COGL_PIPELINE_OPENGL_PRIVATE_H */
+void
+_cogl_use_fragment_program (GLuint gl_program, CoglPipelineProgramType type);
 
+void
+_cogl_use_vertex_program (GLuint gl_program, CoglPipelineProgramType type);
+
+#endif /* __COGL_PIPELINE_OPENGL_PRIVATE_H */
