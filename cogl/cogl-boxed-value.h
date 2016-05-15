@@ -114,4 +114,11 @@ _cogl_boxed_value_set_uniform (CoglContext *ctx,
                                int location,
                                const CoglBoxedValue *value);
 
+const void *
+_cogl_boxed_value_get_pointer (const CoglBoxedValue *value);
+
+const size_t
+_cogl_boxed_value_get_size (const CoglBoxedValue *value);
+
+
 #endif /* __COGL_BOXED_VALUE_H */

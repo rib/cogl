@@ -375,3 +375,55 @@ _cogl_boxed_value_set_uniform (CoglContext *ctx,
       break;
     }
 }
+
+const void *
+_cogl_boxed_value_get_pointer (const CoglBoxedValue *value)
+{
+  switch (value->type)
+    {
+    case COGL_BOXED_NONE:
+      return NULL;
+
+    case COGL_BOXED_INT:
+      if (value->count == 1)
+        return &value->v.int_value;
+      return value->v.int_array;
+
+    case COGL_BOXED_FLOAT:
+      if (value->count == 1)
+        return &value->v.float_value;
+      return value->v.float_array;
+      break;
+
+    case COGL_BOXED_MATRIX:
+      if (value->count == 1)
+        return value->v.matrix;
+      else
+        return value->v.float_array;
+
+    default:
+      g_assert_not_reached();
+      return NULL;
+    }
+}
+
+const size_t
+_cogl_boxed_value_get_size (const CoglBoxedValue *value)
+{
+  switch (value->type)
+    {
+    case COGL_BOXED_NONE:
+      return 0;
+
+    case COGL_BOXED_INT:
+      return value->count * value->size * sizeof (int);
+
+    case COGL_BOXED_MATRIX:
+    case COGL_BOXED_FLOAT:
+      return value->count * value->size * sizeof (float);
+
+    default:
+      g_assert_not_reached();
+      return 0;
+    }
+}
