@@ -184,3 +184,66 @@ _cogl_gl_util_parse_gl_version (const char *version_string,
 
   return TRUE;
 }
+
+static GLenum
+_cogl_blend_equation_to_gl[COGL_PIPELINE_BLEND_EQUATION_N_EQUATIONS] = {
+  GL_FUNC_ADD
+};
+
+GLint
+_cogl_gl_util_blend_equation_to_gl (CoglPipelineBlendEnable equation)
+{
+  if (equation >= COGL_PIPELINE_BLEND_EQUATION_N_EQUATIONS)
+    {
+      g_warning ("Invalid blend equation");
+      return GL_FUNC_ADD;
+    }
+
+  return _cogl_blend_equation_to_gl[equation];
+}
+
+static GLenum
+_cogl_blend_factor_to_gl[COGL_PIPELINE_BLEND_FACTOR_N_FACTORS] = {
+  GL_ZERO,
+  GL_ONE,
+  GL_SRC_ALPHA_SATURATE,
+  GL_ONE_MINUS_SRC_COLOR,
+  GL_SRC_COLOR,
+  GL_ONE_MINUS_SRC_ALPHA,
+  GL_SRC_ALPHA,
+  GL_ONE_MINUS_DST_COLOR,
+  GL_DST_COLOR,
+  GL_ONE_MINUS_DST_ALPHA,
+  GL_DST_ALPHA,
+#if defined(HAVE_COGL_GLES2) || defined(HAVE_COGL_GL)
+  GL_ONE_MINUS_CONSTANT_COLOR,
+  GL_CONSTANT_COLOR,
+  GL_ONE_MINUS_CONSTANT_ALPHA,
+  GL_CONSTANT_ALPHA
+#else
+  GL_INVALID_ENUM,
+  GL_INVALID_ENUM,
+  GL_INVALID_ENUM,
+  GL_INVALID_ENUM
+#endif
+};
+
+GLenum
+_cogl_gl_util_blend_factor_to_gl (CoglPipelineBlendFactor factor)
+{
+  GLenum value;
+
+  if (factor >= COGL_PIPELINE_BLEND_FACTOR_N_FACTORS)
+    {
+      g_warning ("Invalid blend factor");
+      return GL_ONE;
+    }
+
+  value = _cogl_blend_factor_to_gl[factor];
+  if (value == GL_INVALID_ENUM)
+    {
+      g_warning ("Unable to determine valid blend factor from blend string\n");
+      value = GL_ONE;
+    }
+  return value;
+}

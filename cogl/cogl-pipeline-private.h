@@ -280,18 +280,44 @@ typedef enum _CoglPipelineBlendEnable
   COGL_PIPELINE_BLEND_ENABLE_AUTOMATIC
 } CoglPipelineBlendEnable;
 
+typedef enum _CoglPipelineBlendEquation
+{
+  COGL_PIPELINE_BLEND_EQUATION_ADD,
+  /* TODO - add more */
+  COGL_PIPELINE_BLEND_EQUATION_N_EQUATIONS
+} CoglPipelineBlendEquation;
+
+typedef enum _CoglPipelineBlendFactor
+{
+  COGL_PIPELINE_BLEND_FACTOR_ZERO,
+  COGL_PIPELINE_BLEND_FACTOR_ONE,
+  COGL_PIPELINE_BLEND_FACTOR_SRC_ALPHA_SATURATE,
+  COGL_PIPELINE_BLEND_FACTOR_ONE_MINUS_SRC_COLOR,
+  COGL_PIPELINE_BLEND_FACTOR_SRC_COLOR,
+  COGL_PIPELINE_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+  COGL_PIPELINE_BLEND_FACTOR_SRC_ALPHA,
+  COGL_PIPELINE_BLEND_FACTOR_ONE_MINUS_DST_COLOR,
+  COGL_PIPELINE_BLEND_FACTOR_DST_COLOR,
+  COGL_PIPELINE_BLEND_FACTOR_ONE_MINUS_DST_ALPHA,
+  COGL_PIPELINE_BLEND_FACTOR_DST_ALPHA,
+  COGL_PIPELINE_BLEND_FACTOR_ONE_MINUS_CONSTANT_COLOR,
+  COGL_PIPELINE_BLEND_FACTOR_CONSTANT_COLOR,
+  COGL_PIPELINE_BLEND_FACTOR_ONE_MINUS_CONSTANT_ALPHA,
+  COGL_PIPELINE_BLEND_FACTOR_CONSTANT_ALPHA,
+  COGL_PIPELINE_BLEND_FACTOR_N_FACTORS
+} CoglPipelineBlendFactor;
+
 typedef struct
 {
   /* Determines how this pipeline is blended with other primitives */
-#if defined(HAVE_COGL_GLES2) || defined(HAVE_COGL_GL)
-  GLenum    blend_equation_rgb;
-  GLenum    blend_equation_alpha;
-  GLint     blend_src_factor_alpha;
-  GLint     blend_dst_factor_alpha;
+  CoglPipelineBlendEquation blend_equation_rgb;
+  CoglPipelineBlendEquation blend_equation_alpha;
+  CoglPipelineBlendFactor blend_src_factor_alpha;
+  CoglPipelineBlendFactor blend_dst_factor_alpha;
   CoglColor blend_constant;
-#endif
-  GLint     blend_src_factor_rgb;
-  GLint     blend_dst_factor_rgb;
+
+  CoglPipelineBlendFactor blend_src_factor_rgb;
+  CoglPipelineBlendFactor blend_dst_factor_rgb;
 } CoglPipelineBlendState;
 
 typedef struct

@@ -399,12 +399,12 @@ _cogl_use_vertex_program (GLuint gl_program, CoglPipelineProgramType type)
 #if defined(HAVE_COGL_GLES2) || defined(HAVE_COGL_GL)
 
 static CoglBool
-blend_factor_uses_constant (GLenum blend_factor)
+blend_factor_uses_constant (CoglPipelineBlendFactor blend_factor)
 {
-  return (blend_factor == GL_CONSTANT_COLOR ||
-          blend_factor == GL_ONE_MINUS_CONSTANT_COLOR ||
-          blend_factor == GL_CONSTANT_ALPHA ||
-          blend_factor == GL_ONE_MINUS_CONSTANT_ALPHA);
+  return (blend_factor == COGL_PIPELINE_BLEND_FACTOR_CONSTANT_COLOR ||
+          blend_factor == COGL_PIPELINE_BLEND_FACTOR_ONE_MINUS_CONSTANT_COLOR ||
+          blend_factor == COGL_PIPELINE_BLEND_FACTOR_CONSTANT_ALPHA ||
+          blend_factor == COGL_PIPELINE_BLEND_FACTOR_ONE_MINUS_CONSTANT_ALPHA);
 }
 
 #endif
@@ -525,15 +525,31 @@ _cogl_pipeline_flush_color_blend_alpha_depth_state (
       /* GLES 1 only has glBlendFunc */
       if (ctx->driver == COGL_DRIVER_GLES1)
         {
-          GE (ctx, glBlendFunc (blend_state->blend_src_factor_rgb,
-                                blend_state->blend_dst_factor_rgb));
+          GLenum blend_src_factor_rgb =
+            _cogl_gl_util_blend_factor_to_gl (blend_state->blend_src_factor_rgb),
+            blend_dst_factor_rgb =
+            _cogl_gl_util_blend_factor_to_gl (blend_state->blend_dst_factor_rgb);
+          GE (ctx, glBlendFunc (blend_src_factor_rgb,
+                                blend_dst_factor_rgb));
         }
 #if defined(HAVE_COGL_GLES2) || defined(HAVE_COGL_GL)
       else
         {
+          GLint blend_equation_rgb =
+            _cogl_gl_util_blend_equation_to_gl (blend_state->blend_equation_rgb),
+            blend_equation_alpha =
+            _cogl_gl_util_blend_equation_to_gl (blend_state->blend_equation_alpha);
+          GLenum blend_src_factor_rgb =
+            _cogl_gl_util_blend_factor_to_gl (blend_state->blend_src_factor_rgb),
+            blend_src_factor_alpha =
+            _cogl_gl_util_blend_factor_to_gl (blend_state->blend_src_factor_alpha),
+            blend_dst_factor_rgb =
+            _cogl_gl_util_blend_factor_to_gl (blend_state->blend_dst_factor_rgb),
+            blend_dst_factor_alpha =
+            _cogl_gl_util_blend_factor_to_gl (blend_state->blend_dst_factor_alpha);
+
           if (blend_factor_uses_constant (blend_state->blend_src_factor_rgb) ||
-              blend_factor_uses_constant (blend_state
-                                          ->blend_src_factor_alpha) ||
+              blend_factor_uses_constant (blend_state->blend_src_factor_alpha) ||
               blend_factor_uses_constant (blend_state->blend_dst_factor_rgb) ||
               blend_factor_uses_constant (blend_state->blend_dst_factor_alpha))
             {
@@ -551,26 +567,25 @@ _cogl_pipeline_flush_color_blend_alpha_depth_state (
             }
 
           if (ctx->glBlendEquationSeparate &&
-              blend_state->blend_equation_rgb !=
-              blend_state->blend_equation_alpha)
-            GE (ctx,
-                glBlendEquationSeparate (blend_state->blend_equation_rgb,
-                                         blend_state->blend_equation_alpha));
+              blend_equation_rgb != blend_equation_alpha)
+            {
+              GE (ctx,
+                  glBlendEquationSeparate (blend_equation_rgb,
+                                           blend_equation_alpha));
+            }
           else
-            GE (ctx, glBlendEquation (blend_state->blend_equation_rgb));
+            GE (ctx, glBlendEquation (blend_equation_rgb));
 
           if (ctx->glBlendFuncSeparate &&
-              (blend_state->blend_src_factor_rgb !=
-               blend_state->blend_src_factor_alpha ||
-               (blend_state->blend_dst_factor_rgb !=
-                blend_state->blend_dst_factor_alpha)))
-            GE (ctx, glBlendFuncSeparate (blend_state->blend_src_factor_rgb,
-                                          blend_state->blend_dst_factor_rgb,
-                                          blend_state->blend_src_factor_alpha,
-                                          blend_state->blend_dst_factor_alpha));
+              (blend_src_factor_rgb != blend_src_factor_alpha ||
+               (blend_dst_factor_rgb != blend_dst_factor_alpha)))
+            GE (ctx, glBlendFuncSeparate (blend_src_factor_rgb,
+                                          blend_dst_factor_rgb,
+                                          blend_src_factor_alpha,
+                                          blend_dst_factor_alpha));
           else
-            GE (ctx, glBlendFunc (blend_state->blend_src_factor_rgb,
-                                  blend_state->blend_dst_factor_rgb));
+            GE (ctx, glBlendFunc (blend_src_factor_rgb,
+                                  blend_dst_factor_rgb));
         }
 #endif
     }

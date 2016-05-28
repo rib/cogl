@@ -35,6 +35,7 @@
 #include "cogl-types.h"
 #include "cogl-context.h"
 #include "cogl-gl-header.h"
+#include "cogl-pipeline-private.h"
 #include "cogl-texture.h"
 
 #ifdef COGL_GL_DEBUG
@@ -89,5 +90,11 @@ CoglBool
 _cogl_gl_util_parse_gl_version (const char *version_string,
                                 int *major_out,
                                 int *minor_out);
+
+GLint
+_cogl_gl_util_blend_equation_to_gl (CoglPipelineBlendEnable equation);
+
+GLenum
+_cogl_gl_util_blend_factor_to_gl (CoglPipelineBlendFactor factor);
 
 #endif /* _COGL_UTIL_GL_PRIVATE_H_ */
