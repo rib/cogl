@@ -73,8 +73,15 @@ struct _CoglOnscreen
   HWND foreign_hwnd;
 #endif
 
-#ifdef COGL_HAS_EGL_PLATFORM_WAYLAND_SUPPORT
-  struct wl_surface *foreign_surface;
+#if defined(COGL_HAS_WAYLAND_SUPPORT)
+  struct {
+    struct wl_shell_surface *shell_surface;
+    struct wl_surface *surface;
+
+    struct wl_surface *foreign_surface;
+
+    CoglBool shell_surface_type_set;
+  } wayland;
 #endif
 
 #ifdef COGL_HAS_EGL_PLATFORM_MIR_SUPPORT

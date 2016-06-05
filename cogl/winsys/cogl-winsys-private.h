@@ -172,6 +172,14 @@ typedef struct _CoglWinsysVtable
                                      CoglTexturePixmapStereoMode stereo_mode);
 #endif
 
+#ifdef COGL_HAS_WAYLAND_SUPPORT
+  void (*wayland_onscreen_resize) (CoglOnscreen *onscreen,
+                                   int width,
+                                   int height,
+                                   int offset_x,
+                                   int offset_y);
+#endif
+
   void
   (*save_context) (CoglContext *ctx);
 

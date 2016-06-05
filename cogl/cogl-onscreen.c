@@ -42,6 +42,7 @@
 #include "cogl1-context.h"
 #include "cogl-closure-list-private.h"
 #include "cogl-poll-private.h"
+#include "cogl-renderer-private.h"
 #include "cogl-gtype-private.h"
 
 #ifdef COGL_HAS_X11_SUPPORT
@@ -465,6 +466,63 @@ cogl_x11_onscreen_get_visual_xid (CoglOnscreen *onscreen)
   return id;
 }
 #endif /* COGL_HAS_X11_SUPPORT */
+
+#ifdef COGL_HAS_WAYLAND_SUPPORT
+
+void
+cogl_wayland_onscreen_resize (CoglOnscreen *onscreen,
+                              int           width,
+                              int           height,
+                              int           offset_x,
+                              int           offset_y)
+{
+  CoglFramebuffer *fb;
+
+  fb = COGL_FRAMEBUFFER (onscreen);
+  if (fb->allocated)
+    {
+      CoglContext *ctx = fb->context;
+      const CoglWinsysVtable *winsys = ctx->display->renderer->winsys_vtable;
+
+      winsys->wayland_onscreen_resize (onscreen,
+                                       width,
+                                       height,
+                                       offset_x,
+                                       offset_y);
+    }
+  else
+    _cogl_framebuffer_winsys_update_size (fb, width, height);
+}
+
+struct wl_surface *
+cogl_wayland_onscreen_get_surface (CoglOnscreen *onscreen)
+{
+  cogl_framebuffer_allocate (COGL_FRAMEBUFFER (onscreen), NULL);
+
+  return onscreen->wayland.surface;
+}
+
+struct wl_shell_surface *
+cogl_wayland_onscreen_get_shell_surface (CoglOnscreen *onscreen)
+{
+  cogl_framebuffer_allocate (COGL_FRAMEBUFFER (onscreen), NULL);
+
+  return onscreen->wayland.shell_surface;
+}
+
+void
+cogl_wayland_onscreen_set_foreign_surface (CoglOnscreen *onscreen,
+                                           struct wl_surface *surface)
+{
+  CoglFramebuffer *fb;
+
+  fb = COGL_FRAMEBUFFER (onscreen);
+  _COGL_RETURN_IF_FAIL (!fb->allocated);
+
+  onscreen->wayland.foreign_surface = surface;
+}
+
+#endif /* COGL_HAS_WAYLAND_SUPPORT */
 
 #ifdef COGL_HAS_WIN32_SUPPORT
 
