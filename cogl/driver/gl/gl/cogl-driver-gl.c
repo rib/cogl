@@ -45,6 +45,7 @@
 #include "cogl-attribute-gl-private.h"
 #include "cogl-clip-stack-gl-private.h"
 #include "cogl-buffer-gl-private.h"
+#include "cogl-sampler-gl-private.h"
 
 static CoglBool
 _cogl_driver_pixel_format_from_gl_internal (CoglContext *context,
@@ -696,4 +697,6 @@ _cogl_driver_gl =
     _cogl_buffer_gl_map_range,
     _cogl_buffer_gl_unmap,
     _cogl_buffer_gl_set_data,
+    _cogl_sampler_gl_create,
+    _cogl_sampler_gl_destroy,
   };

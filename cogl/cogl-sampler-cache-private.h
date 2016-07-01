@@ -61,15 +61,20 @@ typedef struct _CoglSamplerCache CoglSamplerCache;
 
 typedef struct _CoglSamplerCacheEntry
 {
-  GLuint sampler_object;
-
   GLenum min_filter;
   GLenum mag_filter;
 
   CoglSamplerCacheWrapMode wrap_mode_s;
   CoglSamplerCacheWrapMode wrap_mode_t;
   CoglSamplerCacheWrapMode wrap_mode_p;
+
+  /* Driver specific data */
+  void *winsys;
 } CoglSamplerCacheEntry;
+
+CoglBool
+_cogl_sampler_cache_entry_equal (const CoglSamplerCacheEntry *entry1,
+                                 const CoglSamplerCacheEntry *entry2);
 
 CoglSamplerCache *
 _cogl_sampler_cache_new (CoglContext *context);

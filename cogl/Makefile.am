@@ -210,6 +210,8 @@ cogl_driver_sources += \
 	driver/gl/cogl-pipeline-progend-fixed-private.h \
 	driver/gl/cogl-pipeline-progend-glsl.c \
 	driver/gl/cogl-pipeline-progend-glsl-private.h \
+	driver/gl/cogl-sampler-gl.c \
+	driver/gl/cogl-sampler-gl-private.h \
 	$(NULL)
 
 if COGL_DRIVER_GL_SUPPORTED

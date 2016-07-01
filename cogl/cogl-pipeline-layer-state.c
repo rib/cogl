@@ -1041,11 +1041,8 @@ CoglBool
 _cogl_pipeline_layer_sampler_equal (CoglPipelineLayer *authority0,
                                     CoglPipelineLayer *authority1)
 {
-  /* We compare the actual sampler objects rather than just the entry
-     pointers because two states with different values can lead to the
-     same state in GL terms when AUTOMATIC is used as a wrap mode */
-  return (authority0->sampler_cache_entry->sampler_object ==
-          authority1->sampler_cache_entry->sampler_object);
+  return _cogl_sampler_cache_entry_equal (authority0->sampler_cache_entry,
+                                          authority1->sampler_cache_entry);
 }
 
 CoglBool

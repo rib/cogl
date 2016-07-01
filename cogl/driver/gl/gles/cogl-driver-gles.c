@@ -44,6 +44,7 @@
 #include "cogl-attribute-gl-private.h"
 #include "cogl-clip-stack-gl-private.h"
 #include "cogl-buffer-gl-private.h"
+#include "cogl-sampler-gl-private.h"
 
 #ifndef GL_UNSIGNED_INT_24_8
 #define GL_UNSIGNED_INT_24_8 0x84FA
@@ -484,4 +485,6 @@ _cogl_driver_gles =
     _cogl_buffer_gl_map_range,
     _cogl_buffer_gl_unmap,
     _cogl_buffer_gl_set_data,
+    _cogl_sampler_gl_create,
+    _cogl_sampler_gl_destroy,
   };

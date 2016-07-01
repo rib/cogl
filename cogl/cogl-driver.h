@@ -250,6 +250,15 @@ struct _CoglDriverVtable
                        const void *data,
                        unsigned int size,
                        CoglError **error);
+
+  /* Sampler objects management */
+  void
+  (* sampler_create) (CoglContext *ctx,
+                      CoglSamplerCacheEntry *entry);
+
+  void
+  (* sampler_destroy) (CoglContext *ctx,
+                       CoglSamplerCacheEntry *entry);
 };
 
 #define COGL_DRIVER_ERROR (_cogl_driver_error_quark ())
