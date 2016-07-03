@@ -513,8 +513,6 @@ _cogl_context_free (CoglContext *context)
 {
   const CoglWinsysVtable *winsys = _cogl_context_get_winsys (context);
 
-  winsys->context_deinit (context);
-
   _cogl_free_framebuffer_stack (context->framebuffer_stack);
 
   if (context->current_path)
@@ -604,6 +602,8 @@ _cogl_context_free (CoglContext *context)
   g_array_free (context->attribute_name_index_map, TRUE);
 
   g_byte_array_free (context->buffer_map_fallback_array, TRUE);
+
+  winsys->context_deinit (context);
 
   cogl_object_unref (context->display);
 
