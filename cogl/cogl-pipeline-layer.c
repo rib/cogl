@@ -480,7 +480,7 @@ _cogl_pipeline_layer_set_parent (CoglPipelineLayer *layer,
 CoglPipelineLayer *
 _cogl_pipeline_layer_copy (CoglPipelineLayer *src)
 {
-  CoglPipelineLayer *layer = g_slice_new (CoglPipelineLayer);
+  CoglPipelineLayer *layer = g_slice_new0 (CoglPipelineLayer);
 
   _cogl_pipeline_node_init (COGL_NODE (layer));
 
