@@ -831,6 +831,7 @@ free_slices (CoglTexture2DSliced *tex_2ds)
         }
 
       g_array_free (tex_2ds->slice_textures, TRUE);
+      tex_2ds->slice_textures = NULL;
     }
 
   free_spans (tex_2ds);
