@@ -43,6 +43,7 @@
 #endif
 
 typedef struct _CoglTextureVtable     CoglTextureVtable;
+typedef struct _CoglTextureGLInfo     CoglTextureGLInfo;
 
 /* Encodes three possibiloities result of transforming a quad */
 typedef enum {
@@ -234,6 +235,13 @@ struct _CoglTexturePixel
   GLenum gl_format;
   GLenum gl_type;
   uint8_t data[4];
+};
+
+struct _CoglTextureGLInfo
+{
+  GLenum format;
+  GLuint handle;
+  GLenum target;
 };
 
 void

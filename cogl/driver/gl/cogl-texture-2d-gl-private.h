@@ -71,12 +71,12 @@ _cogl_egl_texture_2d_gl_new_from_image (CoglContext *ctx,
 #endif
 
 void
-_cogl_texture_2d_gl_flush_legacy_texobj_filters (CoglTexture *tex,
+_cogl_texture_2d_gl_flush_legacy_texobj_filters (CoglTexture2D *tex_2d,
                                                  GLenum min_filter,
                                                  GLenum mag_filter);
 
 void
-_cogl_texture_2d_gl_flush_legacy_texobj_wrap_modes (CoglTexture *tex,
+_cogl_texture_2d_gl_flush_legacy_texobj_wrap_modes (CoglTexture2D *tex_2d,
                                                     GLenum wrap_mode_s,
                                                     GLenum wrap_mode_t,
                                                     GLenum wrap_mode_p);
@@ -92,8 +92,9 @@ _cogl_texture_2d_gl_copy_from_framebuffer (CoglTexture2D *tex_2d,
                                            int dst_y,
                                            int level);
 
-unsigned int
-_cogl_texture_2d_gl_get_gl_handle (CoglTexture2D *tex_2d);
+void
+_cogl_texture_2d_gl_get_gl_info (CoglTexture2D *tex_2d,
+                                 CoglTextureGLInfo *info);
 
 void
 _cogl_texture_2d_gl_generate_mipmap (CoglTexture2D *tex_2d);

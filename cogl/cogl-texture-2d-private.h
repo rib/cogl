@@ -52,18 +52,8 @@ struct _CoglTexture2D
   CoglBool mipmaps_dirty;
   CoglBool is_foreign;
 
-  /* TODO: factor out these OpenGL specific members into some form
-   * of driver private state. */
-
-  /* The internal format of the GL texture represented as a GL enum */
-  GLenum gl_internal_format;
-  /* The texture object number */
-  GLuint gl_texture;
-  GLenum gl_legacy_texobj_min_filter;
-  GLenum gl_legacy_texobj_mag_filter;
-  GLint gl_legacy_texobj_wrap_mode_s;
-  GLint gl_legacy_texobj_wrap_mode_t;
-  CoglTexturePixel first_pixel;
+  /* Driver specific data */
+  void *winsys;
 };
 
 CoglTexture2D *

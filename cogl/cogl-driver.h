@@ -134,10 +134,8 @@ struct _CoglDriverVtable
                              int height,
                              CoglPixelFormat internal_format);
 
-  /* Initializes driver private state before allocating any specific
-   * storage for a 2D texture, where base texture and texture 2D
-   * members will already be initialized before passing control to
-   * the driver.
+  /* Initializes driver private state before allocating any specific storage
+   * for a 2D texture.
    */
   void
   (* texture_2d_init) (CoglTexture2D *tex_2d);
@@ -162,17 +160,36 @@ struct _CoglDriverVtable
                                         int dst_y,
                                         int level);
 
-  /* If the given texture has a corresponding OpenGL texture handle
-   * then return that.
+  /* Gets the internal details of a given 2D texture.
    *
    * This is optional
    */
-  unsigned int
-  (* texture_2d_get_gl_handle) (CoglTexture2D *tex_2d);
+  void
+  (* texture_2d_get_gl_info) (CoglTexture2D *tex_2d,
+                              CoglTextureGLInfo *info);
 
   /* Update all mipmap levels > 0 */
   void
   (* texture_2d_generate_mipmap) (CoglTexture2D *tex_2d);
+
+  /* Flush legacy texture 2D filter modes.
+   *
+   * This is optional
+   */
+  void
+  (* texture_2d_flush_legacy_filters) (CoglTexture2D *tex_2d,
+                                       GLenum min_filter,
+                                       GLenum mag_filter);
+
+  /* Flush legacy texture 2D wrap modes.
+   *
+   * This is optional
+   */
+  void
+  (* texture_2d_flush_legacy_wrap_modes) (CoglTexture2D *tex_2d,
+                                          GLenum wrap_mode_s,
+                                          GLenum wrap_mode_t,
+                                          GLenum wrap_mode_p);
 
   /* Initialize the specified region of storage of the given texture
    * with the contents of the specified bitmap region

@@ -77,8 +77,10 @@ _cogl_driver_nop =
     _cogl_texture_2d_nop_init,
     _cogl_texture_2d_nop_allocate,
     _cogl_texture_2d_nop_copy_from_framebuffer,
-    _cogl_texture_2d_nop_get_gl_handle,
+    _cogl_texture_2d_nop_get_gl_info,
     _cogl_texture_2d_nop_generate_mipmap,
+    NULL, /* texture_2d_flush_legacy_filters */
+    NULL, /* texture_2d_flush_legacy_wrap_modes */
     _cogl_texture_2d_nop_copy_from_bitmap,
     NULL, /* texture_2d_get_data */
     _cogl_nop_flush_attributes_state,

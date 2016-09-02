@@ -575,22 +575,55 @@ _cogl_texture_2d_get_gl_texture (CoglTexture *tex,
   CoglContext *ctx = tex->context;
   CoglTexture2D *tex_2d = COGL_TEXTURE_2D (tex);
 
-  if (ctx->driver_vtable->texture_2d_get_gl_handle)
+  if (ctx->driver_vtable->texture_2d_get_gl_info)
     {
-      GLuint handle;
+      CoglTextureGLInfo info;
 
       if (out_gl_target)
         *out_gl_target = GL_TEXTURE_2D;
 
-      handle = ctx->driver_vtable->texture_2d_get_gl_handle (tex_2d);
+      ctx->driver_vtable->texture_2d_get_gl_info (tex_2d, &info);
 
       if (out_gl_handle)
-        *out_gl_handle = handle;
+        *out_gl_handle = info.handle;
 
-      return handle ? TRUE : FALSE;
+      return info.handle ? TRUE : FALSE;
     }
   else
     return FALSE;
+}
+
+static void
+_cogl_texture_2d_flush_legacy_texobj_filters (CoglTexture *tex,
+                                              GLenum min_filter,
+                                              GLenum mag_filter)
+{
+  CoglContext *ctx = tex->context;
+
+  if (!ctx->driver_vtable->texture_2d_flush_legacy_filters)
+    return;
+
+  ctx->driver_vtable->texture_2d_flush_legacy_filters (COGL_TEXTURE_2D (tex),
+                                                       min_filter,
+                                                       mag_filter);
+}
+
+static void
+_cogl_texture_2d_flush_legacy_texobj_wrap_modes (CoglTexture *tex,
+                                                 GLenum wrap_mode_s,
+                                                 GLenum wrap_mode_t,
+                                                 GLenum wrap_mode_p)
+{
+  CoglContext *ctx = tex->context;
+
+  if (!ctx->driver_vtable->texture_2d_flush_legacy_wrap_modes)
+    return;
+
+  ctx->driver_vtable->texture_2d_flush_legacy_wrap_modes (COGL_TEXTURE_2D (tex),
+                                                          wrap_mode_s,
+                                                          wrap_mode_t,
+                                                          wrap_mode_p);
+
 }
 
 static void
@@ -677,7 +710,18 @@ _cogl_texture_2d_get_format (CoglTexture *tex)
 static GLenum
 _cogl_texture_2d_get_gl_format (CoglTexture *tex)
 {
-  return COGL_TEXTURE_2D (tex)->gl_internal_format;
+  CoglContext *ctx = tex->context;
+
+  if (ctx->driver_vtable->texture_2d_get_gl_info)
+    {
+      CoglTexture2D *tex_2d = COGL_TEXTURE_2D (tex);
+      CoglTextureGLInfo info;
+
+      ctx->driver_vtable->texture_2d_get_gl_info (tex_2d, &info);
+      return info.format;
+    }
+  else
+    return 0;
 }
 
 static CoglBool
@@ -706,10 +750,10 @@ cogl_texture_2d_vtable =
     _cogl_texture_2d_transform_coords_to_gl,
     _cogl_texture_2d_transform_quad_coords_to_gl,
     _cogl_texture_2d_get_gl_texture,
-    _cogl_texture_2d_gl_flush_legacy_texobj_filters,
+    _cogl_texture_2d_flush_legacy_texobj_filters,
     _cogl_texture_2d_pre_paint,
     _cogl_texture_2d_ensure_non_quad_rendering,
-    _cogl_texture_2d_gl_flush_legacy_texobj_wrap_modes,
+    _cogl_texture_2d_flush_legacy_texobj_wrap_modes,
     _cogl_texture_2d_get_format,
     _cogl_texture_2d_get_gl_format,
     _cogl_texture_2d_get_type,

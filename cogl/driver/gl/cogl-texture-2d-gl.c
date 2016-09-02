@@ -46,11 +46,30 @@
 #include "cogl-error-private.h"
 #include "cogl-util-gl-private.h"
 
+typedef struct _CoglTexture2DGL CoglTexture2DGL;
+
+struct _CoglTexture2DGL
+{
+  /* The internal format of the GL texture represented as a GL enum */
+  GLenum gl_internal_format;
+  /* The texture object number */
+  GLuint gl_texture;
+  GLenum gl_legacy_texobj_min_filter;
+  GLenum gl_legacy_texobj_mag_filter;
+  GLint gl_legacy_texobj_wrap_mode_s;
+  GLint gl_legacy_texobj_wrap_mode_t;
+  CoglTexturePixel first_pixel;
+};
+
 void
 _cogl_texture_2d_gl_free (CoglTexture2D *tex_2d)
 {
-  if (!tex_2d->is_foreign && tex_2d->gl_texture)
-    _cogl_delete_gl_texture (tex_2d->gl_texture);
+  CoglTexture2DGL *tex_2d_gl = tex_2d->winsys;
+
+  if (!tex_2d->is_foreign && tex_2d_gl->gl_texture)
+    _cogl_delete_gl_texture (tex_2d_gl->gl_texture);
+
+  g_slice_free (CoglTexture2DGL, tex_2d_gl);
 }
 
 CoglBool
@@ -92,15 +111,19 @@ _cogl_texture_2d_gl_can_create (CoglContext *ctx,
 void
 _cogl_texture_2d_gl_init (CoglTexture2D *tex_2d)
 {
-  tex_2d->gl_texture = 0;
+  CoglTexture2DGL *tex_2d_gl = g_slice_new0 (CoglTexture2DGL);
+
+  tex_2d_gl->gl_texture = 0;
 
   /* We default to GL_LINEAR for both filters */
-  tex_2d->gl_legacy_texobj_min_filter = GL_LINEAR;
-  tex_2d->gl_legacy_texobj_mag_filter = GL_LINEAR;
+  tex_2d_gl->gl_legacy_texobj_min_filter = GL_LINEAR;
+  tex_2d_gl->gl_legacy_texobj_mag_filter = GL_LINEAR;
 
   /* Wrap mode not yet set */
-  tex_2d->gl_legacy_texobj_wrap_mode_s = GL_FALSE;
-  tex_2d->gl_legacy_texobj_wrap_mode_t = GL_FALSE;
+  tex_2d_gl->gl_legacy_texobj_wrap_mode_s = GL_FALSE;
+  tex_2d_gl->gl_legacy_texobj_wrap_mode_t = GL_FALSE;
+
+  tex_2d->winsys = tex_2d_gl;
 }
 
 static CoglBool
@@ -108,6 +131,7 @@ allocate_with_size (CoglTexture2D *tex_2d,
                     CoglTextureLoader *loader,
                     CoglError **error)
 {
+  CoglTexture2DGL *tex_2d_gl = tex_2d->winsys;
   CoglTexture *tex = COGL_TEXTURE (tex_2d);
   CoglPixelFormat internal_format;
   int width = loader->src.sized.width;
@@ -142,7 +166,7 @@ allocate_with_size (CoglTexture2D *tex_2d,
 
   gl_texture = ctx->texture_driver->gen (ctx, GL_TEXTURE_2D, internal_format);
 
-  tex_2d->gl_internal_format = gl_intformat;
+  tex_2d_gl->gl_internal_format = gl_intformat;
 
   _cogl_bind_gl_texture_transient (GL_TEXTURE_2D,
                                    gl_texture,
@@ -161,8 +185,8 @@ allocate_with_size (CoglTexture2D *tex_2d,
       return FALSE;
     }
 
-  tex_2d->gl_texture = gl_texture;
-  tex_2d->gl_internal_format = gl_intformat;
+  tex_2d_gl->gl_texture = gl_texture;
+  tex_2d_gl->gl_internal_format = gl_intformat;
 
   tex_2d->internal_format = internal_format;
 
@@ -176,6 +200,7 @@ allocate_from_bitmap (CoglTexture2D *tex_2d,
                       CoglTextureLoader *loader,
                       CoglError **error)
 {
+  CoglTexture2DGL *tex_2d_gl = tex_2d->winsys;
   CoglTexture *tex = COGL_TEXTURE (tex_2d);
   CoglBitmap *bmp = loader->src.bitmap.bitmap;
   CoglContext *ctx = _cogl_bitmap_get_context (bmp);
@@ -231,12 +256,12 @@ allocate_from_bitmap (CoglTexture2D *tex_2d,
                                         &ignore);
       CoglPixelFormat format = cogl_bitmap_get_format (upload_bmp);
 
-      tex_2d->first_pixel.gl_format = gl_format;
-      tex_2d->first_pixel.gl_type = gl_type;
+      tex_2d_gl->first_pixel.gl_format = gl_format;
+      tex_2d_gl->first_pixel.gl_type = gl_type;
 
       if (data)
         {
-          memcpy (tex_2d->first_pixel.data, data,
+          memcpy (tex_2d_gl->first_pixel.data, data,
                   _cogl_pixel_format_get_bytes_per_pixel (format));
           _cogl_bitmap_unmap (upload_bmp);
         }
@@ -245,16 +270,16 @@ allocate_from_bitmap (CoglTexture2D *tex_2d,
           g_warning ("Failed to read first pixel of bitmap for "
                      "glGenerateMipmap fallback");
           cogl_error_free (ignore);
-          memset (tex_2d->first_pixel.data, 0,
+          memset (tex_2d_gl->first_pixel.data, 0,
                   _cogl_pixel_format_get_bytes_per_pixel (format));
         }
     }
 
-  tex_2d->gl_texture =
+  tex_2d_gl->gl_texture =
     ctx->texture_driver->gen (ctx, GL_TEXTURE_2D, internal_format);
   if (!ctx->texture_driver->upload_to_gl (ctx,
                                           GL_TEXTURE_2D,
-                                          tex_2d->gl_texture,
+                                          tex_2d_gl->gl_texture,
                                           FALSE,
                                           upload_bmp,
                                           gl_intformat,
@@ -266,7 +291,7 @@ allocate_from_bitmap (CoglTexture2D *tex_2d,
       return FALSE;
     }
 
-  tex_2d->gl_internal_format = gl_intformat;
+  tex_2d_gl->gl_internal_format = gl_intformat;
 
   cogl_object_unref (upload_bmp);
 
@@ -283,15 +308,16 @@ allocate_from_egl_image (CoglTexture2D *tex_2d,
                          CoglTextureLoader *loader,
                          CoglError **error)
 {
+  CoglTexture2DGL *tex_2d_gl = tex_2d->winsys;
   CoglTexture *tex = COGL_TEXTURE (tex_2d);
   CoglContext *ctx = tex->context;
   CoglPixelFormat internal_format = loader->src.egl_image.format;
   GLenum gl_error;
 
-  tex_2d->gl_texture =
+  tex_2d_gl->gl_texture =
     ctx->texture_driver->gen (ctx, GL_TEXTURE_2D, internal_format);
   _cogl_bind_gl_texture_transient (GL_TEXTURE_2D,
-                                   tex_2d->gl_texture,
+                                   tex_2d_gl->gl_texture,
                                    FALSE);
 
   while ((gl_error = ctx->glGetError ()) != GL_NO_ERROR)
@@ -304,7 +330,7 @@ allocate_from_egl_image (CoglTexture2D *tex_2d,
                        COGL_TEXTURE_ERROR_BAD_PARAMETER,
                        "Could not create a CoglTexture2D from a given "
                        "EGLImage");
-      GE( ctx, glDeleteTextures (1, &tex_2d->gl_texture) );
+      GE( ctx, glDeleteTextures (1, &tex_2d_gl->gl_texture) );
       return FALSE;
     }
 
@@ -324,6 +350,7 @@ allocate_from_gl_foreign (CoglTexture2D *tex_2d,
                           CoglTextureLoader *loader,
                           CoglError **error)
 {
+  CoglTexture2DGL *tex_2d_gl = tex_2d->winsys;
   CoglTexture *tex = COGL_TEXTURE (tex_2d);
   CoglContext *ctx = tex->context;
   CoglPixelFormat format = loader->src.gl_foreign.format;
@@ -429,12 +456,12 @@ allocate_from_gl_foreign (CoglTexture2D *tex_2d,
   tex_2d->is_foreign = TRUE;
   tex_2d->mipmaps_dirty = TRUE;
 
-  tex_2d->gl_texture = loader->src.gl_foreign.gl_handle;
-  tex_2d->gl_internal_format = gl_int_format;
+  tex_2d_gl->gl_texture = loader->src.gl_foreign.gl_handle;
+  tex_2d_gl->gl_internal_format = gl_int_format;
 
   /* Unknown filter */
-  tex_2d->gl_legacy_texobj_min_filter = GL_FALSE;
-  tex_2d->gl_legacy_texobj_mag_filter = GL_FALSE;
+  tex_2d_gl->gl_legacy_texobj_min_filter = GL_FALSE;
+  tex_2d_gl->gl_legacy_texobj_mag_filter = GL_FALSE;
 
   tex_2d->internal_format = format;
 
@@ -476,46 +503,46 @@ _cogl_texture_2d_gl_allocate (CoglTexture *tex,
 }
 
 void
-_cogl_texture_2d_gl_flush_legacy_texobj_filters (CoglTexture *tex,
+_cogl_texture_2d_gl_flush_legacy_texobj_filters (CoglTexture2D *tex_2d,
                                                  GLenum min_filter,
                                                  GLenum mag_filter)
 {
-  CoglTexture2D *tex_2d = COGL_TEXTURE_2D (tex);
-  CoglContext *ctx = tex->context;
+  CoglTexture2DGL *tex_2d_gl = tex_2d->winsys;
+  CoglContext *ctx = COGL_TEXTURE (tex_2d)->context;
 
-  if (min_filter == tex_2d->gl_legacy_texobj_min_filter
-      && mag_filter == tex_2d->gl_legacy_texobj_mag_filter)
+  if (min_filter == tex_2d_gl->gl_legacy_texobj_min_filter
+      && mag_filter == tex_2d_gl->gl_legacy_texobj_mag_filter)
     return;
 
   /* Store new values */
-  tex_2d->gl_legacy_texobj_min_filter = min_filter;
-  tex_2d->gl_legacy_texobj_mag_filter = mag_filter;
+  tex_2d_gl->gl_legacy_texobj_min_filter = min_filter;
+  tex_2d_gl->gl_legacy_texobj_mag_filter = mag_filter;
 
   /* Apply new filters to the texture */
   _cogl_bind_gl_texture_transient (GL_TEXTURE_2D,
-                                   tex_2d->gl_texture,
+                                   tex_2d_gl->gl_texture,
                                    tex_2d->is_foreign);
   GE( ctx, glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, mag_filter) );
   GE( ctx, glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, min_filter) );
 }
 
 void
-_cogl_texture_2d_gl_flush_legacy_texobj_wrap_modes (CoglTexture *tex,
+_cogl_texture_2d_gl_flush_legacy_texobj_wrap_modes (CoglTexture2D *tex_2d,
                                                     GLenum wrap_mode_s,
                                                     GLenum wrap_mode_t,
                                                     GLenum wrap_mode_p)
 {
-  CoglTexture2D *tex_2d = COGL_TEXTURE_2D (tex);
-  CoglContext *ctx = tex->context;
+  CoglTexture2DGL *tex_2d_gl = tex_2d->winsys;
+  CoglContext *ctx = COGL_TEXTURE (tex_2d)->context;
 
   /* Only set the wrap mode if it's different from the current value
      to avoid too many GL calls. Texture 2D doesn't make use of the r
      coordinate so we can ignore its wrap mode */
-  if (tex_2d->gl_legacy_texobj_wrap_mode_s != wrap_mode_s ||
-      tex_2d->gl_legacy_texobj_wrap_mode_t != wrap_mode_t)
+  if (tex_2d_gl->gl_legacy_texobj_wrap_mode_s != wrap_mode_s ||
+      tex_2d_gl->gl_legacy_texobj_wrap_mode_t != wrap_mode_t)
     {
       _cogl_bind_gl_texture_transient (GL_TEXTURE_2D,
-                                       tex_2d->gl_texture,
+                                       tex_2d_gl->gl_texture,
                                        tex_2d->is_foreign);
       GE( ctx, glTexParameteri (GL_TEXTURE_2D,
                                 GL_TEXTURE_WRAP_S,
@@ -524,8 +551,8 @@ _cogl_texture_2d_gl_flush_legacy_texobj_wrap_modes (CoglTexture *tex,
                                 GL_TEXTURE_WRAP_T,
                                 wrap_mode_t) );
 
-      tex_2d->gl_legacy_texobj_wrap_mode_s = wrap_mode_s;
-      tex_2d->gl_legacy_texobj_wrap_mode_t = wrap_mode_t;
+      tex_2d_gl->gl_legacy_texobj_wrap_mode_s = wrap_mode_s;
+      tex_2d_gl->gl_legacy_texobj_wrap_mode_t = wrap_mode_t;
     }
 }
 
@@ -576,6 +603,7 @@ _cogl_texture_2d_gl_copy_from_framebuffer (CoglTexture2D *tex_2d,
                                            int dst_y,
                                            int level)
 {
+  CoglTexture2DGL *tex_2d_gl = tex_2d->winsys;
   CoglTexture *tex = COGL_TEXTURE (tex_2d);
   CoglContext *ctx = tex->context;
 
@@ -588,7 +616,7 @@ _cogl_texture_2d_gl_copy_from_framebuffer (CoglTexture2D *tex_2d,
                                  ~COGL_FRAMEBUFFER_STATE_CLIP);
 
   _cogl_bind_gl_texture_transient (GL_TEXTURE_2D,
-                                   tex_2d->gl_texture,
+                                   tex_2d_gl->gl_texture,
                                    tex_2d->is_foreign);
 
   ctx->glCopyTexSubImage2D (GL_TEXTURE_2D,
@@ -598,15 +626,20 @@ _cogl_texture_2d_gl_copy_from_framebuffer (CoglTexture2D *tex_2d,
                             width, height);
 }
 
-unsigned int
-_cogl_texture_2d_gl_get_gl_handle (CoglTexture2D *tex_2d)
+void
+_cogl_texture_2d_gl_get_gl_info (CoglTexture2D *tex_2d,
+                                 CoglTextureGLInfo *info)
 {
-    return tex_2d->gl_texture;
+  CoglTexture2DGL *tex_2d_gl = tex_2d->winsys;
+
+  info->format = tex_2d_gl->gl_internal_format;
+  info->handle = tex_2d_gl->gl_texture;
 }
 
 void
 _cogl_texture_2d_gl_generate_mipmap (CoglTexture2D *tex_2d)
 {
+  CoglTexture2DGL *tex_2d_gl = tex_2d->winsys;
   CoglContext *ctx = COGL_TEXTURE (tex_2d)->context;
 
   /* glGenerateMipmap is defined in the FBO extension. If it's not
@@ -618,16 +651,16 @@ _cogl_texture_2d_gl_generate_mipmap (CoglTexture2D *tex_2d)
   else
     {
       _cogl_bind_gl_texture_transient (GL_TEXTURE_2D,
-                                       tex_2d->gl_texture,
+                                       tex_2d_gl->gl_texture,
                                        tex_2d->is_foreign);
 
       GE( ctx, glTexParameteri (GL_TEXTURE_2D,
                                 GL_GENERATE_MIPMAP,
                                 GL_TRUE) );
       GE( ctx, glTexSubImage2D (GL_TEXTURE_2D, 0, 0, 0, 1, 1,
-                                tex_2d->first_pixel.gl_format,
-                                tex_2d->first_pixel.gl_type,
-                                tex_2d->first_pixel.data) );
+                                tex_2d_gl->first_pixel.gl_format,
+                                tex_2d_gl->first_pixel.gl_type,
+                                tex_2d_gl->first_pixel.data) );
       GE( ctx, glTexParameteri (GL_TEXTURE_2D,
                                 GL_GENERATE_MIPMAP,
                                 GL_FALSE) );
@@ -647,6 +680,7 @@ _cogl_texture_2d_gl_copy_from_bitmap (CoglTexture2D *tex_2d,
                                       int level,
                                       CoglError **error)
 {
+  CoglTexture2DGL *tex_2d_gl = tex_2d->winsys;
   CoglTexture *tex = COGL_TEXTURE (tex_2d);
   CoglContext *ctx = tex->context;
   CoglBitmap *upload_bmp;
@@ -681,12 +715,12 @@ _cogl_texture_2d_gl_copy_from_bitmap (CoglTexture2D *tex_2d,
       CoglPixelFormat bpp =
         _cogl_pixel_format_get_bytes_per_pixel (upload_format);
 
-      tex_2d->first_pixel.gl_format = gl_format;
-      tex_2d->first_pixel.gl_type = gl_type;
+      tex_2d_gl->first_pixel.gl_format = gl_format;
+      tex_2d_gl->first_pixel.gl_type = gl_type;
 
       if (data)
         {
-          memcpy (tex_2d->first_pixel.data,
+          memcpy (tex_2d_gl->first_pixel.data,
                   (data +
                    cogl_bitmap_get_rowstride (upload_bmp) * src_y +
                    bpp * src_x),
@@ -698,7 +732,7 @@ _cogl_texture_2d_gl_copy_from_bitmap (CoglTexture2D *tex_2d,
           g_warning ("Failed to read first bitmap pixel for "
                      "glGenerateMipmap fallback");
           cogl_error_free (ignore);
-          memset (tex_2d->first_pixel.data, 0, bpp);
+          memset (tex_2d_gl->first_pixel.data, 0, bpp);
         }
     }
 
@@ -727,6 +761,7 @@ _cogl_texture_2d_gl_get_data (CoglTexture2D *tex_2d,
                               int rowstride,
                               uint8_t *data)
 {
+  CoglTexture2DGL *tex_2d_gl = tex_2d->winsys;
   CoglContext *ctx = COGL_TEXTURE (tex_2d)->context;
   int bpp;
   int width = COGL_TEXTURE (tex_2d)->width;
@@ -747,7 +782,7 @@ _cogl_texture_2d_gl_get_data (CoglTexture2D *tex_2d,
                                                     bpp);
 
   _cogl_bind_gl_texture_transient (GL_TEXTURE_2D,
-                                   tex_2d->gl_texture,
+                                   tex_2d_gl->gl_texture,
                                    tex_2d->is_foreign);
 
   ctx->texture_driver->gl_get_tex_image (ctx,
