@@ -468,6 +468,8 @@ _cogl_texture_2d_gl_allocate (CoglTexture *tex,
 #endif
     case COGL_TEXTURE_SOURCE_TYPE_GL_FOREIGN:
       return allocate_from_gl_foreign (tex_2d, loader, error);
+    default:
+      break;
     }
 
   g_return_val_if_reached (FALSE);
