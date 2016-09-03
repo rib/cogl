@@ -166,6 +166,8 @@ cogl_driver_sources = \
 	driver/nop/cogl-clip-stack-nop.c \
 	driver/nop/cogl-texture-2d-nop-private.h \
 	driver/nop/cogl-texture-2d-nop.c \
+	driver/nop/cogl-texture-3d-nop-private.h \
+	driver/nop/cogl-texture-3d-nop.c \
 	$(NULL)
 
 # gl driver sources
@@ -186,6 +188,8 @@ cogl_driver_sources += \
 	driver/gl/cogl-texture-gl.c \
 	driver/gl/cogl-texture-2d-gl-private.h \
 	driver/gl/cogl-texture-2d-gl.c \
+	driver/gl/cogl-texture-3d-gl-private.h \
+	driver/gl/cogl-texture-3d-gl.c \
 	driver/gl/cogl-attribute-gl-private.h \
 	driver/gl/cogl-attribute-gl.c \
 	driver/gl/cogl-clip-stack-gl-private.h \

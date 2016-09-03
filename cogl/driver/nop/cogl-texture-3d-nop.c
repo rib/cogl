@@ -3,7 +3,7 @@
  *
  * A Low Level GPU Graphics and Utilities API
  *
- * Copyright (C) 2010 Intel Corporation.
+ * Copyright (C) 2016 Intel Corporation.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -25,31 +25,53 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  *
+ *
+ *
  * Authors:
- *   Neil Roberts <neil@linux.intel.com>
+ *  Lionel Landwerlin <lionel.g.landwerlin@linux.intel.com>
  */
 
-#ifndef __COGL_TEXTURE_3D_PRIVATE_H
-#define __COGL_TEXTURE_3D_PRIVATE_H
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
-#include "cogl-object-private.h"
-#include "cogl-pipeline-private.h"
-#include "cogl-texture-private.h"
-#include "cogl-texture-3d.h"
+#include <string.h>
 
-struct _CoglTexture3D
+#include "cogl-private.h"
+#include "cogl-texture-3d-nop-private.h"
+#include "cogl-texture-3d-private.h"
+#include "cogl-error-private.h"
+
+void
+_cogl_texture_3d_nop_free (CoglTexture3D *tex_3d)
 {
-  CoglTexture _parent;
+}
 
-  /* The internal format of the texture represented as a
-     CoglPixelFormat */
-  CoglPixelFormat internal_format;
-  int depth;
-  CoglBool auto_mipmap;
-  CoglBool mipmaps_dirty;
+void
+_cogl_texture_3d_nop_init (CoglTexture3D *tex_3d)
+{
+}
 
-  /* Driver specific data */
-  void *winsys;
-};
+CoglBool
+_cogl_texture_3d_nop_allocate (CoglTexture *tex,
+                               CoglError **error)
+{
+  return TRUE;
+}
 
-#endif /* __COGL_TEXTURE_3D_PRIVATE_H */
+unsigned int
+_cogl_texture_3d_nop_get_gl_handle (CoglTexture3D *tex_3d)
+{
+  return 0;
+}
+
+GLenum
+_cogl_texture_3d_nop_get_gl_format (CoglTexture3D *tex_3d)
+{
+  return 0;
+}
+
+void
+_cogl_texture_3d_nop_generate_mipmap (CoglTexture3D *tex_3d)
+{
+}

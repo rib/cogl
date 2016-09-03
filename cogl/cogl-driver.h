@@ -35,6 +35,7 @@
 #include "cogl-offscreen.h"
 #include "cogl-framebuffer-private.h"
 #include "cogl-attribute-private.h"
+#include "cogl-texture-3d.h"
 
 typedef struct _CoglDriverVtable CoglDriverVtable;
 
@@ -219,6 +220,61 @@ struct _CoglDriverVtable
                            CoglPixelFormat format,
                            int rowstride,
                            uint8_t *data);
+
+  /* Destroys any driver specific resources associated with the given 3D
+   * texture. */
+  void
+  (* texture_3d_free) (CoglTexture3D *tex_3d);
+
+  /* Initializes driver private state before allocating any specific storage
+   * for a 3D texture.
+   */
+  void
+  (* texture_3d_init) (CoglTexture3D *tex_3d);
+
+  /* Allocates (uninitialized) storage for the given texture according to
+   * the configured size and format of the texture */
+  CoglBool
+  (* texture_3d_allocate) (CoglTexture *tex,
+                           CoglError **error);
+
+  /* If the given 3D texture has a corresponding OpenGL texture handle then
+   * return that.
+   *
+   * This is optional
+   */
+  unsigned int
+  (* texture_3d_get_gl_handle) (CoglTexture3D *tex_3d);
+
+  /* Gets the internal GL format of a given 3D texture.
+   *
+   * This is optional
+   */
+  GLenum
+  (* texture_3d_get_gl_format) (CoglTexture3D *tex_3d);
+
+  /* Update all mipmap levels > 0 */
+  void
+  (* texture_3d_generate_mipmap) (CoglTexture3D *tex_3d);
+
+  /* Flush legacy texture 3D filter modes.
+   *
+   * This is optional
+   */
+  void
+  (* texture_3d_flush_legacy_filters) (CoglTexture3D *tex_3d,
+                                       GLenum min_filter,
+                                       GLenum mag_filter);
+
+  /* Flush legacy texture 3D wrap modes.
+   *
+   * This is optional
+   */
+  void
+  (* texture_3d_flush_legacy_wrap_modes) (CoglTexture3D *tex_3d,
+                                          GLenum wrap_mode_s,
+                                          GLenum wrap_mode_t,
+                                          GLenum wrap_mode_p);
 
   /* Prepares for drawing by flushing the journal, framebuffer state,
    * pipeline state and attribute state.

@@ -41,6 +41,7 @@
 #include "cogl-error-private.h"
 #include "cogl-framebuffer-nop-private.h"
 #include "cogl-texture-2d-nop-private.h"
+#include "cogl-texture-3d-nop-private.h"
 #include "cogl-attribute-nop-private.h"
 #include "cogl-clip-stack-nop-private.h"
 
@@ -83,6 +84,14 @@ _cogl_driver_nop =
     NULL, /* texture_2d_flush_legacy_wrap_modes */
     _cogl_texture_2d_nop_copy_from_bitmap,
     NULL, /* texture_2d_get_data */
+    _cogl_texture_3d_nop_free,
+    _cogl_texture_3d_nop_init,
+    _cogl_texture_3d_nop_allocate,
+    _cogl_texture_3d_nop_get_gl_handle,
+    _cogl_texture_3d_nop_get_gl_format,
+    _cogl_texture_3d_nop_generate_mipmap,
+    NULL, /* texture_3d_flush_legacy_filters */
+    NULL, /* texture_3d_flush_legacy_wrap_modes */
     _cogl_nop_flush_attributes_state,
     _cogl_clip_stack_nop_flush,
   };
