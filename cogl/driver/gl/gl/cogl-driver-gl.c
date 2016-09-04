@@ -43,6 +43,7 @@
 #include "cogl-framebuffer-gl-private.h"
 #include "cogl-texture-2d-gl-private.h"
 #include "cogl-texture-3d-gl-private.h"
+#include "cogl-texture-rectangle-gl-private.h"
 #include "cogl-attribute-gl-private.h"
 #include "cogl-clip-stack-gl-private.h"
 #include "cogl-buffer-gl-private.h"
@@ -701,6 +702,14 @@ _cogl_driver_gl =
     _cogl_texture_3d_gl_generate_mipmap,
     _cogl_texture_3d_gl_flush_legacy_texobj_filters,
     _cogl_texture_3d_gl_flush_legacy_texobj_wrap_modes,
+    _cogl_texture_rectangle_gl_free,
+    _cogl_texture_rectangle_gl_init,
+    _cogl_texture_rectangle_gl_allocate,
+    _cogl_texture_rectangle_gl_get_gl_format,
+    _cogl_texture_rectangle_gl_get_gl_handle,
+    _cogl_texture_rectangle_gl_flush_legacy_texobj_filters,
+    _cogl_texture_rectangle_gl_flush_legacy_texobj_wrap_modes,
+    _cogl_texture_rectangle_gl_get_data,
     _cogl_gl_flush_attributes_state,
     _cogl_clip_stack_gl_flush,
     _cogl_buffer_gl_create,

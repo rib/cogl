@@ -36,6 +36,7 @@
 #include "cogl-framebuffer-private.h"
 #include "cogl-attribute-private.h"
 #include "cogl-texture-3d.h"
+#include "cogl-texture-rectangle.h"
 
 typedef struct _CoglDriverVtable CoglDriverVtable;
 
@@ -275,6 +276,68 @@ struct _CoglDriverVtable
                                           GLenum wrap_mode_s,
                                           GLenum wrap_mode_t,
                                           GLenum wrap_mode_p);
+
+  /* Destroys any driver specific resources associated with the given
+   * rectangle texture. */
+  void
+  (* texture_rectangle_free) (CoglTextureRectangle *tex_rect);
+
+  /* Initializes driver private state before allocating any specific storage
+   * for a rectangle texture.
+   */
+  void
+  (* texture_rectangle_init) (CoglTextureRectangle *tex_rect);
+
+  /* Allocates (uninitialized) storage for the given texture according to
+   * the configured size and format of the texture */
+  CoglBool
+  (* texture_rectangle_allocate) (CoglTexture *tex,
+                                  CoglError **error);
+
+  /* If the given rectangle texture has a corresponding OpenGL texture
+   * handle then return that.
+   *
+   * This is optional
+   */
+  unsigned int
+  (* texture_rectangle_get_gl_handle) (CoglTextureRectangle *tex_rect);
+
+  /* Gets the internal GL format of a given rectangle texture.
+   *
+   * This is optional
+   */
+  GLenum
+  (* texture_rectangle_get_gl_format) (CoglTextureRectangle *tex_rect);
+
+  /* Flush legacy texture rectangle filter modes.
+   *
+   * This is optional
+   */
+  void
+  (* texture_rectangle_flush_legacy_filters) (CoglTextureRectangle *tex_rect,
+                                              GLenum min_filter,
+                                              GLenum mag_filter);
+
+  /* Flush legacy texture rectangle wrap modes.
+   *
+   * This is optional
+   */
+  void
+  (* texture_rectangle_flush_legacy_wrap_modes) (CoglTextureRectangle *tex_rect,
+                                                 GLenum wrap_mode_s,
+                                                 GLenum wrap_mode_t,
+                                                 GLenum wrap_mode_p);
+
+  /* Reads back the full contents of the given texture and write it to
+   * @data in the given @format and with the given @rowstride.
+   *
+   * This is optional
+   */
+  void
+  (* texture_rectangle_get_data) (CoglTextureRectangle *tex_rect,
+                                  CoglPixelFormat format,
+                                  int rowstride,
+                                  uint8_t *data);
 
   /* Prepares for drawing by flushing the journal, framebuffer state,
    * pipeline state and attribute state.

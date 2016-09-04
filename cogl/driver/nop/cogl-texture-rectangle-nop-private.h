@@ -3,7 +3,7 @@
  *
  * A Low Level GPU Graphics and Utilities API
  *
- * Copyright (C) 2009 Intel Corporation.
+ * Copyright (C) 2016 Intel Corporation.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -26,26 +26,39 @@
  * SOFTWARE.
  *
  *
+ *
+ * Authors:
+ *   Lionel Landwerlin <lionel.g.landwerlin@linux.intel.com>
  */
 
-#ifndef __COGL_TEXTURE_RECTANGLE_H
-#define __COGL_TEXTURE_RECTANGLE_H
+#ifndef _COGL_TEXTURE_RECTANGLE_NOP_PRIVATE_H_
+#define _COGL_TEXTURE_RECTANGLE_NOP_PRIVATE_H_
 
-#include "cogl-pipeline-private.h"
-#include "cogl-texture-private.h"
+#include "cogl-types.h"
+#include "cogl-context-private.h"
+#include "cogl-texture.h"
 #include "cogl-texture-rectangle.h"
 
-struct _CoglTextureRectangle
-{
-  CoglTexture _parent;
+void
+_cogl_texture_rectangle_nop_free (CoglTextureRectangle *tex_rect);
 
-  /* The internal format of the texture represented as a
-     CoglPixelFormat */
-  CoglPixelFormat internal_format;
-  CoglBool is_foreign;
+void
+_cogl_texture_rectangle_nop_init (CoglTextureRectangle *tex_rect);
 
-  /* Driver specific data */
-  void *winsys;
-};
+CoglBool
+_cogl_texture_rectangle_nop_allocate (CoglTexture *tex,
+                                      CoglError **error);
 
-#endif /* __COGL_TEXTURE_RECTANGLE_H */
+unsigned int
+_cogl_texture_rectangle_nop_get_gl_handle (CoglTextureRectangle *tex_rect);
+
+GLenum
+_cogl_texture_rectangle_nop_get_gl_format (CoglTextureRectangle *tex_rect);
+
+void
+_cogl_texture_rectangle_nop_get_data (CoglTextureRectangle *tex_rect,
+                                      CoglPixelFormat format,
+                                      int rowstride,
+                                      uint8_t *data);
+
+#endif /* _COGL_TEXTURE_RECTANGLE_NOP_PRIVATE_H_ */
