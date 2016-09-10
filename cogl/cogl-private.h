@@ -89,6 +89,20 @@ typedef enum _CoglPipelineEvalFlags
   COGL_PIPELINE_EVAL_FLAG_NONE = 0
 } CoglPipelineEvalFlags;
 
+#define _COGL_COLOR_BITS_GET_ALPHA(value)   ((value) & 0xff)
+#define _COGL_COLOR_BITS_GET_RED(value)     (((value) >> 8) & 0xff)
+#define _COGL_COLOR_BITS_GET_GREEN(value)   (((value) >> 16) & 0xff)
+#define _COGL_COLOR_BITS_GET_BLUE(value)    (((value) >> 24) & 0xff)
+#define _COGL_COLOR_BITS_GET_DEPTH(value)   (((value) >> 32) & 0xff)
+#define _COGL_COLOR_BITS_GET_STENCIL(value) (((value) >> 40) & 0xff)
+
+#define _COGL_COLOR_BITS_ALPHA(value)   ((uint64_t) (value))
+#define _COGL_COLOR_BITS_RED(value)     (((uint64_t) (value)) << 8)
+#define _COGL_COLOR_BITS_GREEN(value)   (((uint64_t) (value)) << 16)
+#define _COGL_COLOR_BITS_BLUE(value)    (((uint64_t) (value)) << 24)
+#define _COGL_COLOR_BITS_DEPTH(value)   (((uint64_t) (value)) << 32)
+#define _COGL_COLOR_BITS_STENCIL(value) (((uint64_t) (value)) << 40)
+
 void
 _cogl_transform_point (const CoglMatrix *matrix_mv,
                        const CoglMatrix *matrix_p,
@@ -152,6 +166,20 @@ _cogl_pixel_format_get_bytes_per_pixel (CoglPixelFormat format);
  */
 CoglBool
 _cogl_pixel_format_is_endian_dependant (CoglPixelFormat format);
+
+/*
+ * _cogl_pixel_format_query_bits:
+ * @format: a #CoglPixelFormat
+ *
+ * Queries number of bits associated with each component and builds up a bit
+ * field of it. Each component can get queried using the
+ * _COGL_COLOR_BITS_GET_* macros.
+ *
+ * Return value: A bit field containing the number of bits of the different
+ *               components.
+ */
+uint64_t
+_cogl_pixel_format_query_bits (CoglPixelFormat format);
 
 /*
  * COGL_PIXEL_FORMAT_CAN_HAVE_PREMULT(format):

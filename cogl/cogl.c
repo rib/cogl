@@ -823,3 +823,72 @@ _cogl_pixel_format_is_endian_dependant (CoglPixelFormat format)
 
   return aligned;
 }
+
+uint64_t
+_cogl_pixel_format_query_bits (CoglPixelFormat format)
+{
+  switch (format)
+    {
+    case COGL_PIXEL_FORMAT_A_8:
+      return _COGL_COLOR_BITS_ALPHA(8);
+    case COGL_PIXEL_FORMAT_RGB_565:
+      return (_COGL_COLOR_BITS_RED(5) |
+              _COGL_COLOR_BITS_GREEN(6) |
+              _COGL_COLOR_BITS_BLUE(5));
+    case COGL_PIXEL_FORMAT_RGBA_4444:
+    case COGL_PIXEL_FORMAT_RGBA_4444_PRE:
+      return (_COGL_COLOR_BITS_ALPHA(4) |
+              _COGL_COLOR_BITS_RED(4) |
+              _COGL_COLOR_BITS_GREEN(4) |
+              _COGL_COLOR_BITS_BLUE(4));
+    case COGL_PIXEL_FORMAT_RGBA_5551:
+    case COGL_PIXEL_FORMAT_RGBA_5551_PRE:
+      return (_COGL_COLOR_BITS_ALPHA(1) |
+              _COGL_COLOR_BITS_RED(5) |
+              _COGL_COLOR_BITS_GREEN(5) |
+              _COGL_COLOR_BITS_BLUE(5));
+    case COGL_PIXEL_FORMAT_G_8:
+      return _COGL_COLOR_BITS_GREEN(8);
+    case COGL_PIXEL_FORMAT_RG_88:
+      return (_COGL_COLOR_BITS_RED(8) |
+              _COGL_COLOR_BITS_GREEN(8));
+    case COGL_PIXEL_FORMAT_RGB_888:
+    case COGL_PIXEL_FORMAT_BGR_888:
+      return (_COGL_COLOR_BITS_RED(8) |
+              _COGL_COLOR_BITS_GREEN(8) |
+              _COGL_COLOR_BITS_BLUE(8));
+    case COGL_PIXEL_FORMAT_RGBA_8888:
+    case COGL_PIXEL_FORMAT_BGRA_8888:
+    case COGL_PIXEL_FORMAT_ARGB_8888:
+    case COGL_PIXEL_FORMAT_ABGR_8888:
+    case COGL_PIXEL_FORMAT_RGBA_8888_PRE:
+    case COGL_PIXEL_FORMAT_BGRA_8888_PRE:
+    case COGL_PIXEL_FORMAT_ARGB_8888_PRE:
+    case COGL_PIXEL_FORMAT_ABGR_8888_PRE:
+      return (_COGL_COLOR_BITS_ALPHA(8) |
+              _COGL_COLOR_BITS_RED(8) |
+              _COGL_COLOR_BITS_GREEN(8) |
+              _COGL_COLOR_BITS_BLUE(8));
+    case COGL_PIXEL_FORMAT_RGBA_1010102:
+    case COGL_PIXEL_FORMAT_BGRA_1010102:
+    case COGL_PIXEL_FORMAT_ARGB_2101010:
+    case COGL_PIXEL_FORMAT_ABGR_2101010:
+    case COGL_PIXEL_FORMAT_RGBA_1010102_PRE:
+    case COGL_PIXEL_FORMAT_BGRA_1010102_PRE:
+    case COGL_PIXEL_FORMAT_ARGB_2101010_PRE:
+    case COGL_PIXEL_FORMAT_ABGR_2101010_PRE:
+      return (_COGL_COLOR_BITS_ALPHA(2) |
+              _COGL_COLOR_BITS_RED(10) |
+              _COGL_COLOR_BITS_GREEN(10) |
+              _COGL_COLOR_BITS_BLUE(10));
+    case COGL_PIXEL_FORMAT_DEPTH_16:
+      return _COGL_COLOR_BITS_DEPTH(16);
+    case COGL_PIXEL_FORMAT_DEPTH_32:
+      return _COGL_COLOR_BITS_DEPTH(32);
+    case COGL_PIXEL_FORMAT_DEPTH_24_STENCIL_8:
+      return (_COGL_COLOR_BITS_DEPTH(24) |
+              _COGL_COLOR_BITS_STENCIL(16));
+    default:
+      g_assert_not_reached();
+    }
+}
