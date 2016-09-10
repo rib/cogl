@@ -101,7 +101,6 @@ struct _CoglBuffer
 
   CoglBufferFlags flags;
 
-  GLuint gl_handle; /* OpenGL handle */
   unsigned int size; /* size of the buffer, in bytes */
   CoglBufferUsageHint usage_hint;
   CoglBufferUpdateHint update_hint;
@@ -113,6 +112,9 @@ struct _CoglBuffer
   int immutable_ref;
 
   unsigned int store_created:1;
+
+  /* Driver specific data */
+  void *winsys;
 };
 
 /* This is used to register a type to the list of handle types that

@@ -83,14 +83,19 @@ void
 _cogl_buffer_gl_create (CoglBuffer *buffer)
 {
   CoglContext *ctx = buffer->context;
+  GLuint gl_handle;
 
-  GE (ctx, glGenBuffers (1, &buffer->gl_handle));
+  GE (ctx, glGenBuffers (1, &gl_handle));
+
+  buffer->winsys = GUINT_TO_POINTER (gl_handle);
 }
 
 void
 _cogl_buffer_gl_destroy (CoglBuffer *buffer)
 {
-  GE( buffer->context, glDeleteBuffers (1, &buffer->gl_handle) );
+  GLuint gl_handle = GPOINTER_TO_UINT (buffer->winsys);
+
+  GE( buffer->context, glDeleteBuffers (1, &gl_handle) );
 }
 
 static GLenum
@@ -197,7 +202,7 @@ _cogl_buffer_bind_no_create (CoglBuffer *buffer,
   if (buffer->flags & COGL_BUFFER_FLAG_BUFFER_OBJECT)
     {
       GLenum gl_target = convert_bind_target_to_gl_target (buffer->last_target);
-      GE( ctx, glBindBuffer (gl_target, buffer->gl_handle) );
+      GE( ctx, glBindBuffer (gl_target, GPOINTER_TO_UINT (buffer->winsys)) );
       return NULL;
     }
   else
