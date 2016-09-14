@@ -1,9 +1,12 @@
 #include <config.h>
 
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "test-unit.h"
 #include "test-utils.h"
+
+#include "cogl-poll.h"
 
 #define FB_WIDTH 512
 #define FB_HEIGHT 512
@@ -125,6 +128,41 @@ is_boolean_env_set (const char *variable)
   return ret;
 }
 
+static CoglBool in_swap = FALSE;
+
+static void
+maybe_swap_onscreen_buffers (void)
+{
+  if (is_boolean_env_set ("COGL_TEST_ONSCREEN") && test_fb && !in_swap)
+    {
+      CoglPollFD *poll_fds;
+      int n_poll_fds;
+      int64_t timeout;
+
+      in_swap = TRUE;
+      cogl_onscreen_swap_buffers (COGL_ONSCREEN (test_fb));
+      in_swap = FALSE;
+
+      cogl_poll_renderer_get_info (cogl_context_get_renderer (test_ctx),
+                                   &poll_fds, &n_poll_fds, &timeout);
+
+      g_poll ((GPollFD *) poll_fds, n_poll_fds,
+              timeout == -1 ? -1 : timeout / 1000);
+
+      cogl_poll_renderer_dispatch (cogl_context_get_renderer (test_ctx),
+                                   poll_fds, n_poll_fds);
+    }
+}
+
+static void
+fatal_handler (const char *string)
+{
+  fputs (string, stderr); /* assume UTF-8 */
+  fflush (stderr);
+
+  maybe_swap_onscreen_buffers ();
+}
+
 void
 test_utils_init (TestFlags requirement_flags,
                  TestFlags known_failure_flags)
@@ -136,6 +174,8 @@ test_utils_init (TestFlags requirement_flags,
   CoglRenderer *renderer;
   CoglBool missing_requirement;
   CoglBool known_failure;
+
+  g_set_printerr_handler (fatal_handler);
 
   if (counter != 0)
     g_critical ("We don't support running more than one test at a time\n"
@@ -210,6 +250,8 @@ test_utils_init (TestFlags requirement_flags,
 void
 test_utils_fini (void)
 {
+  maybe_swap_onscreen_buffers ();
+
   if (test_fb)
     cogl_object_unref (test_fb);
 
