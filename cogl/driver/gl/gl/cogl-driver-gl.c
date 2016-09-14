@@ -636,6 +636,8 @@ _cogl_driver_update_features (CoglContext *ctx,
                   COGL_PRIVATE_FEATURE_QUERY_TEXTURE_PARAMETERS, TRUE);
   COGL_FLAGS_SET (private_features,
                   COGL_PRIVATE_FEATURE_TEXTURE_MAX_LEVEL, TRUE);
+  COGL_FLAGS_SET (private_features,
+                  COGL_PRIVATE_FEATURE_8BITS_INDICES, TRUE);
 
   if (ctx->glFenceSync)
     COGL_FLAGS_SET (ctx->features, COGL_FEATURE_ID_FENCE, TRUE);

@@ -190,9 +190,12 @@ CoglIndices *
 cogl_get_rectangle_indices (CoglContext *ctx, int n_rectangles)
 {
   int n_indices = n_rectangles * 6;
+  CoglBool has_8bits_indices =
+    COGL_FLAGS_GET (ctx->private_features,
+                    COGL_PRIVATE_FEATURE_8BITS_INDICES);
 
   /* Check if the largest index required will fit in a byte array... */
-  if (n_indices <= 256 / 4 * 6)
+  if (has_8bits_indices && (n_indices <= (256 / 4 * 6)))
     {
       /* Generate the byte array if we haven't already */
       if (ctx->rectangle_byte_indices == NULL)

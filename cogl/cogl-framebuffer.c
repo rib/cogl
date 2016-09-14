@@ -2001,7 +2001,7 @@ get_wire_line_indices (CoglContext *ctx,
     {
       index_buffer = NULL;
       indices = NULL;
-      indices_type = COGL_INDICES_TYPE_UNSIGNED_BYTE;
+      indices_type = COGL_INDICES_TYPE_UNSIGNED_SHORT;
     }
 
   n_lines = get_line_count (mode, n_vertices_in);

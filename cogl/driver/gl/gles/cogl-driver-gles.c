@@ -445,6 +445,9 @@ _cogl_driver_update_features (CoglContext *context,
                     COGL_FEATURE_ID_TEXTURE_RG,
                     TRUE);
 
+  COGL_FLAGS_SET (private_features,
+                  COGL_PRIVATE_FEATURE_8BITS_INDICES, TRUE);
+
   /* Cache features */
   for (i = 0; i < G_N_ELEMENTS (private_features); i++)
     context->private_features[i] |= private_features[i];
