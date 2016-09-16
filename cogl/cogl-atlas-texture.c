@@ -1021,6 +1021,27 @@ _cogl_atlas_texture_get_type (CoglTexture *tex)
   return COGL_TEXTURE_TYPE_2D;
 }
 
+static CoglBool
+_cogl_atlas_texture_get_vulkan_info (CoglTexture *tex,
+                                     CoglTextureVulkanInfo *info)
+{
+  CoglAtlasTexture *atlas_tex = COGL_ATLAS_TEXTURE (tex);
+
+  /* Forward on to the sub texture */
+  return _cogl_texture_get_vulkan_info (atlas_tex->sub_texture, info);
+}
+static void
+_cogl_atlas_texture_vulkan_move_to (CoglTexture *tex,
+                                    CoglTextureDomain domain,
+                                    VkCommandBuffer cmd_buffer)
+{
+  CoglAtlasTexture *atlas_tex = COGL_ATLAS_TEXTURE (tex);
+
+  /* Forward on to the sub texture */
+  return _cogl_texture_vulkan_move_to (atlas_tex->sub_texture,
+                                       domain, cmd_buffer);
+}
+
 static const CoglTextureVtable
 cogl_atlas_texture_vtable =
   {
@@ -1043,5 +1064,7 @@ cogl_atlas_texture_vtable =
     _cogl_atlas_texture_get_gl_format,
     _cogl_atlas_texture_get_type,
     NULL, /* is_foreign */
-    NULL /* set_auto_mipmap */
+    NULL, /* set_auto_mipmap */
+    _cogl_atlas_texture_get_vulkan_info,
+    _cogl_atlas_texture_vulkan_move_to
   };

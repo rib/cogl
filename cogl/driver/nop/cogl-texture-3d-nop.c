@@ -75,3 +75,16 @@ void
 _cogl_texture_3d_nop_generate_mipmap (CoglTexture3D *tex_3d)
 {
 }
+
+void
+_cogl_texture_3d_nop_get_vulkan_info (CoglTexture3D *tex_3d,
+                                      CoglTextureVulkanInfo *info)
+{
+}
+
+void
+_cogl_texture_3d_nop_vulkan_move_to (CoglTexture3D *tex_3d,
+                                     CoglTextureDomain domain,
+                                     VkCommandBuffer cmd_buffer)
+{
+}

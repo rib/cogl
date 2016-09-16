@@ -222,6 +222,19 @@ struct _CoglDriverVtable
                            int rowstride,
                            uint8_t *data);
 
+  /* Gets the internal Vulkan information of a given 2D texture. */
+  void
+  (* texture_2d_get_vulkan_info) (CoglTexture2D *tex_2d,
+                                  CoglTextureVulkanInfo *info);
+
+  /* Moves a 2D texture from to a particular domain (ie. prepare it to be
+   * used by the CPU or GPU in a specific way).
+   */
+  void
+  (* texture_2d_vulkan_move_to) (CoglTexture2D *tex_2d,
+                                 CoglTextureDomain domain,
+                                 VkCommandBuffer cmd_buffer);
+
   /* Destroys any driver specific resources associated with the given 3D
    * texture. */
   void
@@ -276,6 +289,19 @@ struct _CoglDriverVtable
                                           GLenum wrap_mode_s,
                                           GLenum wrap_mode_t,
                                           GLenum wrap_mode_p);
+
+  /* Gets the internal Vulkan information of a given 3D texture. */
+  void
+  (* texture_3d_get_vulkan_info) (CoglTexture3D *tex_3d,
+                                  CoglTextureVulkanInfo *info);
+
+  /* Moves a 3D texture from to a particular domain (ie. prepare it to be
+   * used by the CPU or GPU in a specific way).
+   */
+  void
+  (* texture_3d_vulkan_move_to) (CoglTexture3D *tex_3d,
+                                 CoglTextureDomain domain,
+                                 VkCommandBuffer cmd_buffer);
 
   /* Destroys any driver specific resources associated with the given
    * rectangle texture. */
@@ -403,11 +429,11 @@ typedef enum { /*< prefix=COGL_DRIVER_ERROR >*/
   COGL_DRIVER_ERROR_UNKNOWN_VERSION,
   COGL_DRIVER_ERROR_INVALID_VERSION,
   COGL_DRIVER_ERROR_NO_SUITABLE_DRIVER_FOUND,
-  COGL_DRIVER_ERROR_FAILED_TO_LOAD_LIBRARY
+  COGL_DRIVER_ERROR_FAILED_TO_LOAD_LIBRARY,
+  COGL_DRIVER_ERROR_INTERNAL
 } CoglDriverError;
 
 uint32_t
 _cogl_driver_error_quark (void);
 
 #endif /* __COGL_DRIVER_H */
-

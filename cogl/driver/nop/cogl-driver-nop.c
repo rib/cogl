@@ -85,6 +85,8 @@ _cogl_driver_nop =
     NULL, /* texture_2d_flush_legacy_wrap_modes */
     _cogl_texture_2d_nop_copy_from_bitmap,
     NULL, /* texture_2d_get_data */
+    _cogl_texture_2d_nop_get_vulkan_info,
+    _cogl_texture_2d_nop_vulkan_move_to,
     _cogl_texture_3d_nop_free,
     _cogl_texture_3d_nop_init,
     _cogl_texture_3d_nop_allocate,
@@ -93,6 +95,8 @@ _cogl_driver_nop =
     _cogl_texture_3d_nop_generate_mipmap,
     NULL, /* texture_3d_flush_legacy_filters */
     NULL, /* texture_3d_flush_legacy_wrap_modes */
+    _cogl_texture_3d_nop_get_vulkan_info,
+    _cogl_texture_3d_nop_vulkan_move_to,
     _cogl_texture_rectangle_nop_free,
     _cogl_texture_rectangle_nop_init,
     _cogl_texture_rectangle_nop_allocate,

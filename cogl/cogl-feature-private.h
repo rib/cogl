@@ -103,4 +103,13 @@ _cogl_feature_check_ext_functions (CoglContext *context,
                                    int gl_minor,
                                    char * const *gl_extensions);
 
+#ifdef HAVE_COGL_VULKAN
+void
+_cogl_feature_check_vulkan_ext_functions (CoglContext *context,
+                                          int vk_major,
+                                          int vk_minor,
+                                          int vk_micro,
+                                          char * const *vk_extensions);
+#endif
+
 #endif /* __COGL_FEATURE_PRIVATE_H */

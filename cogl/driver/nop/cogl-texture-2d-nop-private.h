@@ -84,4 +84,13 @@ _cogl_texture_2d_nop_copy_from_bitmap (CoglTexture2D *tex_2d,
                                        int level,
                                        CoglError **error);
 
+void
+_cogl_texture_2d_nop_get_vulkan_info (CoglTexture2D *tex_2d,
+                                      CoglTextureVulkanInfo *info);
+
+void
+_cogl_texture_2d_nop_vulkan_move_to (CoglTexture2D *tex_2d,
+                                     CoglTextureDomain domain,
+                                     VkCommandBuffer cmd_buffer);
+
 #endif /* _COGL_TEXTURE_2D_NOP_PRIVATE_H_ */

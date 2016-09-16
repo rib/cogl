@@ -200,6 +200,15 @@ struct _CoglTextureDriver
                                     CoglPixelFormat format,
                                     GLenum *closest_gl_format,
                                     GLenum *closest_gl_type);
+
+  /*
+   * The driver might need to be notified when a texture is going to be used
+   * for sampling. For example Vulkan requires that the image is in the
+   * right layout.
+   */
+  void
+  (* pre_paint) (CoglContext *ctx,
+                 CoglTexture *texture);
 };
 
 #endif /* __COGL_TEXTURE_DRIVER_H */

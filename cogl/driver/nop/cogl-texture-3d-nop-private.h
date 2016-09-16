@@ -57,4 +57,13 @@ _cogl_texture_3d_nop_get_gl_format (CoglTexture3D *tex_3d);
 void
 _cogl_texture_3d_nop_generate_mipmap (CoglTexture3D *tex_3d);
 
+void
+_cogl_texture_3d_nop_get_vulkan_info (CoglTexture3D *tex_3d,
+                                      CoglTextureVulkanInfo *info);
+
+void
+_cogl_texture_3d_nop_vulkan_move_to (CoglTexture3D *tex_3d,
+                                     CoglTextureDomain domain,
+                                     VkCommandBuffer cmd_buffer);
+
 #endif /* _COGL_TEXTURE_3D_NOP_PRIVATE_H_ */

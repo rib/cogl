@@ -75,6 +75,7 @@ _cogl_feature_check (CoglRenderer *renderer,
     case COGL_DRIVER_NOP:
     case COGL_DRIVER_GL:
     case COGL_DRIVER_GL3:
+    case COGL_DRIVER_VULKAN:
       break;
     }
 
@@ -232,3 +233,100 @@ _cogl_feature_check_ext_functions (CoglContext *context,
                          gl_extensions,
                          context);
 }
+
+#ifdef HAVE_COGL_VULKAN
+
+static CoglBool
+_cogl_feature_vulkan_check (CoglRenderer *renderer,
+                            const CoglFeatureData *data,
+                            int vk_major,
+                            int vk_minor,
+                            int vk_micro,
+                            CoglDriver driver,
+                            char * const *extensions,
+                            void *function_table)
+
+{
+  int func_num;
+
+  if (driver != COGL_DRIVER_VULKAN)
+    return FALSE;
+
+  /* Try to get all of the entry points */
+  for (func_num = 0; data->functions[func_num].name; func_num++)
+    {
+      void *func;
+
+      func = _cogl_renderer_get_proc_address (renderer,
+                                              data->functions[func_num].name,
+                                              TRUE);
+
+      if (func == NULL)
+        goto error;
+
+      /* Set the function pointer in the context */
+      *(void **) ((uint8_t *) function_table +
+                  data->functions[func_num].pointer_offset) = func;
+    }
+
+  return TRUE;
+
+ error:
+
+  for (func_num = 0; data->functions[func_num].name; func_num++)
+    *(void **) ((uint8_t *) function_table +
+                data->functions[func_num].pointer_offset) = NULL;
+
+  return FALSE;
+}
+
+/* Define a set of arrays containing the functions required from GL
+   for each feature */
+#define COGL_VULKAN_EXT_BEGIN(name,                                     \
+  min_vk_major, min_vk_minor, min_vk_micro,                             \
+  extension_names)                                                      \
+  static const CoglFeatureFunction cogl_vulkan_ext_ ## name ## _funcs[] = {
+#define COGL_VULKAN_EXT_FUNCTION(name)                                  \
+    { G_STRINGIFY (name), G_STRUCT_OFFSET (CoglContext, name) },
+#define COGL_VULKAN_EXT_END()                   \
+    { NULL, 0 },                                \
+  };
+#include "vulkan-prototypes/cogl-all-vulkan-functions.h"
+
+/* Define an array of features */
+#undef COGL_VULKAN_EXT_BEGIN
+#define COGL_VULKAN_EXT_BEGIN(name,                                     \
+                              min_vk_major, min_vk_minor, min_vk_micro, \
+                              extension_names)                          \
+    { min_vk_major, min_vk_minor, 0,                                    \
+      NULL, extension_names, 0, 0, 0,                                    \
+      cogl_vulkan_ext_ ## name ## _funcs },
+#undef COGL_VULKAN_EXT_FUNCTION
+#define COGL_VULKAN_EXT_FUNCTION(name)
+#undef COGL_VULKAN_EXT_END
+#define COGL_VULKAN_EXT_END()
+
+static const CoglFeatureData
+cogl_feature_vulkan_ext_functions_data[] =
+  {
+#include "vulkan-prototypes/cogl-all-vulkan-functions.h"
+  };
+
+void
+_cogl_feature_check_vulkan_ext_functions (CoglContext *context,
+                                          int vk_major,
+                                          int vk_minor,
+                                          int vk_micro,
+                                          char * const *vk_extensions)
+{
+  int i;
+
+  for (i = 0; i < G_N_ELEMENTS (cogl_feature_vulkan_ext_functions_data); i++)
+    _cogl_feature_vulkan_check (context->display->renderer,
+                                cogl_feature_vulkan_ext_functions_data + i,
+                                vk_major, vk_minor, vk_micro, context->driver,
+                                vk_extensions,
+                                context);
+}
+
+#endif

@@ -38,6 +38,9 @@ stamp-marshal
 /cogl/cogl-enum-types.c
 /cogl/cogl-enum-types.h
 /cogl/cogl-gl-header.h
+/cogl/cogl-vulkan-header.h
+/cogl/driver/vulkan/glslang/glslang/MachineIndependent/glslang.cpp
+/cogl/driver/vulkan/glslang/glslang/MachineIndependent/glslang.hpp
 /cogl-path/cogl-path-enum-types.c
 /cogl-path/cogl-path-enum-types.h
 config.h

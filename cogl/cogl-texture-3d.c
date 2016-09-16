@@ -459,6 +459,34 @@ _cogl_texture_3d_get_type (CoglTexture *tex)
   return COGL_TEXTURE_TYPE_3D;
 }
 
+static CoglBool
+_cogl_texture_3d_get_vulkan_info (CoglTexture *tex,
+                                  CoglTextureVulkanInfo *info)
+{
+  CoglContext *ctx = tex->context;
+
+  if (ctx->driver_vtable->texture_3d_get_vulkan_info)
+    {
+      CoglTexture3D *tex_3d = COGL_TEXTURE_3D (tex);
+      ctx->driver_vtable->texture_3d_get_vulkan_info (tex_3d, info);
+      return TRUE;
+    }
+  else
+    return FALSE;
+}
+
+static void
+_cogl_texture_3d_vulkan_move_to (CoglTexture *tex,
+                                 CoglTextureDomain domain,
+                                 VkCommandBuffer cmd_buffer)
+{
+  CoglContext *ctx = tex->context;
+
+  if (ctx->driver_vtable->texture_3d_vulkan_move_to)
+    ctx->driver_vtable->texture_3d_vulkan_move_to (COGL_TEXTURE_3D (tex),
+                                                   domain, cmd_buffer);
+}
+
 static const CoglTextureVtable
 cogl_texture_3d_vtable =
   {
@@ -481,5 +509,7 @@ cogl_texture_3d_vtable =
     _cogl_texture_3d_get_gl_format,
     _cogl_texture_3d_get_type,
     NULL, /* is_foreign */
-    _cogl_texture_3d_set_auto_mipmap
+    _cogl_texture_3d_set_auto_mipmap,
+    _cogl_texture_3d_get_vulkan_info,
+    _cogl_texture_3d_vulkan_move_to
   };

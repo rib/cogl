@@ -629,18 +629,19 @@ _cogl_texture_2d_flush_legacy_texobj_wrap_modes (CoglTexture *tex,
 static void
 _cogl_texture_2d_pre_paint (CoglTexture *tex, CoglTexturePrePaintFlags flags)
 {
+  CoglContext *ctx = tex->context;
   CoglTexture2D *tex_2d = COGL_TEXTURE_2D (tex);
 
   /* Only update if the mipmaps are dirty */
   if ((flags & COGL_TEXTURE_NEEDS_MIPMAP) &&
       tex_2d->auto_mipmap && tex_2d->mipmaps_dirty)
     {
-      CoglContext *ctx = tex->context;
-
       ctx->driver_vtable->texture_2d_generate_mipmap (tex_2d);
 
       tex_2d->mipmaps_dirty = FALSE;
     }
+
+  ctx->texture_driver->pre_paint (ctx, tex);
 }
 
 static void
@@ -736,6 +737,34 @@ _cogl_texture_2d_get_type (CoglTexture *tex)
   return COGL_TEXTURE_TYPE_2D;
 }
 
+static CoglBool
+_cogl_texture_2d_get_vulkan_info (CoglTexture *tex,
+                                  CoglTextureVulkanInfo *info)
+{
+  CoglContext *ctx = tex->context;
+
+  if (ctx->driver_vtable->texture_2d_get_vulkan_info)
+    {
+      CoglTexture2D *tex_2d = COGL_TEXTURE_2D (tex);
+      ctx->driver_vtable->texture_2d_get_vulkan_info (tex_2d, info);
+      return TRUE;
+    }
+  else
+    return FALSE;
+}
+
+static void
+_cogl_texture_2d_vulkan_move_to (CoglTexture *tex,
+                                 CoglTextureDomain domain,
+                                 VkCommandBuffer cmd_buffer)
+{
+  CoglContext *ctx = tex->context;
+
+  if (ctx->driver_vtable->texture_2d_vulkan_move_to)
+    ctx->driver_vtable->texture_2d_vulkan_move_to (COGL_TEXTURE_2D (tex),
+                                                   domain, cmd_buffer);
+}
+
 static const CoglTextureVtable
 cogl_texture_2d_vtable =
   {
@@ -758,5 +787,7 @@ cogl_texture_2d_vtable =
     _cogl_texture_2d_get_gl_format,
     _cogl_texture_2d_get_type,
     _cogl_texture_2d_is_foreign,
-    _cogl_texture_2d_set_auto_mipmap
+    _cogl_texture_2d_set_auto_mipmap,
+    _cogl_texture_2d_get_vulkan_info,
+    _cogl_texture_2d_vulkan_move_to
   };

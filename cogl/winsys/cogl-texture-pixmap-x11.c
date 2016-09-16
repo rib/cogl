@@ -1180,5 +1180,11 @@ cogl_texture_pixmap_x11_vtable =
     _cogl_texture_pixmap_x11_get_gl_format,
     _cogl_texture_pixmap_x11_get_type,
     NULL, /* is_foreign */
-    NULL /* set_auto_mipmap */
+    NULL, /* set_auto_mipmap */
+    NULL, /* get_vulkan_format */
+    NULL, /* get_vulkan_image */
+    NULL, /* get_vulkan_image_view */
+    NULL, /* get_vulkan_image_layout */
+    NULL, /* get_vulkan_component_mapping */
+    NULL /* vulkan_move_to */
   };

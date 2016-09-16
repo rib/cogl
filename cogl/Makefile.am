@@ -23,6 +23,7 @@ AM_CPPFLAGS = \
 	-I$(srcdir)/driver/gl 			\
 	-I$(srcdir)/driver/gl/gl 		\
 	-I$(srcdir)/driver/gl/gles 		\
+	-I$(srcdir)/driver/vulkan 		\
 	$(NULL)
 
 if !USE_GLIB
@@ -35,6 +36,7 @@ AM_CPPFLAGS += \
 	-DCOGL_GL_LIBNAME=\"$(COGL_GL_LIBNAME)\" \
 	-DCOGL_GLES1_LIBNAME=\"$(COGL_GLES1_LIBNAME)\" \
 	-DCOGL_GLES2_LIBNAME=\"$(COGL_GLES2_LIBNAME)\" \
+	-DCOGL_VULKAN_LIBNAME=\"$(COGL_VULKAN_LIBNAME)\" \
 	-DCOGL_LOCALEDIR=\""$(localedir)"\" \
 	$(NULL)
 
@@ -46,9 +48,21 @@ endif
 
 AM_CFLAGS = $(COGL_DEP_CFLAGS) $(COGL_EXTRA_CFLAGS) $(MAINTAINER_CFLAGS)
 
-BUILT_SOURCES += cogl-defines.h cogl-egl-defines.h cogl-gl-header.h
-DISTCLEANFILES += cogl-defines.h cogl-egl-defines.h cogl-gl-header.h
-EXTRA_DIST += cogl-defines.h.in cogl-egl-defines.h.in cogl-gl-header.h.in
+BUILT_SOURCES += \
+	cogl-defines.h \
+	cogl-egl-defines.h \
+	cogl-gl-header.h \
+	cogl-vulkan-header.h
+DISTCLEANFILES += \
+	cogl-defines.h \
+	cogl-egl-defines.h \
+	cogl-gl-header.h \
+	cogl-vulkan-header.h
+EXTRA_DIST += \
+	cogl-defines.h.in \
+	cogl-egl-defines.h.in \
+	cogl-gl-header.h.in \
+	cogl-vulkan-header.h.in
 
 # Note: The cogl-1.0/cogl-gl-1.0 files are essentially for
 # compatability only.  I'm not really sure who could possibly be using
@@ -236,6 +250,157 @@ cogl_driver_sources += \
 	$(NULL)
 endif
 
+# We need to generate .h for the parser
+AM_YFLAGS = -d
+
+noinst_LTLIBRARIES += \
+	libglslang_private.la \
+	libspirv_private.la
+
+libglslang_private_la_CPPFLAGS = \
+	$(AM_CPPFLAGS) \
+	\
+	-D_GLIBCXX_USE_CXX11_ABI=0 \
+	-I$(srcdir)/driver/vulkan/glslang/glslang \
+	-I$(srcdir)/driver/vulkan/glslang/glslang/MachineIndependent \
+	-I$(srcdir)/driver/vulkan/spirv \
+	$(NULL)
+libglslang_private_la_CXXFLAGS = \
+	$(COGL_DEP_CFLAGS) $(COGL_EXTRA_CFLAGS) $(MAINTAINER_CFLAGS) \
+	-DGLSLANG_OSINCLUDE_UNIX \
+	-std=c++11 \
+	$(NULL)
+
+libglslang_private_la_SOURCES = \
+	driver/vulkan/cogl-shader-vulkan.cc \
+	driver/vulkan/cogl-shader-vulkan-private.h \
+	\
+	driver/vulkan/glslang/InitializeDll.cpp \
+	driver/vulkan/glslang/glslang/MachineIndependent/glslang.ypp \
+	driver/vulkan/glslang/glslang/MachineIndependent/Constant.cpp \
+	driver/vulkan/glslang/glslang/MachineIndependent/InfoSink.cpp \
+	driver/vulkan/glslang/glslang/MachineIndependent/Initialize.cpp \
+	driver/vulkan/glslang/glslang/MachineIndependent/IntermTraverse.cpp \
+	driver/vulkan/glslang/glslang/MachineIndependent/Intermediate.cpp \
+	driver/vulkan/glslang/glslang/MachineIndependent/ParseHelper.cpp \
+	driver/vulkan/glslang/glslang/MachineIndependent/PoolAlloc.cpp \
+	driver/vulkan/glslang/glslang/MachineIndependent/RemoveTree.cpp \
+	driver/vulkan/glslang/glslang/MachineIndependent/Scan.cpp \
+	driver/vulkan/glslang/glslang/MachineIndependent/ShaderLang.cpp \
+	driver/vulkan/glslang/glslang/MachineIndependent/SymbolTable.cpp \
+	driver/vulkan/glslang/glslang/MachineIndependent/Versions.cpp \
+	driver/vulkan/glslang/glslang/MachineIndependent/intermOut.cpp \
+	driver/vulkan/glslang/glslang/MachineIndependent/limits.cpp \
+	driver/vulkan/glslang/glslang/MachineIndependent/linkValidate.cpp \
+	driver/vulkan/glslang/glslang/MachineIndependent/parseConst.cpp \
+	driver/vulkan/glslang/glslang/MachineIndependent/parseVersions.h \
+	driver/vulkan/glslang/glslang/MachineIndependent/reflection.cpp \
+	driver/vulkan/glslang/glslang/MachineIndependent/preprocessor/Pp.cpp \
+	driver/vulkan/glslang/glslang/MachineIndependent/preprocessor/PpAtom.cpp \
+	driver/vulkan/glslang/glslang/MachineIndependent/preprocessor/PpContext.cpp \
+	driver/vulkan/glslang/glslang/MachineIndependent/preprocessor/PpMemory.cpp \
+	driver/vulkan/glslang/glslang/MachineIndependent/preprocessor/PpScanner.cpp \
+	driver/vulkan/glslang/glslang/MachineIndependent/preprocessor/PpSymbols.cpp \
+	driver/vulkan/glslang/glslang/MachineIndependent/preprocessor/PpTokens.cpp \
+	driver/vulkan/glslang/glslang/MachineIndependent/propagateNoContraction.cpp \
+	driver/vulkan/glslang/glslang/MachineIndependent/propagateNoContraction.h \
+	driver/vulkan/glslang/glslang/MachineIndependent/glslang.hpp \
+	driver/vulkan/glslang/glslang/MachineIndependent/gl_types.h \
+	driver/vulkan/glslang/glslang/MachineIndependent/Initialize.h \
+	driver/vulkan/glslang/glslang/MachineIndependent/localintermediate.h \
+	driver/vulkan/glslang/glslang/MachineIndependent/ParseHelper.h \
+	driver/vulkan/glslang/glslang/MachineIndependent/reflection.h \
+	driver/vulkan/glslang/glslang/MachineIndependent/RemoveTree.h \
+	driver/vulkan/glslang/glslang/MachineIndependent/Scan.h \
+	driver/vulkan/glslang/glslang/MachineIndependent/ScanContext.h \
+	driver/vulkan/glslang/glslang/MachineIndependent/SymbolTable.h \
+	driver/vulkan/glslang/glslang/MachineIndependent/Versions.h \
+	driver/vulkan/glslang/glslang/MachineIndependent/preprocessor/PpContext.h \
+	driver/vulkan/glslang/glslang/MachineIndependent/preprocessor/PpTokens.h \
+	driver/vulkan/glslang/glslang/GenericCodeGen/CodeGen.cpp \
+	driver/vulkan/glslang/glslang/GenericCodeGen/Link.cpp \
+	driver/vulkan/glslang/glslang/Public/ShaderLang.h \
+	driver/vulkan/glslang/glslang/Include/arrays.h \
+	driver/vulkan/glslang/glslang/Include/BaseTypes.h \
+	driver/vulkan/glslang/glslang/Include/Common.h \
+	driver/vulkan/glslang/glslang/Include/ConstantUnion.h \
+	driver/vulkan/glslang/glslang/Include/InfoSink.h \
+	driver/vulkan/glslang/glslang/Include/InitializeGlobals.h \
+	driver/vulkan/glslang/glslang/Include/intermediate.h \
+	driver/vulkan/glslang/glslang/Include/PoolAlloc.h \
+	driver/vulkan/glslang/glslang/Include/ResourceLimits.h \
+	driver/vulkan/glslang/glslang/Include/revision.h \
+	driver/vulkan/glslang/glslang/Include/ShHandle.h \
+	driver/vulkan/glslang/glslang/Include/Types.h \
+	$(NULL)
+
+libspirv_private_la_CPPFLAGS = \
+	-DG_LOG_DOMAIN=\"Cogl\" 	\
+	-DCOGL_COMPILATION		\
+	-DCOGL_GL_LIBNAME=\"$(COGL_GL_LIBNAME)\" \
+	-DCOGL_GLES1_LIBNAME=\"$(COGL_GLES1_LIBNAME)\" \
+	-DCOGL_GLES2_LIBNAME=\"$(COGL_GLES2_LIBNAME)\" \
+	-DCOGL_VULKAN_LIBNAME=\"$(COGL_VULKAN_LIBNAME)\" \
+	-DCOGL_LOCALEDIR=\""$(localedir)"\" \
+	\
+	-D_GLIBCXX_USE_CXX11_ABI=0 \
+	-I$(srcdir)/driver/vulkan/glslang/glslang \
+	-I$(srcdir)/driver/vulkan/spirv \
+	$(NULL)
+libspirv_private_la_CXXFLAGS = \
+	$(COGL_DEP_CFLAGS) $(COGL_EXTRA_CFLAGS) $(MAINTAINER_CFLAGS) \
+	-DGLSLANG_OSINCLUDE_UNIX \
+	-std=c++11 \
+	$(NULL)
+
+libspirv_private_la_SOURCES = \
+	driver/vulkan/spirv/disassemble.cpp \
+	driver/vulkan/spirv/disassemble.h \
+	driver/vulkan/spirv/doc.cpp \
+	driver/vulkan/spirv/doc.h \
+	driver/vulkan/spirv/InReadableOrder.cpp \
+	driver/vulkan/spirv/GlslangToSpv.cpp \
+	driver/vulkan/spirv/GlslangToSpv.h \
+	driver/vulkan/spirv/Logger.cpp \
+	driver/vulkan/spirv/Logger.h \
+	driver/vulkan/spirv/spirv.hpp \
+	driver/vulkan/spirv/SpvBuilder.cpp \
+	driver/vulkan/spirv/SpvBuilder.h \
+	driver/vulkan/spirv/spvIR.h \
+	$(NULL)
+
+CLEANFILES += \
+	driver/vulkan/glslang/glslang/MachineIndependent/glslang.cpp \
+	driver/vulkan/glslang/glslang/MachineIndependent/glslang.hpp \
+	$(NULL)
+
+if COGL_DRIVER_VULKAN_SUPPORTED
+libcogl_la_CXXFLAGS = -std=c++11
+
+cogl_driver_sources += \
+	driver/vulkan/cogl-buffer-vulkan.c \
+	driver/vulkan/cogl-buffer-vulkan-private.h \
+	driver/vulkan/cogl-driver-vulkan.c \
+	driver/vulkan/cogl-framebuffer-vulkan.c \
+	driver/vulkan/cogl-framebuffer-vulkan-private.h \
+	driver/vulkan/cogl-pipeline-fragend-vulkan.c \
+	driver/vulkan/cogl-pipeline-fragend-vulkan-private.h \
+	driver/vulkan/cogl-pipeline-progend-vulkan.c \
+	driver/vulkan/cogl-pipeline-progend-vulkan-private.h \
+	driver/vulkan/cogl-pipeline-vertend-vulkan.c \
+	driver/vulkan/cogl-pipeline-vertend-vulkan-private.h \
+	driver/vulkan/cogl-pipeline-vulkan.c \
+	driver/vulkan/cogl-pipeline-vulkan-private.h \
+	driver/vulkan/cogl-sampler-vulkan.c \
+	driver/vulkan/cogl-sampler-vulkan-private.h \
+	driver/vulkan/cogl-texture-2d-vulkan.c \
+	driver/vulkan/cogl-texture-2d-vulkan-private.h \
+	driver/vulkan/cogl-texture-driver-vulkan.c \
+	driver/vulkan/cogl-util-vulkan.c \
+	driver/vulkan/cogl-util-vulkan-private.h \
+	$(NULL)
+endif
+
 # winsys sources, common to all backends
 cogl_winsys_common_sources = \
 	winsys/cogl-winsys-private.h \
@@ -401,6 +566,8 @@ cogl_sources_c = \
 	gl-prototypes/cogl-in-gles2-core-functions.h	\
 	gl-prototypes/cogl-fixed-functions.h	\
 	gl-prototypes/cogl-glsl-functions.h	\
+	vulkan-prototypes/cogl-all-vulkan-functions.h	\
+	vulkan-prototypes/cogl-core-vulkan-functions.h	\
 	cogl-memory-stack-private.h		\
 	cogl-memory-stack.c			\
 	cogl-magazine-private.h		\
@@ -537,6 +704,16 @@ cogl_sources_c += \
 	winsys/cogl-winsys-sdl2.c \
 	cogl-sdl.c
 endif
+if SUPPORT_VULKAN_WAYLAND
+cogl_sources_c += \
+	winsys/cogl-winsys-vulkan-wayland-private.h \
+	winsys/cogl-winsys-vulkan-wayland.c
+endif
+# if SUPPORT_VULKAN_XLIB
+# cogl_sources_c += \
+# 	winsys/cogl-winsys-vulkan-xlib-private.h \
+# 	winsys/cogl-winsys-vulkan-xlib.c
+# endif
 
 EXTRA_DIST += stb_image.c
 
@@ -552,6 +729,9 @@ libcogl_la_LIBADD = $(LIBM) $(COGL_DEP_LIBS) $(COGL_EXTRA_LDFLAGS)
 if !USE_GLIB
 libcogl_la_LIBADD += $(top_builddir)/deps/glib/libglib.la
 libcogl_la_LIBADD += $(top_builddir)/deps/gmodule/libgmodule.la
+endif
+if COGL_DRIVER_VULKAN_SUPPORTED
+libcogl_la_LIBADD += $(builddir)/libglslang_private.la $(builddir)/libspirv_private.la -lstdc++
 endif
 if UNIT_TESTS
 libcogl_la_LIBADD += $(top_builddir)/test-fixtures/libtest-fixtures.la

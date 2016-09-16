@@ -634,6 +634,12 @@ _cogl_texture_driver_find_best_gl_get_data_format
   return COGL_PIXEL_FORMAT_RGBA_8888;
 }
 
+static void
+_cogl_texture_driver_pre_paint (CoglContext *ctx,
+                                CoglTexture *texture)
+{
+}
+
 const CoglTextureDriver
 _cogl_texture_driver_gles =
   {
@@ -648,5 +654,6 @@ _cogl_texture_driver_gles =
     _cogl_texture_driver_size_supported_3d,
     _cogl_texture_driver_try_setting_gl_border_color,
     _cogl_texture_driver_allows_foreign_gl_target,
-    _cogl_texture_driver_find_best_gl_get_data_format
+    _cogl_texture_driver_find_best_gl_get_data_format,
+    _cogl_texture_driver_pre_paint
   };

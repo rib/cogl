@@ -82,6 +82,12 @@
 #ifdef COGL_HAS_SDL_SUPPORT
 #include "cogl-winsys-sdl-private.h"
 #endif
+#ifdef COGL_HAS_VULKAN_PLATFORM_WAYLAND_SUPPORT
+#include "cogl-winsys-vulkan-wayland-private.h"
+#endif
+/* #ifdef COGL_HAS_VULKAN_PLATFORM_XCB_SUPPORT */
+/* #include "cogl-winsys-vulkan-xcb-private.h" */
+/* #endif */
 
 #ifdef COGL_HAS_XLIB_SUPPORT
 #include "cogl-xlib-renderer.h"
@@ -96,6 +102,10 @@ extern const CoglDriverVtable _cogl_driver_gl;
 #if defined (HAVE_COGL_GLES) || defined (HAVE_COGL_GLES2)
 extern const CoglTextureDriver _cogl_texture_driver_gles;
 extern const CoglDriverVtable _cogl_driver_gles;
+#endif
+#ifdef HAVE_COGL_VULKAN
+extern const CoglTextureDriver _cogl_texture_driver_vulkan;
+extern const CoglDriverVtable _cogl_driver_vulkan;
 #endif
 
 extern const CoglDriverVtable _cogl_driver_nop;
@@ -186,6 +196,18 @@ static CoglDriverDescription _cogl_drivers[] =
     NULL,
   },
 #endif
+#ifdef HAVE_COGL_VULKAN
+  {
+    COGL_DRIVER_VULKAN,
+    "vulkan",
+    COGL_RENDERER_CONSTRAINT_USES_VULKAN,
+    { COGL_PRIVATE_FEATURE_GL_PROGRAMMABLE,
+      -1 },
+    &_cogl_driver_vulkan,
+    &_cogl_texture_driver_vulkan,
+    COGL_VULKAN_LIBNAME,
+  },
+#endif
   {
     COGL_DRIVER_NOP,
     "nop",
@@ -229,6 +251,12 @@ static CoglWinsysVtableGetter _cogl_winsys_vtable_getters[] =
 #ifdef COGL_HAS_SDL_SUPPORT
   _cogl_winsys_sdl_get_vtable,
 #endif
+#ifdef COGL_HAS_VULKAN_PLATFORM_WAYLAND_SUPPORT
+  _cogl_winsys_vulkan_wayland_get_vtable,
+#endif
+/* #ifdef COGL_HAS_VULKAN_PLATFORM_XCB_SUPPORT */
+/*   _cogl_winsys_vulkan_xcb_get_vtable, */
+/* #endif */
   _cogl_winsys_stub_get_vtable,
 };
 
@@ -505,6 +533,8 @@ driver_id_to_name (CoglDriver id)
         return "gles2";
       case COGL_DRIVER_WEBGL:
         return "webgl";
+      case COGL_DRIVER_VULKAN:
+        return "vulkan";
       case COGL_DRIVER_NOP:
         return "nop";
       case COGL_DRIVER_ANY:

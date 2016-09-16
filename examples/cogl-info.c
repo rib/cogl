@@ -153,6 +153,8 @@ get_winsys_name_for_id (CoglWinsysID winsys_id)
       return "EGL + Windows WGL platform";
     case COGL_WINSYS_ID_SDL:
       return "EGL + SDL platform";
+    case COGL_WINSYS_ID_VULKAN_WAYLAND:
+      return "Vulkan + Wayland platform";
     }
   g_return_val_if_reached ("Unknown");
 }

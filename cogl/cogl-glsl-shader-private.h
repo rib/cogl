@@ -42,4 +42,12 @@ _cogl_glsl_shader_get_source_with_boilerplate (CoglContext *ctx,
                                                const char **strings_in,
                                                const int *lengths_in);
 
+GString *
+_cogl_glsl_vulkan_shader_get_source_with_boilerplate (CoglContext *ctx,
+                                                      CoglGlslShaderType shader_type,
+                                                      CoglPipeline *pipeline,
+                                                      GString *block,
+                                                      GString *global,
+                                                      GString *source);
+
 #endif /* _COGL_GLSL_SHADER_PRIVATE_H_ */

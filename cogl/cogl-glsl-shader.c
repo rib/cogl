@@ -180,3 +180,123 @@ _cogl_glsl_shader_get_source_with_boilerplate (CoglContext *ctx,
 
   return result;
 }
+
+/**/
+
+struct _CoglVulkanShaderBuilder
+{
+  GString *attributes;
+  GString *uniforms;
+};
+
+static CoglBool
+add_layer_vulkan_vertex_boilerplate_cb (CoglPipelineLayer *layer,
+                                        void *user_data)
+{
+  struct _CoglVulkanShaderBuilder *builder = user_data;
+  int unit_index = _cogl_pipeline_layer_get_unit_index (layer);
+  g_string_append_printf (builder->attributes,
+                          "in vec4 _cogl_tex_coord%d_in;\n"
+                          "#define cogl_tex_coord%d_in _cogl_tex_coord%d_in\n"
+                          "#define cogl_texture_matrix%i cogl_texture_matrix[%i]\n"
+                          "#define cogl_tex_coord%i_out _cogl_tex_coord[%i]\n",
+                          unit_index,
+                          layer->index,
+                          unit_index,
+                          layer->index,
+                          unit_index,
+                          layer->index,
+                          unit_index);
+  return TRUE;
+}
+
+static CoglBool
+add_layer_vulkan_fragment_boilerplate_cb (CoglPipelineLayer *layer,
+                                          void *user_data)
+{
+  struct _CoglVulkanShaderBuilder *builder = user_data;
+  g_string_append_printf (builder->attributes,
+                          "#define cogl_tex_coord%i_in _cogl_tex_coord[%i]\n",
+                          layer->index,
+                          _cogl_pipeline_layer_get_unit_index (layer));
+  return TRUE;
+}
+
+GString *
+_cogl_glsl_vulkan_shader_get_source_with_boilerplate (CoglContext *ctx,
+                                                      CoglGlslShaderType shader_type,
+                                                      CoglPipeline *pipeline,
+                                                      GString *block,
+                                                      GString *global,
+                                                      GString *source)
+{
+  int n_layers = cogl_pipeline_get_n_layers (pipeline);
+  struct _CoglVulkanShaderBuilder builder = {
+    g_string_new (NULL),
+    g_string_new (NULL),
+  };
+
+  g_string_append_printf (builder.uniforms, "#version %i core\n\n",
+                          ctx->glsl_version_to_use);
+
+  g_string_append (builder.uniforms, _COGL_VULKAN_SHADER_BOILERPLATE_BEGIN);
+
+  /* Build with standard 140 uniform block. */
+  g_string_append (builder.uniforms, _COGL_VULKAN_SHADER_UNIFORM_BEGIN);
+  g_string_append_len (builder.uniforms, block->str, block->len);
+
+  /* Then add the layers (some uniforms, some attributes). */
+  n_layers = cogl_pipeline_get_n_layers (pipeline);
+  if (n_layers)
+    {
+      g_string_append_printf (builder.uniforms,
+                              "uniform mat4 cogl_texture_matrix[%d];\n",
+                              n_layers);
+
+      if (shader_type == COGL_GLSL_SHADER_TYPE_VERTEX)
+        {
+          g_string_append_printf (builder.attributes,
+                                  "out vec4 _cogl_tex_coord[%d];\n",
+                                  n_layers);
+
+          _cogl_pipeline_foreach_layer_internal (pipeline,
+                                                 add_layer_vulkan_vertex_boilerplate_cb,
+                                                 &builder);
+        }
+      else if (shader_type == COGL_GLSL_SHADER_TYPE_FRAGMENT)
+        {
+          g_string_append_printf (builder.attributes,
+                                  "in vec4 _cogl_tex_coord[%d];\n",
+                                  n_layers);
+          _cogl_pipeline_foreach_layer_internal (pipeline,
+                                                 add_layer_vulkan_fragment_boilerplate_cb,
+                                                 &builder);
+        }
+    }
+
+  /* End the uniform block. */
+  g_string_append (builder.uniforms, _COGL_VULKAN_SHADER_UNIFORM_END);
+
+  if (shader_type == COGL_GLSL_SHADER_TYPE_VERTEX)
+    g_string_append (builder.attributes,
+                     _COGL_VERTEX_VULKAN_SHADER_BOILERPLATE);
+  else
+    g_string_append (builder.attributes,
+                     _COGL_FRAGMENT_VULKAN_SHADER_BOILERPLATE);
+
+  g_string_append_len (builder.uniforms,
+                       builder.attributes->str,
+                       builder.attributes->len);
+  g_string_free (builder.attributes, TRUE);
+
+  g_string_append_len (builder.uniforms, global->str, global->len);
+  g_string_append_len (builder.uniforms, source->str, source->len);
+
+  if (G_UNLIKELY (COGL_DEBUG_ENABLED (COGL_DEBUG_SHOW_SOURCE)))
+    COGL_NOTE (SHOW_SOURCE, "%s shader:\n%s",
+               shader_type == COGL_GLSL_SHADER_TYPE_VERTEX ?
+               "vertex" : "fragment",
+               builder.uniforms->str);
+
+  return builder.uniforms;
+}

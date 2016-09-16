@@ -193,6 +193,8 @@ struct _CoglFramebuffer
   CoglFramebufferBits bits;
 
   int                 samples_per_pixel;
+
+  void *winsys;
 };
 
 typedef enum {

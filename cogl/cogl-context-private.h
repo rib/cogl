@@ -56,6 +56,7 @@
 #include "cogl-sampler-cache-private.h"
 #include "cogl-gpu-info-private.h"
 #include "cogl-gl-header.h"
+#include "cogl-vulkan-header.h"
 #include "cogl-framebuffer-private.h"
 #include "cogl-onscreen-private.h"
 #include "cogl-fence-private.h"
@@ -158,6 +159,7 @@ struct _CoglContext
   CoglPipeline     *opaque_color_pipeline; /* used for set_source_color */
   CoglPipeline     *blended_color_pipeline; /* used for set_source_color */
   CoglPipeline     *texture_pipeline; /* used for set_source_texture */
+  GString          *codegen_uniform_block_buffer;
   GString          *codegen_header_buffer;
   GString          *codegen_source_buffer;
   GString          *codegen_boilerplate_buffer;
@@ -357,6 +359,22 @@ struct _CoglContext
 #undef COGL_EXT_BEGIN
 #undef COGL_EXT_FUNCTION
 #undef COGL_EXT_END
+
+#ifdef HAVE_COGL_VULKAN
+#define COGL_VULKAN_EXT_BEGIN(name,                                     \
+                              min_vk_major, min_vk_minor, min_vk_micro, \
+                              extension_suffixes)
+#define COGL_VULKAN_EXT_FUNCTION(name)          \
+  PFN_##name name;
+#define COGL_VULKAN_EXT_END()
+
+#include "vulkan-prototypes/cogl-all-vulkan-functions.h"
+
+#undef COGL_VULKAN_EXT_BEGIN
+#undef COGL_VULKAN_EXT_FUNCTION
+#undef COGL_VULKAN_EXT_END
+#endif
+
 };
 
 CoglContext *

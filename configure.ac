@@ -816,9 +816,52 @@ AS_IF([test "x$enable_gl" = "xyes"],
         HAVE_GL=1
       ])
 
+HAVE_VULKAN=0
+AC_ARG_ENABLE(
+  [vulkan],
+  [AC_HELP_STRING([--enable-vulkan=@<:@no/yes@:>@], [Enable support for Vulkan @<:@default=no@:>@])],
+  [],
+  enable_vulkan=no
+)
+AS_IF([test "x$enable_vulkan" = "xyes"],
+      [
+        enabled_drivers="$enabled_drivers vulkan"
+
+        cogl_vulkan_headers="vulkan/vulkan.h"
+        AC_DEFINE([HAVE_COGL_VULKAN], 1, [Have Vulkan for rendering])
+        COGL_DEFINES_SYMBOLS="$COGL_DEFINES_SYMBOLS COGL_HAS_VULKAN"
+        HAVE_VULKAN=1
+
+        AC_PROG_YACC
+        dnl AX_PROG_BISON([], [AC_MSG_ERROR([bison not found])])
+
+        AC_CHECK_HEADER([vulkan/vulkan.h],
+                        [],
+                        [AC_MSG_ERROR([Unable to locate vulkan/vulkan.h])])
+
+        PKG_CHECK_MODULES([XLIB], [x11],
+                          [
+                           COGL_DEFINES_SYMBOLS="$COGL_DEFINES_SYMBOLS COGL_HAS_VULKAN_PLATFORM_XLIB_SUPPORT"
+                           SUPPORT_VULKAN_XLIB=yes
+                          ],
+                          [])
+        PKG_CHECK_MODULES([WAYLAND_CLIENT], [wayland-client >= wayland_req_version],
+                          [
+                           COGL_DEFINES_SYMBOLS="$COGL_DEFINES_SYMBOLS COGL_HAS_VULKAN_PLATFORM_WAYLAND_SUPPORT"
+                           SUPPORT_VULKAN_WAYLAND=yes
+                          ],
+                          [])
+
+        COGL_VULKAN_LIBNAME="libvulkan.so"
+        COGL_EXTRA_LDFLAGS="$COGL_EXTRA_LDFLAGS -lstdc++"
+      ])
+
 AM_CONDITIONAL([COGL_DRIVER_GL_SUPPORTED], [test "x$enable_gl" = "xyes"])
 AM_CONDITIONAL([COGL_DRIVER_GLES_SUPPORTED],
                [test "x$enable_gles1" = "xyes" || test "x$enable_gles2" = "xyes"])
+AM_CONDITIONAL([COGL_DRIVER_VULKAN_SUPPORTED], [test "x$enable_vulkan" = "xyes"])
+AM_CONDITIONAL(SUPPORT_VULKAN_WAYLAND, [test "x$SUPPORT_VULKAN_WAYLAND" = "xyes"])
+AM_CONDITIONAL(SUPPORT_VULKAN_XLIB, [test "x$SUPPORT_VULKAN_XLIB" = "xyes"])
 
 dnl Allow the GL library names and default driver to be overridden with configure options
 AC_ARG_WITH([gl-libname],
@@ -844,6 +887,7 @@ AM_CONDITIONAL(HAVE_COGL_DEFAULT_DRIVER,
 
 
 AC_SUBST([COGL_GL_LIBNAME])
+AC_SUBST([COGL_VULKAN_LIBNAME])
 AC_SUBST([HAVE_GL])
 AC_SUBST([COGL_GLES1_LIBNAME])
 AC_SUBST([HAVE_GLES1])
@@ -1452,6 +1496,13 @@ for x in $cogl_gl_headers; do
 done;
 AC_SUBST(COGL_GL_HEADER_INCLUDES)
 AM_SUBST_NOTMAKE(COGL_GL_HEADER_INCLUDES)
+COGL_VULKAN_HEADER_INCLUDES=""
+for x in $cogl_vulkan_headers; do
+  COGL_VULKAN_HEADER_INCLUDES="$COGL_VULKAN_HEADER_INCLUDES
+#include <$x>"
+done;
+AC_SUBST(COGL_VULKAN_HEADER_INCLUDES)
+AM_SUBST_NOTMAKE(COGL_VULKAN_HEADER_INCLUDES)
 
 AC_DEFINE([COGL_ENABLE_EXPERIMENTAL_2_0_API], [1],
           [Can use Cogl 2.0 API internally])
@@ -1492,6 +1543,7 @@ cogl/cogl-defines.h.win32
 cogl/cogl-defines.h.win32_SDL
 cogl/cogl-gl-header.h
 cogl/cogl-egl-defines.h
+cogl/cogl-vulkan-header.h
 cogl/cogl.rc
 cogl-pango/Makefile
 cogl-pango/cogl-pango-1.0.pc
@@ -1544,7 +1596,7 @@ echo " • Features:"
 echo "        Drivers: ${enabled_drivers}"
 AS_IF([test "x$GL_LIBRARY_DIRECTLY_LINKED" != xyes],
       [for driver in $enabled_drivers; do
-         driver=`echo $driver | tr "[gles]" "[GLES]"`
+         driver=`echo $driver | tr "[gles]" "[GLES]" | tr "[vulkan]" "[VULKAN]"`
          libname=`eval echo \\$COGL_${driver}_LIBNAME`
          echo "        Library name for $driver: $libname"
        done])

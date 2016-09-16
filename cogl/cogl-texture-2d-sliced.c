@@ -1381,21 +1381,28 @@ _cogl_texture_2d_sliced_transform_quad_coords_to_gl (CoglTexture *tex,
           ? COGL_TRANSFORM_HARDWARE_REPEAT : COGL_TRANSFORM_NO_REPEAT);
 }
 
+static CoglTexture2D *
+_cogl_texture_2d_sliced_get_first_texture (CoglTexture2DSliced *tex_2ds)
+{
+  if (tex_2ds->slice_textures == NULL)
+    return NULL;
+
+  if (tex_2ds->slice_textures->len < 1)
+    return NULL;
+
+  return g_array_index (tex_2ds->slice_textures, CoglTexture2D *, 0);
+}
+
 static CoglBool
 _cogl_texture_2d_sliced_get_gl_texture (CoglTexture *tex,
                                         GLuint *out_gl_handle,
                                         GLenum *out_gl_target)
 {
-  CoglTexture2DSliced *tex_2ds = COGL_TEXTURE_2D_SLICED (tex);
-  CoglTexture2D *slice_tex;
+  CoglTexture2D *slice_tex =
+    _cogl_texture_2d_sliced_get_first_texture (COGL_TEXTURE_2D_SLICED (tex));
 
-  if (tex_2ds->slice_textures == NULL)
+  if (slice_tex == NULL)
     return FALSE;
-
-  if (tex_2ds->slice_textures->len < 1)
-    return FALSE;
-
-  slice_tex = g_array_index (tex_2ds->slice_textures, CoglTexture2D *, 0);
 
   return cogl_texture_get_gl_texture (COGL_TEXTURE (slice_tex),
                                       out_gl_handle, out_gl_target);
@@ -1521,6 +1528,35 @@ _cogl_texture_2d_sliced_get_type (CoglTexture *tex)
   return COGL_TEXTURE_TYPE_2D;
 }
 
+static CoglBool
+_cogl_texture_2d_sliced_get_vulkan_info (CoglTexture *tex,
+                                         CoglTextureVulkanInfo *info)
+{
+  CoglTexture2D *slice_tex =
+    _cogl_texture_2d_sliced_get_first_texture (COGL_TEXTURE_2D_SLICED (tex));
+
+  if (slice_tex == NULL)
+    return FALSE;
+
+  return _cogl_texture_get_vulkan_info (COGL_TEXTURE (slice_tex), info);
+}
+
+static void
+_cogl_texture_2d_sliced_vulkan_move_to (CoglTexture *tex,
+                                        CoglTextureDomain domain,
+                                        VkCommandBuffer cmd_buffer)
+{
+  CoglTexture2D *slice_tex =
+    _cogl_texture_2d_sliced_get_first_texture (COGL_TEXTURE_2D_SLICED (tex));
+
+  if (slice_tex == NULL)
+    return;
+
+  /* Forward on to the sub texture */
+  return _cogl_texture_vulkan_move_to (COGL_TEXTURE (slice_tex),
+                                       domain, cmd_buffer);
+}
+
 static const CoglTextureVtable
 cogl_texture_2d_sliced_vtable =
   {
@@ -1543,5 +1579,7 @@ cogl_texture_2d_sliced_vtable =
     _cogl_texture_2d_sliced_get_gl_format,
     _cogl_texture_2d_sliced_get_type,
     _cogl_texture_2d_sliced_is_foreign,
-    NULL /* set_auto_mipmap */
+    NULL, /* set_auto_mipmap */
+    _cogl_texture_2d_sliced_get_vulkan_info,
+    _cogl_texture_2d_sliced_vulkan_move_to
   };

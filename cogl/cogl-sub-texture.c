@@ -454,6 +454,27 @@ _cogl_sub_texture_get_type (CoglTexture *tex)
   return _cogl_texture_get_type (sub_tex->full_texture);
 }
 
+static CoglBool
+_cogl_sub_texture_get_vulkan_info (CoglTexture *tex,
+                                   CoglTextureVulkanInfo *info)
+{
+  CoglSubTexture *sub_tex = COGL_SUB_TEXTURE (tex);
+
+  return _cogl_texture_get_vulkan_info (sub_tex->full_texture, info);
+}
+
+static void
+_cogl_sub_texture_vulkan_move_to (CoglTexture *tex,
+                                  CoglTextureDomain domain,
+                                  VkCommandBuffer cmd_buffer)
+{
+  CoglSubTexture *sub_tex = COGL_SUB_TEXTURE (tex);
+
+  /* Forward on to the sub texture */
+  return _cogl_texture_vulkan_move_to (sub_tex->full_texture,
+                                       domain, cmd_buffer);
+}
+
 static const CoglTextureVtable
 cogl_sub_texture_vtable =
   {
@@ -476,5 +497,7 @@ cogl_sub_texture_vtable =
     _cogl_sub_texture_get_gl_format,
     _cogl_sub_texture_get_type,
     NULL, /* is_foreign */
-    NULL /* set_auto_mipmap */
+    NULL, /* set_auto_mipmap */
+    _cogl_sub_texture_get_vulkan_info,
+    _cogl_sub_texture_vulkan_move_to
   };

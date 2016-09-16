@@ -696,6 +696,8 @@ _cogl_driver_gl =
     _cogl_texture_2d_gl_flush_legacy_texobj_wrap_modes,
     _cogl_texture_2d_gl_copy_from_bitmap,
     _cogl_texture_2d_gl_get_data,
+    NULL, /* texture_2d_get_vulkan_info */
+    NULL, /* texture_2d_vulkan_move_to */
     _cogl_texture_3d_gl_free,
     _cogl_texture_3d_gl_init,
     _cogl_texture_3d_gl_allocate,
@@ -704,6 +706,8 @@ _cogl_driver_gl =
     _cogl_texture_3d_gl_generate_mipmap,
     _cogl_texture_3d_gl_flush_legacy_texobj_filters,
     _cogl_texture_3d_gl_flush_legacy_texobj_wrap_modes,
+    NULL, /* texture_3d_get_vulkan_info */
+    NULL, /* texture_3d_vulkan_move_to */
     _cogl_texture_rectangle_gl_free,
     _cogl_texture_rectangle_gl_init,
     _cogl_texture_rectangle_gl_allocate,

@@ -42,8 +42,11 @@
 #include "cogl-egl-defines.h"
 #endif
 
+#include "cogl-vulkan-header.h"
+
 typedef struct _CoglTextureVtable     CoglTextureVtable;
 typedef struct _CoglTextureGLInfo     CoglTextureGLInfo;
+typedef struct _CoglTextureVulkanInfo CoglTextureVulkanInfo;
 
 /* Encodes three possibiloities result of transforming a quad */
 typedef enum {
@@ -64,6 +67,14 @@ typedef enum {
      automatically update the mipmap tree */
   COGL_TEXTURE_NEEDS_MIPMAP = 1
 } CoglTexturePrePaintFlags;
+
+typedef enum {
+  COGL_TEXTURE_DOMAIN_ATTACHMENT,
+  COGL_TEXTURE_DOMAIN_HOST,
+  COGL_TEXTURE_DOMAIN_SAMPLING,
+  COGL_TEXTURE_DOMAIN_TRANSFER_DESTINATION,
+  COGL_TEXTURE_DOMAIN_TRANSFER_SOURCE,
+} CoglTextureDomain;
 
 struct _CoglTextureVtable
 {
@@ -149,13 +160,21 @@ struct _CoglTextureVtable
   /* Only needs to be implemented if is_primitive == TRUE */
   void (* set_auto_mipmap) (CoglTexture *texture,
                             CoglBool value);
+
+  CoglBool (* get_vulkan_info) (CoglTexture *tex,
+                                CoglTextureVulkanInfo *data);
+
+  void (* vulkan_move_to) (CoglTexture *tex,
+                           CoglTextureDomain domain,
+                           VkCommandBuffer cmd_buffer);
 };
 
 typedef enum _CoglTextureSoureType {
   COGL_TEXTURE_SOURCE_TYPE_SIZED = 1,
   COGL_TEXTURE_SOURCE_TYPE_BITMAP,
   COGL_TEXTURE_SOURCE_TYPE_EGL_IMAGE,
-  COGL_TEXTURE_SOURCE_TYPE_GL_FOREIGN
+  COGL_TEXTURE_SOURCE_TYPE_GL_FOREIGN,
+  COGL_TEXTURE_SOURCE_TYPE_VULKAN_FOREIGN
 } CoglTextureSourceType;
 
 typedef struct _CoglTextureLoader
@@ -187,6 +206,17 @@ typedef struct _CoglTextureLoader
       unsigned int gl_handle;
       CoglPixelFormat format;
     } gl_foreign;
+#if defined (COGL_HAS_VULKAN)
+    struct {
+      int width;
+      int height;
+      VkImage image;
+      VkFormat format;
+      VkComponentMapping component_mapping;
+      VkImageLayout image_layout;
+      VkAccessFlags access_mask;
+    } vulkan_foreign;
+#endif
   } src;
 } CoglTextureLoader;
 
@@ -242,6 +272,15 @@ struct _CoglTextureGLInfo
   GLenum format;
   GLuint handle;
   GLenum target;
+};
+
+struct _CoglTextureVulkanInfo
+{
+  VkFormat format;
+  VkImage image;
+  VkImageView image_view;
+  VkImageLayout image_layout;
+  VkComponentMapping component_mapping;
 };
 
 void
@@ -413,5 +452,29 @@ _cogl_texture_create_loader (void);
 void
 _cogl_texture_copy_internal_format (CoglTexture *src,
                                     CoglTexture *dest);
+
+CoglBool
+_cogl_texture_get_vulkan_info (CoglTexture *texture,
+                               CoglTextureVulkanInfo *info);
+
+VkFormat
+_cogl_texture_get_vulkan_format (CoglTexture *texture);
+
+VkImage
+_cogl_texture_get_vulkan_image (CoglTexture *texture);
+
+VkImageView
+_cogl_texture_get_vulkan_image_view (CoglTexture *texture);
+
+VkImageLayout
+_cogl_texture_get_vulkan_image_layout (CoglTexture *texture);
+
+VkComponentMapping
+_cogl_texture_get_vulkan_component_mapping (CoglTexture *texture);
+
+void
+_cogl_texture_vulkan_move_to (CoglTexture *texture,
+                              CoglTextureDomain domain,
+                              VkCommandBuffer cmd_buffer);
 
 #endif /* __COGL_TEXTURE_PRIVATE_H */
