@@ -414,10 +414,11 @@ _cogl_framebuffer_vulkan_begin_render_pass (CoglFramebuffer *framebuffer)
 }
 
 static void
-_cogl_framebuffer_vulkan_flush_viewport_state (CoglFramebuffer *framebuffer)
+_cogl_framebuffer_vulkan_flush_viewport_scissor_state (CoglFramebuffer *framebuffer)
 {
   CoglContext *ctx = framebuffer->context;
   CoglFramebufferVulkan *vk_fb = framebuffer->winsys;
+  VkRect2D scissor_rect = vk_fb->scissor_rect;
   VkViewport vk_viewport;
 
   g_assert (framebuffer->viewport_width >=0 &&
@@ -432,17 +433,6 @@ _cogl_framebuffer_vulkan_flush_viewport_state (CoglFramebuffer *framebuffer)
   vk_viewport.minDepth = 0;
   vk_viewport.maxDepth = 1;
 
-  /* Convert the Cogl viewport y offset to an OpenGL viewport y offset
-   * NB: OpenGL defines its window and viewport origins to be bottom
-   * left, while Cogl defines them to be top left.
-   * NB: We render upside down to offscreen framebuffers so we don't
-   * need to convert the y offset in this case. */
-  /* if (cogl_is_offscreen (framebuffer)) */
-  /*   vk_viewport.y = framebuffer->viewport_y; */
-  /* else */
-  /*   vk_viewport.y = framebuffer->height - */
-  /*     (framebuffer->viewport_y + framebuffer->viewport_height); */
-
   COGL_NOTE (VULKAN, "Setting viewport to (%f, %f, %f, %f)",
              vk_viewport.x,
              vk_viewport.y,
@@ -450,6 +440,15 @@ _cogl_framebuffer_vulkan_flush_viewport_state (CoglFramebuffer *framebuffer)
              vk_viewport.height);
 
   VK ( ctx, vkCmdSetViewport (vk_fb->cmd_buffer, 0, 1, &vk_viewport) );
+
+  /* Scissor disabled in Cogl is 0x0 but in Vulkan it needs to be the
+     framebuffer's size. */
+  if (scissor_rect.extent.width == 0 || scissor_rect.extent.height == 0)
+    {
+      scissor_rect.extent.width = framebuffer->width;
+      scissor_rect.extent.height = framebuffer->height;
+    }
+  VK ( ctx, vkCmdSetScissor (vk_fb->cmd_buffer, 0, 1, &scissor_rect) );
 }
 
 void
@@ -459,22 +458,19 @@ _cogl_clip_stack_vulkan_flush (CoglClipStack *stack,
   CoglContext *ctx = framebuffer->context;
   CoglFramebufferVulkan *vk_fb;
   int x0, y0, x1, y1;
-  VkRect2D vk_rect;
 
   if (G_UNLIKELY (!framebuffer->allocated))
     cogl_framebuffer_allocate (framebuffer, NULL);
 
   vk_fb = framebuffer->winsys;
-  _cogl_framebuffer_vulkan_begin_render_pass (framebuffer);
 
   _cogl_clip_stack_get_bounds (stack, &x0, &y0, &x1, &y1);
 
-  vk_rect.offset.x = x0;
-  vk_rect.offset.y = y0;
-  vk_rect.extent.width = x1 - x0;
-  vk_rect.extent.height = y1 - y0;
+  vk_fb->scissor_rect.offset.x = x0;
+  vk_fb->scissor_rect.offset.y = y0;
+  vk_fb->scissor_rect.extent.width = x1 - x0;
+  vk_fb->scissor_rect.extent.height = y1 - y0;
 
-  VK ( ctx, vkCmdSetScissor (vk_fb->cmd_buffer, 0, 1, &vk_rect) );
 }
 
 static void
@@ -707,7 +703,7 @@ _cogl_framebuffer_vulkan_draw_attributes (CoglFramebuffer *framebuffer,
   _cogl_flush_attributes_state (framebuffer, pipeline, flags,
                                 attributes, n_attributes);
 
-  _cogl_framebuffer_vulkan_flush_viewport_state (framebuffer);
+  _cogl_framebuffer_vulkan_flush_viewport_scissor_state (framebuffer);
 
   VK ( ctx, vkCmdDraw (vk_fb->cmd_buffer, n_vertices, 1, first_vertex, 0) );
   vk_fb->cmd_buffer_length++;
@@ -739,7 +735,7 @@ _cogl_framebuffer_vulkan_draw_indexed_attributes (CoglFramebuffer *framebuffer,
   _cogl_flush_attributes_state (framebuffer, pipeline, flags,
                                 attributes, n_attributes);
 
-  _cogl_framebuffer_vulkan_flush_viewport_state (framebuffer);
+  _cogl_framebuffer_vulkan_flush_viewport_scissor_state (framebuffer);
 
   VK ( ctx, vkCmdBindIndexBuffer (vk_fb->cmd_buffer, vk_buf->buffer,
                                   indices->offset,

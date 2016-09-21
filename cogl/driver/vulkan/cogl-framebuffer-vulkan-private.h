@@ -39,6 +39,8 @@ typedef struct _CoglFramebufferVulkan
   VkImage color_image;
   VkFormat color_format;
 
+  VkRect2D scissor_rect;
+
   /* Owned. */
   VkFormat depth_format;
   VkImage depth_image;
