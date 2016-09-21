@@ -53,7 +53,7 @@
 
 typedef struct _CoglPipelineVulkan
 {
-  VkPipeline pipeline;
+  VkPipeline pipelines[VK_PRIMITIVE_TOPOLOGY_RANGE_SIZE];
 
   VkPipelineVertexInputStateCreateInfo *vertex_inputs;
   int n_user_vertex_inputs;
@@ -68,7 +68,6 @@ typedef struct _CoglPipelineVulkan
   int n_seen_attribute_buffers;
 
   CoglColorMask color_mask;
-  CoglVerticesMode vertices_mode;
 
   /* Color & depth format of the last */
   VkFormat color_format;
@@ -195,6 +194,7 @@ _cogl_pipeline_vulkan_invalidate_internal (CoglPipeline *pipeline,
 {
   CoglContextVulkan *vk_ctx;
   CoglPipelineVulkan *vk_pipeline = get_vk_pipeline (pipeline);
+  int i;
 
   _COGL_GET_CONTEXT (ctx, NO_RETVAL);
   vk_ctx = ctx->winsys;
@@ -204,11 +204,15 @@ _cogl_pipeline_vulkan_invalidate_internal (CoglPipeline *pipeline,
 
   _cogl_pipeline_vulkan_end_internal (pipeline, vk_pipeline, keep_alive);
 
-  if (vk_pipeline->pipeline != VK_NULL_HANDLE)
+  for (i = 0; i < G_N_ELEMENTS (vk_pipeline->pipelines); i++)
     {
-      VK (ctx, vkDestroyPipeline (vk_ctx->device, vk_pipeline->pipeline,
-                                  NULL) );
-      vk_pipeline->pipeline = VK_NULL_HANDLE;
+      if (vk_pipeline->pipelines[i] != VK_NULL_HANDLE)
+        {
+          VK (ctx, vkDestroyPipeline (vk_ctx->device,
+                                      vk_pipeline->pipelines[i],
+                                      NULL) );
+          vk_pipeline->pipelines[i] = VK_NULL_HANDLE;
+        }
     }
 
   if (vk_pipeline->attribute_buffers)
@@ -649,6 +653,8 @@ _cogl_pipeline_vulkan_create_pipeline (CoglPipeline *pipeline,
   CoglContext *ctx = framebuffer->context;
   CoglContextVulkan *vk_ctx = ctx->winsys;
   CoglFramebufferVulkan *vk_fb = framebuffer->winsys;
+  CoglVerticesMode vert_mode =
+    vk_fb->vertices_modes[vk_fb->n_vertices_modes - 1];
 
   VkPipelineColorBlendStateCreateInfo vk_blend_state;
   VkPipelineColorBlendAttachmentState vk_blend_attachment_state;
@@ -670,11 +676,10 @@ _cogl_pipeline_vulkan_create_pipeline (CoglPipeline *pipeline,
 
   VkGraphicsPipelineCreateInfo pipeline_state;
 
-  if (vk_pipeline->pipeline != VK_NULL_HANDLE)
+  if (vk_pipeline->pipelines[vert_mode] != VK_NULL_HANDLE)
     return;
 
   vk_pipeline->color_mask = framebuffer->color_mask;
-  vk_pipeline->vertices_mode = vk_fb->vertices_modes[vk_fb->n_vertices_modes - 1];
   vk_pipeline->color_format = vk_fb->color_format;
   vk_pipeline->depth_format = vk_fb->depth_format;
 
@@ -733,7 +738,7 @@ _cogl_pipeline_vulkan_create_pipeline (CoglPipeline *pipeline,
       VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     vk_raster_state.rasterizerDiscardEnable = VK_FALSE;
     vk_raster_state.polygonMode =
-      _cogl_vertices_mode_to_vulkan_polygon_mode (vk_pipeline->vertices_mode);
+      _cogl_vertices_mode_to_vulkan_polygon_mode (vert_mode);
     vk_raster_state.cullMode =
       _cogl_cull_mode_to_vulkan_cull_mode (cogl_pipeline_get_cull_face_mode (pipeline));
     vk_raster_state.frontFace =
@@ -799,7 +804,7 @@ _cogl_pipeline_vulkan_create_pipeline (CoglPipeline *pipeline,
     input_assembly_state.sType =
       VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
     input_assembly_state.topology =
-      _cogl_vertices_mode_to_vulkan_primitive_topology (vk_pipeline->vertices_mode);
+      _cogl_vertices_mode_to_vulkan_primitive_topology (vert_mode);
     input_assembly_state.primitiveRestartEnable = VK_FALSE;
   }
 
@@ -849,7 +854,7 @@ _cogl_pipeline_vulkan_create_pipeline (CoglPipeline *pipeline,
                                       (VkPipelineCache) { VK_NULL_HANDLE },
                                       1, &pipeline_state,
                                       NULL,
-                                      &vk_pipeline->pipeline) );
+                                      &vk_pipeline->pipelines[vert_mode]) );
 }
 
 void
@@ -860,6 +865,8 @@ _cogl_pipeline_flush_vulkan_state (CoglFramebuffer *framebuffer,
 {
   CoglContext *ctx = framebuffer->context;
   CoglFramebufferVulkan *vk_fb = framebuffer->winsys;
+  CoglVerticesMode vert_mode =
+    vk_fb->vertices_modes[vk_fb->n_vertices_modes - 1];
   CoglPipelineVulkan *vk_pipeline = get_vk_pipeline (pipeline);
   int i, n_layers = cogl_pipeline_get_n_layers (pipeline);
   const CoglPipelineProgend *progend;
@@ -878,12 +885,11 @@ _cogl_pipeline_flush_vulkan_state (CoglFramebuffer *framebuffer,
   COGL_TIMER_START (_cogl_uprof_context, pipeline_flush_timer);
 
   if (vk_pipeline &&
-      vk_pipeline->pipeline != VK_NULL_HANDLE &&
+      vk_pipeline->pipelines[vert_mode] != VK_NULL_HANDLE &&
       _cogl_pipeline_vertend_vulkan_get_shader (pipeline) != NULL &&
       _cogl_pipeline_fragend_vulkan_get_shader (pipeline) != NULL)
     {
-      if (vk_fb->vertices_modes[vk_fb->n_vertices_modes - 1] != vk_pipeline->vertices_mode ||
-          framebuffer->color_mask != vk_pipeline->color_mask ||
+      if (framebuffer->color_mask != vk_pipeline->color_mask ||
           vk_pipeline->color_format != vk_fb->color_format ||
           vk_pipeline->depth_format != vk_fb->depth_format)
         _cogl_pipeline_vulkan_invalidate (pipeline);
@@ -893,7 +899,7 @@ _cogl_pipeline_flush_vulkan_state (CoglFramebuffer *framebuffer,
                                                   framebuffer,
                                                   attributes, n_attributes);
 
-      if (vk_pipeline->pipeline != VK_NULL_HANDLE)
+      if (vk_pipeline->pipelines[vert_mode] != VK_NULL_HANDLE)
         goto done;
     }
 
@@ -966,7 +972,7 @@ done:
 
   VK ( ctx, vkCmdBindPipeline (vk_fb->cmd_buffer,
                                VK_PIPELINE_BIND_POINT_GRAPHICS,
-                               vk_pipeline->pipeline) );
+                               vk_pipeline->pipelines[vert_mode]) );
 
   g_ptr_array_add (vk_fb->pipelines, cogl_object_ref (pipeline));
 
