@@ -817,7 +817,7 @@ _cogl_pipeline_vulkan_create_pipeline (CoglPipeline *pipeline,
     memset (&dynamic_state, 0, sizeof (dynamic_state));
 
     dynamic_state.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-    dynamic_state.dynamicStateCount = 1;
+    dynamic_state.dynamicStateCount = 2;
     dynamic_state.pDynamicStates = dynamic_states;
     dynamic_states[0] = VK_DYNAMIC_STATE_VIEWPORT;
     dynamic_states[1] = VK_DYNAMIC_STATE_SCISSOR;
