@@ -42,7 +42,10 @@ typedef enum _TestFlags
   TEST_REQUIREMENT_GLSL = 1<<9,
   TEST_REQUIREMENT_OFFSCREEN = 1<<10,
   TEST_REQUIREMENT_FENCE = 1<<11,
-  TEST_REQUIREMENT_PER_VERTEX_POINT_SIZE = 1<<12
+  TEST_REQUIREMENT_PER_VERTEX_POINT_SIZE = 1<<12,
+  /* Get rid of this flag once the Vulkan backend is at parity feature with
+     GL/GLES. */
+  TEST_KNOWN_VULKAN_FAILURE = 1<<13
 } TestFlags;
 
  /**

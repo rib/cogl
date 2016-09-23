@@ -94,6 +94,10 @@ if test $HAVE_GLES2 -eq 1; then
   GLES2_FORMAT=" %6s %7s"
   printf "$GLES2_FORMAT" "ES2" "ES2-NPT"
 fi
+if test $HAVE_VULKAN -eq 1; then
+  VULKAN_FORMAT=" %6s"
+  printf "$VULKAN_FORMAT" "VULKAN"
+fi
 
 echo ""
 echo ""
@@ -137,6 +141,12 @@ do
     run_test $test gles2_npot
   fi
 
+  if test $HAVE_VULKAN -eq 1; then
+    export COGL_DRIVER=vulkan
+    export COGL_DEBUG=
+    run_test $test vulkan
+  fi
+
   printf $TITLE_FORMAT "$test:"
   if test $HAVE_GL -eq 1; then
     printf "$GL_FORMAT" \
@@ -150,6 +160,10 @@ do
     printf "$GLES2_FORMAT" \
       "`get_status $gles2_result`" \
       "`get_status $gles2_npot_result`"
+  fi
+  if test $HAVE_VULKAN -eq 1; then
+    printf "$VULKAN_FORMAT" \
+           "`get_status $vulkan_result`"
   fi
   echo ""
 done

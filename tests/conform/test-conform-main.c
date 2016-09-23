@@ -58,10 +58,10 @@ main (int argc, char **argv)
   ADD_TEST (test_premult, 0, TEST_KNOWN_FAILURE);
   UNPORTED_TEST (test_readpixels);
 #ifdef COGL_HAS_COGL_PATH_SUPPORT
-  ADD_TEST (test_path, 0, 0);
-  ADD_TEST (test_path_clip, 0, 0);
+  ADD_TEST (test_path, 0, TEST_KNOWN_VULKAN_FAILURE);
+  ADD_TEST (test_path_clip, 0, TEST_KNOWN_VULKAN_FAILURE);
 #endif
-  ADD_TEST (test_depth_test, 0, 0);
+  ADD_TEST (test_depth_test, 0, TEST_KNOWN_VULKAN_FAILURE);
   ADD_TEST (test_color_mask, 0, 0);
   ADD_TEST (test_backface_culling, 0, TEST_REQUIREMENT_NPOT);
   ADD_TEST (test_layer_remove, 0, 0);
@@ -79,7 +79,7 @@ main (int argc, char **argv)
   ADD_TEST (test_texture_3d, TEST_REQUIREMENT_TEXTURE_3D, 0);
   ADD_TEST (test_wrap_modes, 0, 0);
   UNPORTED_TEST (test_texture_pixmap_x11);
-  ADD_TEST (test_texture_get_set_data, 0, 0);
+  ADD_TEST (test_texture_get_set_data, 0, TEST_KNOWN_VULKAN_FAILURE);
   ADD_TEST (test_atlas_migration, 0, 0);
   ADD_TEST (test_read_texture_formats, 0, TEST_KNOWN_FAILURE);
   ADD_TEST (test_write_texture_formats, 0, 0);
@@ -92,12 +92,20 @@ main (int argc, char **argv)
   UNPORTED_TEST (test_vertex_buffer_interleved);
   UNPORTED_TEST (test_vertex_buffer_mutability);
 
-  ADD_TEST (test_primitive, 0, 0);
+  ADD_TEST (test_primitive, 0, TEST_KNOWN_VULKAN_FAILURE);
 
-  ADD_TEST (test_just_vertex_shader, TEST_REQUIREMENT_GLSL, 0);
-  ADD_TEST (test_pipeline_uniforms, TEST_REQUIREMENT_GLSL, 0);
-  ADD_TEST (test_snippets, TEST_REQUIREMENT_GLSL, 0);
-  ADD_TEST (test_custom_attributes, TEST_REQUIREMENT_GLSL, 0);
+  ADD_TEST (test_just_vertex_shader,
+            TEST_REQUIREMENT_GLSL,
+            TEST_KNOWN_VULKAN_FAILURE);
+  ADD_TEST (test_pipeline_uniforms,
+            TEST_REQUIREMENT_GLSL,
+            TEST_KNOWN_VULKAN_FAILURE);
+  ADD_TEST (test_snippets,
+            TEST_REQUIREMENT_GLSL,
+            TEST_KNOWN_VULKAN_FAILURE);
+  ADD_TEST (test_custom_attributes,
+            TEST_REQUIREMENT_GLSL,
+            TEST_KNOWN_VULKAN_FAILURE);
 
   ADD_TEST (test_offscreen, 0, 0);
   ADD_TEST (test_framebuffer_get_bits,
@@ -127,7 +135,7 @@ main (int argc, char **argv)
 
   ADD_TEST (test_map_buffer_range, TEST_REQUIREMENT_MAP_WRITE, 0);
 
-  ADD_TEST (test_primitive_and_journal, 0, 0);
+  ADD_TEST (test_primitive_and_journal, 0, TEST_KNOWN_VULKAN_FAILURE);
 
   ADD_TEST (test_copy_replace_texture, 0, 0);
 

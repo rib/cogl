@@ -98,6 +98,13 @@ check_flags (TestFlags flags,
       return FALSE;
     }
 
+  if (flags & TEST_KNOWN_VULKAN_FAILURE &&
+      cogl_renderer_get_driver (renderer) == COGL_DRIVER_VULKAN)
+    {
+      return FALSE;
+    }
+
+
   return TRUE;
 }
 
