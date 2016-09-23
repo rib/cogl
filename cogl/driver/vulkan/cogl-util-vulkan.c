@@ -248,12 +248,6 @@ _get_pixel_format_guesses_for_render (CoglPixelFormat format)
       break;
 
     default:
-      g_warning ("Unsupported CoglPixelFormat %i alpha=%i bgr=%i a_first=%i form=%i",
-                 format,
-                 (format & COGL_A_BIT) != 0,
-                 (format & COGL_BGR_BIT) != 0,
-                 (format & COGL_AFIRST_BIT) != 0,
-                 format & 0xff);
       RETURN_COGL_VK_VIEWS (COGL_VK_VIEW_NONE);
     }
 }
@@ -334,12 +328,6 @@ _get_pixel_format_guesses_for_sampling (CoglPixelFormat format)
       break;
 
     default:
-      g_warning ("Unsupported CoglPixelFormat %i alpha=%i bgr=%i a_first=%i form=%i",
-                 format,
-                 format & COGL_A_BIT,
-                 format & COGL_BGR_BIT,
-                 format & COGL_AFIRST_BIT,
-                 format & 0xff);
       RETURN_COGL_VK_VIEWS (COGL_VK_VIEW_NONE);
     }
 }
