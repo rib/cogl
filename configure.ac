@@ -816,17 +816,27 @@ AS_IF([test "x$enable_gl" = "xyes"],
         HAVE_GL=1
       ])
 
-HAVE_VULKAN=0
-AC_ARG_ENABLE(
+AC_ARG_WITH(
   [vulkan],
-  [AC_HELP_STRING([--enable-vulkan=@<:@no/yes@:>@], [Enable support for Vulkan @<:@default=no@:>@])],
-  [],
-  enable_vulkan=no
+  [AC_HELP_STRING([--with-vulkan], [Path to Vulkan install prefix (for finding headers).])],
+  [
+    ENABLE_VULKAN=yes
+    COGL_VULKAN_PREFIX="$withval"
+    COGL_EXTRA_CFLAGS="$COGL_EXTRA_CFLAGS -I$COGL_VULKAN_PREFIX/include"
+  ],
+  [ ENABLE_VULKAN=no ]
 )
-AS_IF([test "x$enable_vulkan" = "xyes"],
+AS_IF([test "x$ENABLE_VULKAN" = "xyes"],
       [
-        enabled_drivers="$enabled_drivers vulkan"
+        save_CPPFLAGS=$CPPFLAGS
+        CPPFLAGS=$COGL_EXTRA_CFLAGS
+        AC_CHECK_HEADER([vulkan/vulkan.h],
+                        [],
+                        [AC_MSG_ERROR([Unable to locate vulkan/vulkan.h])]
+                        [$COGL_VULKAN_PREFIX/include])
+        CPPFLAGS=$save_CPPFLAGS
 
+        enabled_drivers="$enabled_drivers vulkan"
         cogl_vulkan_headers="vulkan/vulkan.h"
         AC_DEFINE([HAVE_COGL_VULKAN], 1, [Have Vulkan for rendering])
         COGL_DEFINES_SYMBOLS="$COGL_DEFINES_SYMBOLS COGL_HAS_VULKAN"
@@ -835,9 +845,6 @@ AS_IF([test "x$enable_vulkan" = "xyes"],
         AC_PROG_YACC
         dnl AX_PROG_BISON([], [AC_MSG_ERROR([bison not found])])
 
-        AC_CHECK_HEADER([vulkan/vulkan.h],
-                        [],
-                        [AC_MSG_ERROR([Unable to locate vulkan/vulkan.h])])
 
         PKG_CHECK_MODULES([XLIB], [x11],
                           [
