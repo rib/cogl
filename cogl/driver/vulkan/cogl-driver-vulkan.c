@@ -129,47 +129,35 @@ _cogl_vulkan_renderer_init (CoglRenderer *renderer,
     .enabledExtensionCount = n_extensions,
     .ppEnabledExtensionNames = extensions,
   };
+  struct {
+      const char *name;
+      void *sym_ptr;
+  } vulkan_symbols[] = {
+#define VK_SYM(NAME) \
+        { #NAME, &vk_renderer->NAME },
+#include "cogl-vulkan-symbols.x"
+#undef VK_SYM
+  };
+
   VkResult result;
   uint32_t i, device_count;
 
-  renderer->libgl_module = g_module_open (COGL_VULKAN_LIBNAME,
-                                          G_MODULE_BIND_LAZY);
+  renderer->libgl_module = g_module_open(COGL_VULKAN_LIBNAME,
+                                         G_MODULE_BIND_LAZY);
 
-  if (!g_module_symbol (renderer->libgl_module,
-                        "vkCreateInstance",
-                        (gpointer *) &vk_renderer->vkCreateInstance) ||
-      !g_module_symbol (renderer->libgl_module,
-                        "vkDestroyInstance",
-                        (gpointer *) &vk_renderer->vkDestroyInstance) ||
-      !g_module_symbol (renderer->libgl_module,
-                        "vkGetInstanceProcAddr",
-                        (gpointer *) &vk_renderer->vkGetInstanceProcAddr) ||
-      !g_module_symbol (renderer->libgl_module,
-                        "vkEnumeratePhysicalDevices",
-                        (gpointer *) &vk_renderer->vkEnumeratePhysicalDevices) ||
-      !g_module_symbol (renderer->libgl_module,
-                        "vkGetPhysicalDeviceFeatures",
-                        (gpointer *) &vk_renderer->vkGetPhysicalDeviceFeatures) ||
-      !g_module_symbol (renderer->libgl_module,
-                        "vkGetPhysicalDeviceProperties",
-                        (gpointer *) &vk_renderer->vkGetPhysicalDeviceProperties) ||
-      !g_module_symbol (renderer->libgl_module,
-                        "vkGetPhysicalDeviceMemoryProperties",
-                        (gpointer *) &vk_renderer->vkGetPhysicalDeviceMemoryProperties) ||
-      !g_module_symbol (renderer->libgl_module,
-                        "vkCreateDevice",
-                        (gpointer *) &vk_renderer->vkCreateDevice) ||
-      !g_module_symbol (renderer->libgl_module,
-                        "vkDestroyDevice",
-                        (gpointer *) &vk_renderer->vkDestroyDevice) ||
-      !g_module_symbol (renderer->libgl_module,
-                        "vkGetDeviceProcAddr",
-                        (gpointer *) &vk_renderer->vkGetDeviceProcAddr))
+  for (i = 0; i < G_N_ELEMENTS(vulkan_symbols); i++)
     {
-      _cogl_set_error (error, COGL_DRIVER_ERROR,
-                       COGL_DRIVER_ERROR_INTERNAL,
-                       "Cannot find vulkan instance symbols");
-      goto error;
+
+      if (!g_module_symbol(renderer->libgl_module,
+                           vulkan_symbols[i].name,
+                           vulkan_symbols[i].sym_ptr))
+        {
+          _cogl_set_error (error, COGL_DRIVER_ERROR,
+                           COGL_DRIVER_ERROR_INTERNAL,
+                           "Cannot find vulkan instance symbol %s",
+                           vulkan_symbols[i].name);
+          goto error;
+        }
     }
 
   result = vk_renderer->vkCreateInstance (&instance_info, NULL,
