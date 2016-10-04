@@ -336,7 +336,7 @@ load_bitmap_data_to_texture (CoglTexture2D *tex_2d,
 
       for (i = 0; i < height; i++) {
         memcpy ((uint8_t *) dst_data + (dst_y + i) * dst_rowstride + dst_x * format_bpp,
-                src_data + (src_y + i) * src_rowstride + src_x * format_bpp,
+                (uint8_t *) src_data + (src_y + i) * src_rowstride + src_x * format_bpp,
                 width * format_bpp);
       }
     }
