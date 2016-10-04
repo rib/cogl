@@ -866,7 +866,7 @@ AS_IF([test "x$ENABLE_VULKAN" = "xyes"],
 AM_CONDITIONAL([COGL_DRIVER_GL_SUPPORTED], [test "x$enable_gl" = "xyes"])
 AM_CONDITIONAL([COGL_DRIVER_GLES_SUPPORTED],
                [test "x$enable_gles1" = "xyes" || test "x$enable_gles2" = "xyes"])
-AM_CONDITIONAL([COGL_DRIVER_VULKAN_SUPPORTED], [test "x$enable_vulkan" = "xyes"])
+AM_CONDITIONAL([COGL_DRIVER_VULKAN_SUPPORTED], [test "x$ENABLE_VULKAN" = "xyes"])
 AM_CONDITIONAL(SUPPORT_VULKAN_WAYLAND, [test "x$SUPPORT_VULKAN_WAYLAND" = "xyes"])
 AM_CONDITIONAL(SUPPORT_VULKAN_XLIB, [test "x$SUPPORT_VULKAN_XLIB" = "xyes"])
 
