@@ -39,6 +39,7 @@ extern "C" {
 #include "cogl-driver-vulkan-private.h"
 #include "cogl-shader-vulkan-private.h"
 #include "cogl-util-vulkan-private.h"
+#include "cogl-vulkan-header.h"
 
 }
 
@@ -546,7 +547,7 @@ private:
   SymbolMap map_;
 };
 
-VkShaderModule
+static VkShaderModule
 _cogl_shader_vulkan_build_shader_module (CoglShaderVulkan *shader,
                                          const glslang::TIntermediate *intermediate)
 {
