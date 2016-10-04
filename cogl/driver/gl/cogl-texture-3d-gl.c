@@ -39,6 +39,7 @@
 #include "cogl-util.h"
 #include "cogl-texture-private.h"
 #include "cogl-texture-3d-private.h"
+#include "cogl-texture-3d-gl-private.h"
 #include "cogl-texture-gl-private.h"
 #include "cogl-texture-driver.h"
 #include "cogl-context-private.h"

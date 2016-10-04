@@ -33,6 +33,7 @@
 #endif
 
 #include "cogl-context-private.h"
+#include "cogl-sampler-gl-private.h"
 #include "cogl-util-gl-private.h"
 
 static void
