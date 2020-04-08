@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html>
+    <head>
+	<meta charset='utf-8'/>
+	<meta http-equiv="X-UA-Compatible" content="chrome=1"/>
+	<link href='http://fonts.googleapis.com/css?family=Droid+Sans|Magra|Marvel' rel='stylesheet' type='text/css'>
+	<link href='assets/cogl3d.css' rel='stylesheet' type='text/css'>
+	<title>Cogl - Neat 3D Graphics</title>
+	
+    </head>
+    <body>
+	<div class="page liquid">
+	    <div class="head">
+		<div class="leftCol">&nbsp;</div>
+		<div class="line">
+		    <div class="unit size1of5">
+			<img src="assets/cogl-logo.png"/>
+		    </div>
+		    <div class="unit size1of5">
+			<p class="note"><b>cog</b> <em>/käg/</em> Noun: A wheel or bar with a series of projections on its edge that transfers motion by engaging with projections on another wheel or bar</p>
+		    </div>
+		    <div class="unit size3of5">&nbsp;</div>
+		</div>
+	    </div>
+	    <div class="body">
+		<div class="leftCol">
+		    <h2>The Essentials</h2>
+		    <ul>
+			<li><a href="index.html">Home</a></li>
+			<li><a href="about.html">About</a></li>
+			<li><a href="hello.html">Hello World</a></li>
+			<li>Reference Manuals:
+			<ul>
+			<li><a href="http://cogl3d.org/cogl-reference/">Cogl Reference</a></li>
+			<li><a href="http://cogl3d.org/cogl-pango-reference/">CoglPano Reference</a></li>
+			<li><a href="http://cogl3d.org/cogl-gst-reference/">CoglGst Reference</a></li>
+			<li><a href="http://cogl3d.org/cogl-path-reference/">CoglPath Reference</a></li>
+			</ul>
+			</li>
+			<li><a href="http://lists.freedesktop.org/mailman/listinfo/cogl">Mailing list</a></li>
+			<li><a href="https://github.com/rib/cogl-web/wiki">Wiki</a></li>
+			<li><a href="https://twitter.com/#!/cogl3d">Follow cogl3d on twitter</a></li>
+			<li>IRC - Join us in #cogl on Freenode</li>
+		    </ul>
+		</div>
+		<div class="rightCol">
+		    
+		</div>
+		<div class="main">
+		    
+<p>Here is an introductory example of using the Cogl 2.0 api.
+<p>After the example there are detailed explanations of each section.
+
+<pre name="code" class="c">
+#include &lt;cogl/cogl.h>
+#include &lt;glib.h>
+
+typedef struct _Data
+{
+    CoglContext *ctx;
+    CoglFramebuffer *fb;
+    CoglPrimitive *triangle;
+    CoglPipeline *pipeline;
+} Data;
+
+static CoglBool
+paint_cb (void *user_data)
+{
+    Data *data = user_data;
+
+    cogl_framebuffer_clear4f (data->fb, COGL_BUFFER_BIT_COLOR, 0, 0, 0, 1);
+    cogl_framebuffer_draw_primitive (data->fb, data->pipeline, data->triangle);
+    cogl_onscreen_swap_buffers (COGL_ONSCREEN (data->fb));
+
+    return FALSE; /* un-register idle callback */
+}
+
+static void
+frame_event_cb (CoglOnscreen *onscreen,
+                CoglFrameEvent event,
+                CoglFrameInfo *info,
+                void *user_data)
+{
+    if (event == COGL_FRAME_EVENT_SYNC)
+        paint_cb (user_data);
+}
+
+int
+main (int argc, char **argv)
+{
+    Data data;
+    CoglOnscreen *onscreen;
+    CoglError *error = NULL;
+    CoglVertexP2C4 triangle_vertices[] = {
+        {0, 0.7, 0xff, 0x00, 0x00, 0x80},
+        {-0.7, -0.7, 0x00, 0xff, 0x00, 0xff},
+        {0.7, -0.7, 0x00, 0x00, 0xff, 0xff}
+    };
+    GSource *cogl_source;
+    GMainLoop *loop;
+
+    data.ctx = cogl_context_new (NULL, &error);
+    if (!data.ctx) {
+        fprintf (stderr, "Failed to create context: %s\n", error->message);
+        return 1;
+    }
+
+    onscreen = cogl_onscreen_new (data.ctx, 640, 480);
+    cogl_onscreen_show (onscreen);
+    data.fb = COGL_FRAMEBUFFER (onscreen);
+
+    data.triangle = cogl_primitive_new_p2c4 (data.ctx,
+                                             COGL_VERTICES_MODE_TRIANGLES,
+                                             3, triangle_vertices);
+    data.pipeline = cogl_pipeline_new (data.ctx);
+
+    cogl_source = cogl_glib_source_new (data.ctx, G_PRIORITY_DEFAULT);
+
+    g_source_attach (cogl_source, NULL);
+
+    cogl_onscreen_add_frame_callback (COGL_ONSCREEN (data.fb),
+                                      frame_event_cb,
+                                      &data,
+                                      NULL /* destroy callback */);
+
+    g_idle_add (paint_cb, &data);
+
+    loop = g_main_loop_new (NULL, TRUE);
+    g_main_loop_run (loop);
+
+    return 0;
+}
+</pre>
+
+<h2>Building the example</h2>
+<p>If you save the above code to a file named hello.c then you can compile
+the example as follows:
+
+<pre>
+gcc -o hello hello.c `pkg-config --cflags --libs cogl2 glib-2.0`
+</pre>
+
+<h1>Step by Step...</h1>
+<h2>Including the right headers</h2>
+First include the experimental Cogl 2.0 API via &lt;cogl/cogl.h>
+
+<p><em>Note: The Cogl 2.0 api is still a work in progress so be aware that
+there is a chance that this example is slightly out of date.</em>
+
+<pre name="code" class="c">
+#include &lt;cogl/cogl.h>
+</pre>
+
+<p>Since Cogl needs to be integrated with a mainloop this example uses the Glib
+mainloop because it's portable.
+
+<p><em>Note: Glib's mainloop is not a required dependency for Cogl, and if you want
+to integrate with an alternative mainloop library then Cogl makes that
+possible.</em>
+
+<pre name="code" class="c">
+#include &lt;glib.h>
+</pre>
+
+<p>We will construct various state in the main() function which we also need to
+share with the paint() callback so we declare a structure to hold that shared
+state...
+
+<pre name="code" class="c">
+typedef struct _Data
+{
+    CoglContext *ctx;
+    CoglFramebuffer *fb;
+    CoglPrimitive *triangle;
+    CoglPipeline *pipeline;
+} Data;
+</pre>
+
+<h2>Creating a context</h2>
+<p>A CoglContext is an application sandbox for interacting with a graphics
+renderer (typically a GPU) and an application should normally only create a
+single Context.
+
+<p>Although Cogl does offer a lot of control over the details of how a Context
+is initialized, in this example we are going to gloss over that capability by
+passing a <em>NULL</em> display pointer to cogl_context_new() so that Cogl can
+instead just choose sensible defaults. This is what most simple applications
+should do.
+
+<p>Strictly speaking passing the error argument to cogl_context_new() is optional
+but this is a good opportunity to show how Cogl exposes runtime exceptions to
+the user.
+
+<p>If a runtime recoverable error occurs (such as an IO error when trying to
+communicate with the platform specific graphics stack) then cogl_context_new()
+will return <em>NULL</em> and also pass back an exception pointer through the
+error argument.
+
+<p>If an exception is returned then it contains a domain value, an error code
+and a human readable error message that can be shown to a user.
+
+<p>In this example we are just aborting the program so really this error handling
+example is redundant because the default behaviour of Cogl is to automatically
+print the error message and abort if the error argument is <em>NULL.</em>
+
+<p><em>Note: for those interested in more details about controlling the context
+initialization they should look into the CoglRenderer, CoglDisplay and
+CoglOnscreenTemplate apis.</em>
+
+<pre name="code" class="c">
+    data.ctx = cogl_context_new (NULL, &error);
+    if (!data.ctx) {
+        fprintf (stderr, "Failed to create context: %s\n", error->message);
+        return 1;
+    }
+</pre>
+
+<h2>Creating an onscreen framebuffer</h2>
+<p>Once we have a context we are able to create an onscreen framebuffer with a requested size.
+<p><em>Note: the dimensions are only a request since on some platforms an onscreen framebuffer will be forced to be fullscreen.</em>
+<pre name="code" class="c">
+    onscreen = cogl_onscreen_new (data.ctx, 640, 480);
+</pre>
+
+<p>When we are ready we can make the onscreen framebuffer visible to the user like so...
+<pre name="code" class="c">
+    cogl_onscreen_show (onscreen);
+</pre>
+
+<p>At this point it's worth mentioning that Cogl's type system is "Interface Oriented" more so than it is strictly "Object Oriented".
+<p>What this means is that the programming style puts more emphasis on what interfaces an object implements than it does on what its type is or what types an object inherits from. This style should be familar to those with any experience of JavaScript, or any duck-typed languages such as Ruby.
+<p>One of the interfaces Cogl exposes is the "CoglFramebuffer" interface. This interface exposes any functionality that is common between onscreen and offscreen framebuffers that can be rendered too.
+<p>This next line shows us casting a CoglOnscreen framebuffer to a CoglFramebuffer so we can use the pointer with the CoglFramebuffer interface api.
+<pre name="code" class="c">
+    data.fb = COGL_FRAMEBUFFER (onscreen);
+</pre>
+
+<h2>Creating a primitive</h2>
+<p>Next we are going to create a primitive, representing geometry that we can draw.
+
+<p>A primitive represents a collection of vertex attributes where a vertex attribute might for example be a position, color or texture coordinate. So if you imagine a model made of points in space (vertices) which we join up with lots of triangles then each one of those vertices can have a position, a color and texture coordinate.
+
+<p>Cogl offers lots of control over the details of how primitives are memory managed; over what attributes should be associated with a primitive and what data types should be used for each attribute but Cogl also provides some convenience functions for the most common choices made.
+
+<p>Cogl provides a number of convenient vertex structures representing the most common vertex layouts with commonly used attribute types. In this example we want each vertex of our triangle to have x and y position coordinates as well as 4 unsigned byte color components. Although at first sight the <em>"P2C4"</em> suffix may seem awkward, the convenience this offers is really worthwhile. The 'P2" refers to the 2 <em>p</em>osition coordinates and the C4 refers to the 4 <em>c</em>olor coordinates.
+
+<p>The data we declare here represents 3 vertices of a triangle and you can see each vertex has a position followed by an rgba color.
+<pre name="code" class="c">
+    CoglVertexP2C4 triangle_vertices[] = {
+        {0, 0.7, 0xff, 0x00, 0x00, 0x80},
+        {-0.7, -0.7, 0x00, 0xff, 0x00, 0xff},
+        {0.7, -0.7, 0x00, 0x00, 0xff, 0xff}
+    };
+</pre>
+
+<p>Once we have the data for a primitive we upload the data to the GPU and specify a topology for the data.
+<p>GPUs can handle a number of standard topologies which we won't cover in full here, but the COGL_VERTICES_MODE_TRIANGLES topology implies that each sequential set of 3 vertices defines a single distinct triangle for the GPU.
+<pre name="code" class="c">
+    data.triangle = cogl_primitive_new_p2c4 (data.ctx,
+                                             COGL_VERTICES_MODE_TRIANGLES,
+                                             3, triangle_vertices);
+</pre>
+
+<h2>Describing a pipeline</h2>
+<p>Once we have a primitive that represents the geometry we want to draw the next thing we need is a <em>pipeline</em> that defines <em>how</em> to draw our geometry.
+<p>GPUs process data in a long pipeline which might start with some vertex processing (take a model and translate, rotate and squash it), followed by pixel processing (for each triangle of a model apply a color gradient and combine with a texture) and end on blending (take a colored and textured triangle and blend it onto a framebuffer to become part of a bigger picture).
+<p>Cogl provides an api to control how that GPU processing pipeline works and encapsulate a complete pipeline description into a single object.
+<p>In this example we are actually just going to use a default pipeline so its enough to allocate a pipeline object and use that.
+<pre name="code" class="c">
+    data.pipeline = cogl_pipeline_new (data.ctx);
+</pre>
+
+<h2>Mainloop Integration</h2>
+
+<p>Cogl requires that it is integrated with a system mainloop of some kind because the api is designed to allow certain work to be handled asynchronously without blocking an application but when that work completes we can notify the application via a callback that they registered.
+<p>The GLib api provides a portable mainloop that we are using in this example, but Cogl also provides alternative apis to allow integration with a different mainloop if required.
+
+<pre name="code" class="c">
+    cogl_source = cogl_glib_source_new (data.ctx, G_PRIORITY_DEFAULT);
+
+    g_source_attach (cogl_source, NULL);
+</pre>
+
+<h3>What does a mainloop provide?</h3>
+
+<p>A mainloop is a very common way of driving event based applications by providing a centralized event dispatch point that is able to manage event sources, such as socket file descriptors (that might provide events from another process) or device file descriptors (that can provide events from the system).
+
+<p>A mainloop is typically managed by adding event sources to the loop and once an application is initialized it will <em>run</em> the mainloop by calling into a function that won't return until the mainloop stops running. Once a mainloop is running then the application is driven by the events triggered by registered event sources which will typically result in calling application callback functions that were previously associated with the event sources.
+
+<p>Since graphics hardware runs asynchronously with respect to an application running on the CPU it's important that Cogl has an efficient way to deliver events about the state of the hardware to the application without it having to repeatedly, manually, probe the state of the hardware. This is why Cogl is designed to be integrated with a mainloop, so we can take advantage of platform specific event delivery mechanisms that enable an application to go to sleep while it is idle waiting for events without wasting power.
+
+<h3>Registering for frame synchronization events</h3>
+
+<p>An important example of events in Cogl is the ability to register a callback for synchronizing the painting of an application.
+
+<p>This synchronization mechanism will make sure your applications doesn't waste resources rendering faster than can be displayed. When your application is running under a system compositor then Cogl will make sure rendering is synchronized with the painting of the compositor, otherwise Cogl will make sure rendering is synchronized to the refresh rate of your display.
+
+<p>This mechanism also helps to ensure that your application doesn't end up trying to render new frames when the GPU is not ready to accept more frame which would otherwise lead to the application being forcibly blocked until the GPU is ready. By helping your application avoid these forced blocks that means your application gets more CPU time overall for processing other mainloop events which can have a big impact on interactivity.
+
+<pre name="code" class="c">
+    cogl_onscreen_add_frame_callback (COGL_ONSCREEN (data.fb),
+                                      frame_event_cb,
+                                      &data,
+                                      NULL /* destroy callback */);
+</pre>
+
+<h3>Running the mainloop</h3>
+
+<p>We are almost ready to start running the mainloop, but to bootstrap rendering we need to register an idle callback function with the mainloop that will be immediately dispatched once we start it running.
+
+<pre name="code" class="c">
+    g_idle_add (paint_cb, &data);
+</pre>
+
+<p>Now we are ready; we enter the mainloop as the last thing we do in the <em>main()</em> function. In this example we never exit the mainloop but a more complete application might exit the function in response to a user request to quit the application.
+
+<pre name="code" class="c">
+    loop = g_main_loop_new (NULL, TRUE);
+    g_main_loop_run (loop);
+</pre>
+
+<h2>Drawing our triangle</h2>
+
+<p>Once the mainloop starts running our <em>paint_cb</em> callback function will be called and is the place for us to render a new frame. The <em>user_data</em> argument is the Data pointer we passed to <em>g_idle_add</em> earlier so we can access the Cogl framebuffer and context we created.
+
+<pre name="code" class="c">
+static CoglBool
+paint_cb (void *user_data)
+{
+    Data *data = user_data;
+</pre>
+
+<p>The first thing we do at the start of a new frame is to clear the colour contents of the framebuffer we're drawing too.
+
+<p><em>Note: you can't assume that anything is preserved in your framebuffer between frames since a single CoglFramebuffer may internally be comprised of multiple buffers that are switched between so for each frame you render you may not be rendering to the same memory as the previous frame.</em>
+
+<p>Next we can submit our triangle <em>primitive</em> to the GPU along with the <em>pipeline</em> that should be used to process that primitive as it is rendered to the given <em>framebuffer</em>.
+
+<p>When we've finished drawing we explicitly ask for the new frame to be presented to the user by <em>"swapping"</em> the colour buffer from being a hidden back-buffer to being a visible front-buffer.
+
+<p><em>Remember, as we mentioned earlier, the GPU works asynchronously with respect to the application so when cogl_onscreen_swap_buffers() returns that doesn't necesarily mean the GPU has finished rendering the new frame or that the frame is literally visible yet. The frame-event-callback registered in the main() function can tell us about this if supported by the platform.</em>
+
+<pre name="code" class="c">
+    cogl_framebuffer_clear4f (data->fb, COGL_BUFFER_BIT_COLOR, 0, 0, 0, 1);
+    cogl_framebuffer_draw_primitive (data->fb, data->pipeline, data->triangle);
+    cogl_onscreen_swap_buffers (COGL_ONSCREEN (data->fb));
+</pre>
+
+<h2>Handling further redraws</h2>
+
+<p>Finally once we have finished rendering a frame we need to think about how we render our next frame.
+
+<p>Firstly the <em>paint_cb</em> function returns <em>FALSE</em> since that notifies glib that the function shouldn't continue to be called on idle. From now on painting should be throttled by <em>COGL_FRAME_EVENT_SYNC</em> events that get delivered to the <em>frame_event_cb</em> function registered earlier.
+
+<pre name="code" class="c">
+    return FALSE; /* un-register idle callback */
+}
+</pre>
+
+<p>Now if we look at the implementation of <em>frame_event_cb</em> we identify whenever the current <em>event</em> is a <em>COGL_FRAME_EVENT_SYNC</em> and if so we call our <em>paint_cb</em> function to draw a new frame.
+
+<pre name="code" class="c">
+static void
+frame_event_cb (CoglOnscreen *onscreen,
+                CoglFrameEvent event,
+                CoglFrameInfo *info,
+                void *user_data)
+{
+    if (event == COGL_FRAME_EVENT_SYNC)
+        paint_cb (user_data);
+}
+</pre>
+
+
+<h2>Done!</h2>
+
+<p>And there you are, a first example of using Cogl.
+
+<p>As you may imagine this example glosses over many interesting details, and so we would recommend also looking at the <a href="http://cogl3d.org/reference/2.0/">reference manual</a> if you are interested in learning more, and feel free to ask questions on IRC and on the mailinglist.
+		</div>
+	    </div>
+	    <div class="foot">
+		
+	    </div>
+	</div>
+    </body>
+    
+<link type="text/css" rel="stylesheet" href="assets/SyntaxHighlighter/SyntaxHighlighter.css"></link>
+<script language="javascript" src="assets/SyntaxHighlighter/shCore.js"></script>
+<script language="javascript" src="assets/SyntaxHighlighter/shBrushCpp.js"></script>
+<script language="javascript" src="assets/SyntaxHighlighter/shBrushXml.js"></script>
+<script language="javascript">
+window.onload = function () {
+    dp.SyntaxHighlighter.ClipboardSwf = '/flash/clipboard.swf';
+    dp.SyntaxHighlighter.HighlightAll('code');
+}
+</script>
+<!--
+<script language="javascript">
+dp.SyntaxHighlighter.ClipboardSwf = 'assets/SyntaxHighlighter/clipboard.swf';
+dp.SyntaxHighlighter.HighlightAll('code');
+</script>
+-->
+</html>
